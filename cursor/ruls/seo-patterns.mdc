@@ -1,0 +1,7 @@
+
+## SEO & Social Share Standards
+- **Dynamic Metadata**: Always generate a unique `title` and `description` for each project page based on the content.
+- **Title Length**: Keep titles between 50-60 characters and include the project name.
+- **Description Length**: Mandatory description field between 120-160 characters.
+- **Open Graph (OG)**: Ensure `og:title`, `og:description`, and `og:image` are present to make the site shareable [1].
+- **Semantic Hierarchy**: Only one `<h1>` per page, which must match the SEO title [4, 5].

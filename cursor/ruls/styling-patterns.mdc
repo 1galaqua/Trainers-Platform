@@ -1,0 +1,21 @@
+---
+description: Tailwind CSS standards focusing on Mobile-First responsive design and interactive states.
+globs: src/**/*.tsx, src/**/*.css
+---
+
+# Styling & Tailwind Standards
+
+## Responsive Design (Mobile-First)
+- Base classes must always target mobile devices [3].
+- Use responsive modifiers (`sm:`, `md:`, `lg:`) only to add or override styles for larger screens.
+- ❌ `className="w-[1200px] md:w-full"`
+- ✅ `className="w-full md:w-[1200px]"`
+
+## Interactive States (a11y)
+- Every interactive element (button, link, input) must have explicit `:focus` and `:hover` states [3].
+- Ensure focus rings are visible for keyboard navigation.
+- ✅ `className="hover:bg-blue-600 focus:ring-2 focus:ring-offset-2 focus:outline-none"`
+
+## Magic Numbers
+- Avoid arbitrary values (e.g., `h-[432px]`) [4].
+- Use Tailwind's spacing and sizing scale whenever possible.

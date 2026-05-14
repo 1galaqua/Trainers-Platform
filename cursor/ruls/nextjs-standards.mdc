@@ -1,0 +1,12 @@
+---
+description: Standards for Next.js Page Components and Media
+globs: src/app/**/page.tsx, src/components/**/*.tsx
+---
+# Next.js & Media Standards
+
+- **SSG First**: Always prefer static rendering. Use `generateStaticParams` for dynamic routes [3, 4].
+- **SEO**: Every page must export a `metadata` object with a title and description (120-160 chars) [5].
+- **Project Images**:
+  - Use `next/image` for all project assets.
+  - **Layout**: Use a defined `aspect-ratio` (e.g., `aspect-video`) with `fill`. **`object-cover`** for uniform grids/heroes (fills frame; may trim edges). **`object-contain`** or intrinsic `width`/`height` + `w-full h-auto` when the full screenshot must be visible.
+  - Set `priority` for above-the-fold hero or lead card images to improve LCP [6].

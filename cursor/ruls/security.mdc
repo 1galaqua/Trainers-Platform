@@ -1,0 +1,13 @@
+--
+description: Security standards for preventing secret leaks
+globs: **/*.{ts,tsx,js,jsx,env}
+---
+# Security Standards
+
+- **No Secrets in Code**: Never store API keys, tokens, or passwords directly in the source code [1, 3].
+- **Environment Variables**: Always use `process.env` to access sensitive information [1, 2].
+- **Environment Handling**: Add all sensitive keys to `.env.local` and ensure they are configured in the deployment platform (e.g., Vercel) [4].
+
+## Examples
+❌ `const apiKey = "sk-..."`
+✅ `const apiKey = process.env.OPENAI_API_KEY`

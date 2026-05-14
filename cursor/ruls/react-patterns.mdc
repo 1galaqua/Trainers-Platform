@@ -1,0 +1,24 @@
+---
+description: Standards for React components, TypeScript usage, and accessibility.
+globs: src/app/**/*.tsx, src/components/**/*.tsx
+---
+
+# React & TypeScript Standards
+
+## Component Structure
+- Use **PascalCase** for component names and filenames [2, 3].
+- Prefer functional components with `export default` for pages [1].
+
+## TypeScript Usage
+- No use of `any`. Define clear **Interfaces** for all Props [2, 3].
+- ❌ `const MyComponent = (props: any) => { ... }`
+- ✅ `interface MyComponentProps { title: string; }`
+
+## Accessibility (a11y)
+- All components must follow **WCAG 2.1** standards [2, 3].
+- Use semantic HTML (e.g., `<main>`, `<nav>`, `<button>`).
+- Images must have an `alt` attribute.
+
+## Clean Code
+- ❌ Never use magic numbers for status codes or constants [4, 5].
+- ✅ Use constants from a central location.

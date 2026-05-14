@@ -1,0 +1,27 @@
+// Fitness Trainers Platform — PostgreSQL via Prisma
+// Run migrations after setting DATABASE_URL in .env.local
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Example models — extend as features are built
+model User {
+  id          String   @id @default(cuid())
+  clerkId     String   @unique
+  displayName String?
+  email       String?
+  role        UserRole @default(TRAINEE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum UserRole {
+  COACH
+  TRAINEE
+}

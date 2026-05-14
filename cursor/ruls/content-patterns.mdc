@@ -1,0 +1,7 @@
+
+## Accessibility for Content
+- **Heading Hierarchy**: Ensure content uses heading tags (`<h2>`, `<h3>`) in a logical, descending order. Never skip levels [2, 3].
+- **Image Metadata**: Every image in the content layer must have a mandatory `alt` field with a descriptive text. Avoid "image" or "picture" in the description [4].
+- **Semantic Lists**: Grouped content items (like project tags) must be rendered using `<ul>` or `<ol>` with `<li>` elements [5].
+- **Meaningful Links**: Links within content (e.g., "Read more") must include aria-labels if the text itself isn't descriptive enough [2, 6].
+
