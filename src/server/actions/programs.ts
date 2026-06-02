@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { ProgramType } from "@prisma/client";
 
 import { requireCoach } from "@/lib/auth";
+import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
 
 export type ExerciseInput = {
@@ -41,11 +42,10 @@ export async function createTrainingProgramAction(formData: FormData) {
   }
 
   try {
-    await prisma.coachTrainee.upsert({
-      where: { coachId_traineeId: { coachId: coach.id, traineeId } },
-      create: { coachId: coach.id, traineeId },
-      update: {},
-    });
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) {
+      return { error: "ניתן לשייך תוכנית רק למתאמנים שלך" };
+    }
 
     const program = await prisma.trainingProgram.create({
       data: {
@@ -87,7 +87,7 @@ export async function getCoachTraineesAction() {
         trainee: {
           include: {
             programsAsTrainee: {
-              where: { isActive: true },
+              where: { coachId: coach.id, isActive: true },
               include: { _count: { select: { sessions: true } } },
             },
             questionnaireResponse: true,
@@ -121,9 +121,11 @@ export async function getCoachProgramsAction() {
 }
 
 export async function getProgramByIdAction(programId: string) {
+  const coach = await requireCoach();
+
   try {
-    return await prisma.trainingProgram.findUnique({
-      where: { id: programId },
+    return await prisma.trainingProgram.findFirst({
+      where: { id: programId, coachId: coach.id },
       include: {
         trainee: true,
         coach: true,

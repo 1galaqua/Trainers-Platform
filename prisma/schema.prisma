@@ -52,7 +52,7 @@ model User {
 model CoachTrainee {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   coachId   String   @db.ObjectId
-  traineeId String   @db.ObjectId
+  traineeId String   @unique @db.ObjectId
   coach     User     @relation("CoachRelation", fields: [coachId], references: [id])
   trainee   User     @relation("TraineeRelation", fields: [traineeId], references: [id])
   createdAt DateTime @default(now())

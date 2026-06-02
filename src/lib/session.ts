@@ -2,14 +2,16 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { UserRole } from "@prisma/client";
 
+import { getSessionSecret } from "@/lib/server-env";
+
 export const SESSION_COOKIE = "tp_session";
 
-function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET?.trim();
-  if (!secret && process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET is required in production");
+function getSecretKey() {
+  const secret = getSessionSecret();
+  if (!secret) {
+    throw new Error("SESSION_SECRET is not configured");
   }
-  return new TextEncoder().encode(secret ?? "dev-session-secret-change-me");
+  return new TextEncoder().encode(secret);
 }
 
 export type SessionData = {
@@ -32,7 +34,7 @@ export async function createUserSession(data: SessionData) {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(getSessionSecret());
+    .sign(getSecretKey());
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -41,17 +43,6 @@ export async function createUserSession(data: SessionData) {
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
-  });
-}
-
-/** @deprecated use createUserSession */
-export async function createSession(userId: string) {
-  await createUserSession({
-    userId,
-    clerkId: userId,
-    email: "",
-    displayName: "",
-    role: "TRAINEE",
   });
 }
 
@@ -75,12 +66,14 @@ function parseSessionPayload(payload: Record<string, unknown>): SessionData | nu
 }
 
 export async function getSession(): Promise<SessionData | null> {
+  if (!getSessionSecret()) return null;
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSessionSecret());
+    const { payload } = await jwtVerify(token, getSecretKey());
     return parseSessionPayload(payload as Record<string, unknown>);
   } catch {
     return null;

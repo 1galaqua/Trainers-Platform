@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
+import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
+import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
 
 export type ExerciseLogInput = {
@@ -123,9 +124,14 @@ export async function getExerciseProgressAction(exerciseId: string) {
 }
 
 export async function getCoachTraineeProgressAction(traineeId: string) {
+  const coach = await requireCoach();
+
   try {
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) return [];
+
     return await prisma.workoutSession.findMany({
-      where: { traineeId },
+      where: { traineeId, program: { coachId: coach.id } },
       include: {
         program: true,
         logs: { include: { exercise: true } },

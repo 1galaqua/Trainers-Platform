@@ -10,10 +10,21 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { registerAction } from "@/server/actions/auth";
 
-export function EmailRegisterForm() {
+export type CoachOption = {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+};
+
+type EmailRegisterFormProps = {
+  coaches: CoachOption[];
+};
+
+export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<"TRAINEE" | "COACH">("TRAINEE");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,15 +32,17 @@ export function EmailRegisterForm() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    formData.set("role", role);
+
     const result = await registerAction(formData);
     setLoading(false);
 
-    if (result?.error) {
+    if (result && "error" in result && result.error) {
       setError(result.error);
       return;
     }
 
-    if (result?.success) {
+    if (result && "success" in result && result.success) {
       router.push("/dashboard");
       router.refresh();
     }
@@ -59,13 +72,45 @@ export function EmailRegisterForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="role">סוג משתמש</Label>
-        <Select id="role" name="role" defaultValue="TRAINEE">
+        <Select
+          id="role"
+          name="role"
+          value={role}
+          onChange={(e) => setRole(e.target.value as "TRAINEE" | "COACH")}
+        >
           <option value="TRAINEE">מתאמן/ית</option>
           <option value="COACH">מאמן/ית</option>
         </Select>
       </div>
+
+      {role === "TRAINEE" && (
+        <div className="space-y-2">
+          <Label htmlFor="coachId">בחר/י מאמן/ית</Label>
+          {coaches.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              אין מאמנים רשומים במערכת. בקש/י מהמאמן/ית להירשם קודם.
+            </p>
+          ) : (
+            <Select id="coachId" name="coachId" required defaultValue="">
+              <option value="" disabled>
+                בחר/י מאמן/ית
+              </option>
+              {coaches.map((coach) => (
+                <option key={coach.id} value={coach.id}>
+                  {coach.displayName ?? coach.email ?? "מאמן/ית"}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+      )}
+
       {error && <p className="text-destructive text-sm">{error}</p>}
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={loading || (role === "TRAINEE" && coaches.length === 0)}
+      >
         {loading ? "נרשם..." : "יצירת חשבון"}
       </Button>
       <p className="text-center text-muted-foreground text-sm">

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { requireCoach } from "@/lib/auth";
+import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { photoCategoryLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
@@ -20,8 +21,11 @@ type PageProps = {
 };
 
 export default async function TraineeDetailPage({ params }: PageProps) {
-  await requireCoach();
+  const coach = await requireCoach();
   const { id } = await params;
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, id);
+  if (!ownsTrainee) notFound();
 
   let trainee;
   try {

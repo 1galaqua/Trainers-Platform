@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { PhotoCategory } from "@prisma/client";
 
 import { requireCoach, requireTraineeOnboarded } from "@/lib/auth";
+import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { getWeekStart } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 
@@ -58,9 +59,12 @@ export async function getMyPhotosAction() {
 }
 
 export async function getTraineePhotosAction(traineeId: string) {
-  await requireCoach();
+  const coach = await requireCoach();
 
   try {
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) return [];
+
     return await prisma.progressPhoto.findMany({
       where: { traineeId },
       orderBy: [{ weekStart: "desc" }, { uploadedAt: "desc" }],

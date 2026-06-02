@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { CreateProgramForm } from "@/features/programs/components/create-program-form";
 import { requireCoach } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCoachTraineesAction } from "@/server/actions/programs";
 
 export const metadata = {
   title: `תוכנית חדשה | ${siteConfig.shortName}`,
@@ -14,23 +14,7 @@ export const metadata = {
 
 export default async function NewWorkoutPage() {
   await requireCoach();
-
-  let trainees: Array<{ id: string; displayName: string | null }> = [];
-  try {
-    const coach = await requireCoach();
-    const links = await prisma.coachTrainee.findMany({
-      where: { coachId: coach.id },
-      include: { trainee: true },
-    });
-    trainees = links.map((l) => l.trainee);
-
-    if (trainees.length === 0) {
-      const allTrainees = await prisma.user.findMany({ where: { role: "TRAINEE" } });
-      trainees = allTrainees;
-    }
-  } catch {
-    trainees = [];
-  }
+  const trainees = await getCoachTraineesAction();
 
   return (
     <div className="space-y-6">
@@ -50,11 +34,13 @@ export default async function NewWorkoutPage() {
         </CardHeader>
         <CardContent>
           {trainees.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              אין מתאמנים במערכת. הריצו <code className="font-mono">npm run db:seed</code> לטעינת נתוני דמו.
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              אין לך מתאמנים משויכים. מתאמנים נרשמים ובוחרים אותך כמאמן/ית — אז יופיעו כאן.
             </p>
           ) : (
-            <CreateProgramForm trainees={trainees} />
+            <CreateProgramForm
+              trainees={trainees.map((t) => ({ id: t.id, displayName: t.displayName }))}
+            />
           )}
         </CardContent>
       </Card>

@@ -26,7 +26,7 @@ export default async function TraineesPage() {
       {trainees.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground text-sm">
-            אין מתאמנים מקושרים. צור תוכנית אימון כדי לקשר מתאמן.
+            אין מתאמנים משויכים אליך. מתאמנים נרשמים ובוחרים אותך כמאמן/ית — ואז יופיעו כאן.
           </CardContent>
         </Card>
       ) : (
