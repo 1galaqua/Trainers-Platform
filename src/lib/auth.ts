@@ -4,9 +4,22 @@ import { redirect } from "next/navigation";
 
 import { isClerkConfigured } from "@/config/clerk";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, type SessionData } from "@/lib/session";
 
 export type SessionUser = User;
+
+function userFromSession(session: SessionData): SessionUser {
+  return {
+    id: session.userId,
+    clerkId: session.clerkId,
+    displayName: session.displayName || null,
+    email: session.email || null,
+    passwordHash: null,
+    role: session.role,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
   if (isClerkConfigured()) {
@@ -42,11 +55,24 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const session = await getSession();
   if (!session) return null;
 
-  try {
-    return await prisma.user.findUnique({ where: { id: session.userId } });
-  } catch {
-    return null;
+  if (session.isOfflineDemo) {
+    return userFromSession(session);
   }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (user) return user;
+  } catch {
+    // DB unavailable — fall back to session if we have profile data
+    if (session.email) return userFromSession(session);
+  }
+
+  return null;
+}
+
+export async function isOfflineDemoSession(): Promise<boolean> {
+  const session = await getSession();
+  return Boolean(session?.isOfflineDemo);
 }
 
 export async function requireUser(): Promise<SessionUser> {
@@ -70,6 +96,10 @@ export async function requireTrainee(): Promise<SessionUser> {
 }
 
 export async function getTraineeOnboardingStatus(traineeId: string) {
+  if (await isOfflineDemoSession()) {
+    return { questionnaireComplete: true, agreementComplete: true, isComplete: true };
+  }
+
   try {
     const [questionnaire, agreement] = await Promise.all([
       prisma.questionnaireResponse.findUnique({ where: { traineeId } }),

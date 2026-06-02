@@ -22,12 +22,12 @@ export function EmailLoginForm() {
     const result = await loginAction(formData);
     setLoading(false);
 
-    if (result?.error) {
+    if (result && "error" in result && result.error) {
       setError(result.error);
       return;
     }
 
-    if (result?.success) {
+    if (result && "success" in result && result.success) {
       router.push("/dashboard");
       router.refresh();
     }

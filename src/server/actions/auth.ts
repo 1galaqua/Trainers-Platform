@@ -7,12 +7,28 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { UserRole } from "@prisma/client";
 
 import { isClerkConfigured } from "@/config/clerk";
-import { resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
-import { createSession, clearSession } from "@/lib/session";
+import { isDbConnectionError } from "@/lib/db-errors";
+import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
+import { createUserSession, clearSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+async function loginDemoOffline(email: string, password: string) {
+  const demo = DEMO_AUTH[email];
+  if (!demo || password !== demo.password) return null;
+
+  await createUserSession({
+    userId: demo.clerkId,
+    clerkId: demo.clerkId,
+    email,
+    displayName: demo.displayName,
+    role: demo.role,
+    isOfflineDemo: true,
+  });
+  return { success: true as const, offline: true as const };
 }
 
 export async function registerAction(formData: FormData) {
@@ -54,11 +70,23 @@ export async function registerAction(formData: FormData) {
       },
     });
 
-    await createSession(user.id);
+    await createUserSession({
+      userId: user.id,
+      clerkId: user.clerkId,
+      email: user.email ?? email,
+      displayName: user.displayName ?? displayName,
+      role: user.role,
+    });
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    if (isDbConnectionError(error)) {
+      return {
+        error:
+          "מסד הנתונים לא זמין — לא ניתן ליצור חשבון חדש. נסה שוב אחרי חיבור Atlas, או התחבר עם coach@demo.com / trainee@demo.com",
+      };
+    }
     return { error: "שגיאה ביצירת החשבון" };
   }
 }
@@ -86,19 +114,31 @@ export async function loginAction(formData: FormData) {
       return { error: "אימייל או סיסמה שגויים" };
     }
 
-    await createSession(user.id);
+    await createUserSession({
+      userId: user.id,
+      clerkId: user.clerkId,
+      email: user.email ?? email,
+      displayName: user.displayName ?? "",
+      role: user.role,
+    });
     revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
     if (isRedirectError(error)) throw error;
     console.error("loginAction error:", error);
-    const message = error instanceof Error ? error.message : "";
-    if (message.includes("Server selection timeout") || message.includes("fatal alert")) {
+
+    if (isDbConnectionError(error)) {
+      const offline = await loginDemoOffline(email, password);
+      if (offline) {
+        revalidatePath("/dashboard");
+        return offline;
+      }
       return {
         error:
-          "לא ניתן להתחבר למסד הנתונים. בדוק ב-MongoDB Atlas: Network Access (הוסף IP) ושה-cluster פעיל.",
+          "מסד הנתונים לא מחובר. לחשבונות דemo השתמש ב-coach@demo.com או trainee@demo.com עם סיסמה demo1234",
       };
     }
+
     return { error: "שגיאה בהתחברות" };
   }
 }

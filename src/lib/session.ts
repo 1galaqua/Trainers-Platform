@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import type { UserRole } from "@prisma/client";
 
 export const SESSION_COOKIE = "tp_session";
 
@@ -11,12 +12,24 @@ function getSessionSecret() {
   return new TextEncoder().encode(secret ?? "dev-session-secret-change-me");
 }
 
-export type SessionPayload = {
+export type SessionData = {
   userId: string;
+  clerkId: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  isOfflineDemo?: boolean;
 };
 
-export async function createSession(userId: string) {
-  const token = await new SignJWT({ userId })
+export async function createUserSession(data: SessionData) {
+  const token = await new SignJWT({
+    userId: data.userId,
+    clerkId: data.clerkId,
+    email: data.email,
+    displayName: data.displayName,
+    role: data.role,
+    isOfflineDemo: data.isOfflineDemo ?? false,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
     .sign(getSessionSecret());
@@ -31,16 +44,44 @@ export async function createSession(userId: string) {
   });
 }
 
-export async function getSession(): Promise<SessionPayload | null> {
+/** @deprecated use createUserSession */
+export async function createSession(userId: string) {
+  await createUserSession({
+    userId,
+    clerkId: userId,
+    email: "",
+    displayName: "",
+    role: "TRAINEE",
+  });
+}
+
+function parseSessionPayload(payload: Record<string, unknown>): SessionData | null {
+  const userId = payload.userId;
+  const clerkId = payload.clerkId;
+  const email = payload.email;
+  const displayName = payload.displayName;
+  const role = payload.role;
+
+  if (typeof userId !== "string" || typeof clerkId !== "string") return null;
+
+  return {
+    userId,
+    clerkId,
+    email: typeof email === "string" ? email : "",
+    displayName: typeof displayName === "string" ? displayName : "",
+    role: role === "COACH" || role === "TRAINEE" ? role : "TRAINEE",
+    isOfflineDemo: payload.isOfflineDemo === true,
+  };
+}
+
+export async function getSession(): Promise<SessionData | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, getSessionSecret());
-    const userId = payload.userId;
-    if (typeof userId !== "string") return null;
-    return { userId };
+    return parseSessionPayload(payload as Record<string, unknown>);
   } catch {
     return null;
   }
