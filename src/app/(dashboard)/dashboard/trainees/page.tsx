@@ -1,25 +1,74 @@
-import type { Metadata } from "next";
+import Link from "next/link";
 
-import { demoPeople } from "@/config/demo";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
+import { requireCoach } from "@/lib/auth";
+import { getCoachTraineesAction } from "@/server/actions/programs";
+import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
 
-export const metadata: Metadata = {
-  title: "מתאמנים",
+export const metadata = {
+  title: `מתאמנים | ${siteConfig.shortName}`,
 };
 
-export default function TraineesPage() {
+export default async function TraineesPage() {
+  await requireCoach();
+  const trainees = await getCoachTraineesAction();
+
   return (
-    <div className="space-y-4">
-      <h1 className="font-semibold text-2xl tracking-tight">מתאמנים</h1>
-      <p className="text-muted-foreground text-sm leading-relaxed">
-        כאן יוצגו רשימת המתאמנים וההתקדמות. נתוני דמו: מתאמן{" "}
-        <span className="font-medium text-foreground">{demoPeople.trainee.fullName}</span>{" "}
-        (מאמן הדמו: {demoPeople.trainer.fullName}).
-      </p>
-      <div className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-xs">
-        <p className="font-medium text-sm">{demoPeople.trainee.fullName}</p>
-        <p className="mt-1 text-muted-foreground text-xs">מתאמן · {siteConfig.shortName}</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-semibold text-2xl tracking-tight">מתאמנים</h1>
+        <p className="mt-1 text-muted-foreground text-sm">מעקב אחר מתאמנים, תוכניות והתקדמות</p>
       </div>
+
+      {trainees.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground text-sm">
+            אין מתאמנים מקושרים. צור תוכנית אימון כדי לקשר מתאמן.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {await Promise.all(
+            trainees.map(async (trainee) => {
+              const sessions = await getCoachTraineeProgressAction(trainee.id);
+              const activeProgram = trainee.programsAsTrainee[0];
+
+              return (
+                <Card key={trainee.id}>
+                  <CardHeader>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle className="text-base">{trainee.displayName ?? "מתאמן"}</CardTitle>
+                      <div className="flex gap-2">
+                        {trainee.questionnaireResponse ? (
+                          <Badge variant="secondary">שאלון הושלם</Badge>
+                        ) : (
+                          <Badge variant="outline">ממתין לשאלון</Badge>
+                        )}
+                        {activeProgram && <Badge>תוכנית פעילה</Badge>}
+                      </div>
+                    </div>
+                    <CardDescription>
+                      {sessions.length} אימונים שבוצעו
+                      {activeProgram ? ` · ${activeProgram.name}` : ""}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}`} />}>
+                      צפייה בהתקדמות
+                    </Button>
+                    <Button variant="outline" size="sm" render={<Link href="/dashboard/workouts/new" />}>
+                      תוכנית חדשה
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            }),
+          )}
+        </div>
+      )}
     </div>
   );
 }

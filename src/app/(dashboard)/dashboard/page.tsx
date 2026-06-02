@@ -1,82 +1,66 @@
-import { auth } from "@clerk/nextjs/server";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { isClerkConfigured } from "@/config/clerk";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { getDemoRoster } from "@/lib/demo-roster";
-import { refreshDashboardAction } from "@/server/actions/example";
+import { getCurrentUser } from "@/lib/auth";
+import { getCoachProgramsAction } from "@/server/actions/programs";
 
 export default async function DashboardHomePage() {
-  const { userId } = isClerkConfigured()
-    ? await auth()
-    : { userId: null as string | null };
+  const user = await getCurrentUser();
 
-  const roster = await getDemoRoster();
+  if (user?.role === "TRAINEE") {
+    redirect("/dashboard/my-program");
+  }
+
+  const programs = await getCoachProgramsAction();
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">סקירה כללית</h1>
         <p className="mt-1 text-muted-foreground text-sm">
-          ברוכים הבאים ל־{siteConfig.name}. עמוד זה מרונדר בצד השרת.
+          ברוכים הבאים ל־{siteConfig.name}
+          {user?.displayName ? `, ${user.displayName}` : ""}
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xs">
-        <h2 className="font-medium text-base">נתוני דמו</h2>
-        <p className="mt-1 text-muted-foreground text-xs">
-          מקור: {roster.source === "database" ? "מסד הנתונים (Prisma)" : "ברירת מחדל בקוד (ללא DB)"}
-        </p>
-        <ul className="mt-4 space-y-3">
-          {roster.users.map((u) => (
-            <li
-              key={u.clerkId}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background/50 px-4 py-3 text-sm"
-            >
-              <span className="font-medium">{u.displayName ?? "—"}</span>
-              <span className="text-muted-foreground">
-                {u.role === "COACH" ? "מאמן" : "מתאמן"}
-              </span>
-            </li>
-          ))}
-        </ul>
-        {roster.source === "static" && (
-          <p className="mt-3 text-muted-foreground text-xs leading-relaxed">
-            להטענת הנתונים ל־PostgreSQL הריצו: <code className="font-mono">npx prisma db push</code> ואז{" "}
-            <code className="font-mono">npx prisma db seed</code>
-          </p>
-        )}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">תוכניות פעילות</CardTitle>
+            <CardDescription>סה״כ במערכת</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="font-semibold text-3xl">{programs.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">אימונים שבוצעו</CardTitle>
+            <CardDescription>על ידי מתאמנים</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="font-semibold text-3xl">
+              {programs.reduce((sum, p) => sum + p._count.sessions, 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">פעולות מהירות</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <Button size="sm" render={<Link href="/dashboard/workouts/new" />}>
+              תוכנית חדשה
+            </Button>
+            <Button variant="outline" size="sm" render={<Link href="/dashboard/trainees" />}>
+              מתאמנים
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-
-      <div className="rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xs">
-        <p className="text-sm leading-relaxed">
-          {isClerkConfigured() ? (
-            userId ? (
-              <>
-                מחוברים. ניתן לקשר משתמשי Clerk למשתמשי Prisma באמצעות{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">userId</code> בצד
-                השרת.
-              </>
-            ) : (
-              <>לא אמור לקרות: לוח הבקרה מוגן כשה־Clerk מופעל.</>
-            )
-          ) : (
-            <>
-              Clerk לא מוגדר — בפיתוח ניתן להיכנס לכאן ללא התחברות. הוסיפו מפתחות ב־
-              <code className="font-mono text-xs">.env.local</code> כדי להפעיל התחברות.
-            </>
-          )}
-        </p>
-      </div>
-
-      <form action={refreshDashboardAction} className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="secondary">
-          רענון סקירה (פעולת שרת)
-        </Button>
-        <span className="text-muted-foreground text-xs">
-          דוגמה: <code className="font-mono">src/server/actions/example.ts</code>
-        </span>
-      </form>
     </div>
   );
 }

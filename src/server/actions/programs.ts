@@ -1,0 +1,141 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { ProgramType } from "@prisma/client";
+
+import { requireCoach } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export type ExerciseInput = {
+  name: string;
+  sets: number;
+  reps: number;
+  restSeconds: number;
+  coachNotes?: string;
+  youtubeUrl?: string;
+  instructions?: string;
+};
+
+export async function createTrainingProgramAction(formData: FormData) {
+  const coach = await requireCoach();
+
+  const traineeId = String(formData.get("traineeId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const type = String(formData.get("type") ?? "CUSTOM") as ProgramType;
+  const description = String(formData.get("description") ?? "").trim() || null;
+
+  if (!traineeId || !name) {
+    return { error: "יש לבחור מתאמן ולהזין שם לתוכנית" };
+  }
+
+  const exercisesJson = String(formData.get("exercises") ?? "[]");
+  let exercises: ExerciseInput[] = [];
+  try {
+    exercises = JSON.parse(exercisesJson) as ExerciseInput[];
+  } catch {
+    return { error: "נתוני תרגילים לא תקינים" };
+  }
+
+  if (exercises.length === 0) {
+    return { error: "יש להוסיף לפחות תרגיל אחד" };
+  }
+
+  try {
+    await prisma.coachTrainee.upsert({
+      where: { coachId_traineeId: { coachId: coach.id, traineeId } },
+      create: { coachId: coach.id, traineeId },
+      update: {},
+    });
+
+    const program = await prisma.trainingProgram.create({
+      data: {
+        coachId: coach.id,
+        traineeId,
+        name,
+        type,
+        description,
+        exercises: {
+          create: exercises.map((ex, index) => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            restSeconds: ex.restSeconds,
+            coachNotes: ex.coachNotes || null,
+            youtubeUrl: ex.youtubeUrl || null,
+            instructions: ex.instructions || null,
+            sortOrder: index,
+          })),
+        },
+      },
+    });
+
+    revalidatePath("/dashboard/workouts");
+    revalidatePath("/dashboard/trainees");
+    return { success: true, programId: program.id };
+  } catch {
+    return { error: "שגיאה ביצירת התוכנית" };
+  }
+}
+
+export async function getCoachTraineesAction() {
+  const coach = await requireCoach();
+
+  try {
+    const links = await prisma.coachTrainee.findMany({
+      where: { coachId: coach.id },
+      include: {
+        trainee: {
+          include: {
+            programsAsTrainee: {
+              where: { isActive: true },
+              include: { _count: { select: { sessions: true } } },
+            },
+            questionnaireResponse: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return links.map((l) => l.trainee);
+  } catch {
+    return [];
+  }
+}
+
+export async function getCoachProgramsAction() {
+  const coach = await requireCoach();
+
+  try {
+    return await prisma.trainingProgram.findMany({
+      where: { coachId: coach.id },
+      include: {
+        trainee: true,
+        _count: { select: { exercises: true, sessions: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function getProgramByIdAction(programId: string) {
+  try {
+    return await prisma.trainingProgram.findUnique({
+      where: { id: programId },
+      include: {
+        trainee: true,
+        coach: true,
+        exercises: { orderBy: { sortOrder: "asc" } },
+        sessions: {
+          orderBy: { completedAt: "desc" },
+          include: { logs: { include: { exercise: true } } },
+          take: 10,
+        },
+      },
+    });
+  } catch {
+    return null;
+  }
+}

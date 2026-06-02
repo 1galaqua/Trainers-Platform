@@ -1,19 +1,19 @@
-export const dashboardNavigation = [
+import type { UserRole } from "@prisma/client";
+
+export const coachNavigation = [
   { title: "סקירה", href: "/dashboard", description: "סיכום ופעילות" },
-  {
-    title: "מתאמנים",
-    href: "/dashboard/trainees",
-    description: "רשימה והתקדמות",
-  },
-  {
-    title: "אימונים",
-    href: "/dashboard/workouts",
-    description: "תוכניות ואימונים",
-  },
-  {
-    title: "תזונה",
-    href: "/dashboard/nutrition",
-    description: "תוכניות תזונה",
-  },
-  { title: "תוכן", href: "/dashboard/content", description: "פוסטים ומדיה" },
+  { title: "מתאמנים", href: "/dashboard/trainees", description: "רשימה והתקדמות" },
+  { title: "תוכניות אימון", href: "/dashboard/workouts", description: "יצירה וניהול" },
 ] as const;
+
+export const traineeNavigation = [
+  { title: "סקירה", href: "/dashboard", description: "סיכום" },
+  { title: "התוכנית שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
+  { title: "דיווח אימון", href: "/dashboard/workouts/log", description: "משקלים וחזרות" },
+  { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
+  { title: "תמונות", href: "/dashboard/photos", description: "העלאה ומעקב" },
+] as const;
+
+export function getNavigationForRole(role: UserRole) {
+  return role === "COACH" ? coachNavigation : traineeNavigation;
+}

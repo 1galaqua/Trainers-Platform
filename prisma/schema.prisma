@@ -1,27 +1,152 @@
-// Fitness Trainers Platform — PostgreSQL via Prisma
-// Run migrations after setting DATABASE_URL in .env.local
+// Fitness Trainers Platform — MongoDB Atlas via Prisma
+// Set DATABASE_URL in .env.local, then: npm run db:push && npm run db:seed
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
-}
-
-// Example models — extend as features are built
-model User {
-  id          String   @id @default(cuid())
-  clerkId     String   @unique
-  displayName String?
-  email       String?
-  role        UserRole @default(TRAINEE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 enum UserRole {
   COACH
   TRAINEE
+}
+
+enum ProgramType {
+  STRENGTH
+  HYPERTROPHY
+  CUTTING
+  ENDURANCE
+  CUSTOM
+}
+
+enum PhotoCategory {
+  FRONT
+  SIDE
+  BACK
+}
+
+model User {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId      String   @unique
+  displayName  String?
+  email        String?
+  passwordHash String?
+  role         UserRole @default(TRAINEE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  coachedTrainees       CoachTrainee[]         @relation("CoachRelation")
+  coaches               CoachTrainee[]         @relation("TraineeRelation")
+  programsAsCoach       TrainingProgram[]      @relation("ProgramCoach")
+  programsAsTrainee     TrainingProgram[]      @relation("ProgramTrainee")
+  workoutSessions       WorkoutSession[]
+  progressPhotos        ProgressPhoto[]
+  questionnaireResponse QuestionnaireResponse?
+  agreement             Agreement?
+}
+
+model CoachTrainee {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  coachId   String   @db.ObjectId
+  traineeId String   @db.ObjectId
+  coach     User     @relation("CoachRelation", fields: [coachId], references: [id])
+  trainee   User     @relation("TraineeRelation", fields: [traineeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([coachId, traineeId])
+}
+
+model TrainingProgram {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  coachId     String      @db.ObjectId
+  traineeId   String      @db.ObjectId
+  name        String
+  type        ProgramType
+  description String?
+  isActive    Boolean     @default(true)
+  coach       User        @relation("ProgramCoach", fields: [coachId], references: [id])
+  trainee     User        @relation("ProgramTrainee", fields: [traineeId], references: [id])
+  exercises   ProgramExercise[]
+  sessions    WorkoutSession[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model ProgramExercise {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  programId    String          @db.ObjectId
+  name         String
+  sets         Int
+  reps         Int
+  restSeconds  Int             @default(60)
+  coachNotes   String?
+  youtubeUrl   String?
+  videoUrl     String?
+  instructions String?
+  sortOrder    Int             @default(0)
+  program      TrainingProgram @relation(fields: [programId], references: [id])
+  logs         ExerciseLog[]
+}
+
+model WorkoutSession {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  programId   String          @db.ObjectId
+  traineeId   String          @db.ObjectId
+  notes       String?
+  completedAt DateTime        @default(now())
+  program     TrainingProgram @relation(fields: [programId], references: [id])
+  trainee     User            @relation(fields: [traineeId], references: [id])
+  logs        ExerciseLog[]
+}
+
+model ExerciseLog {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId     String          @db.ObjectId
+  exerciseId    String          @db.ObjectId
+  weightKg      Float?
+  repsCompleted Int?
+  notes         String?
+  session       WorkoutSession  @relation(fields: [sessionId], references: [id])
+  exercise      ProgramExercise @relation(fields: [exerciseId], references: [id])
+}
+
+model ProgressPhoto {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String        @db.ObjectId
+  category   PhotoCategory
+  imageUrl   String
+  weekStart  DateTime
+  uploadedAt DateTime      @default(now())
+  trainee    User          @relation(fields: [traineeId], references: [id])
+
+  @@index([traineeId, weekStart])
+}
+
+model QuestionnaireResponse {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId       String   @unique @db.ObjectId
+  age             Int?
+  heightCm        Float?
+  weightKg        Float?
+  goal            String?
+  experience      String?
+  injuries        String?
+  sessionsPerWeek Int?
+  equipment       String?
+  completedAt     DateTime @default(now())
+  trainee         User     @relation(fields: [traineeId], references: [id])
+}
+
+model Agreement {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId      String   @unique @db.ObjectId
+  agreedAt       DateTime @default(now())
+  ipAddress      String?
+  signatureUrl   String
+  contentVersion String   @default("1.0")
+  trainee        User     @relation(fields: [traineeId], references: [id])
 }

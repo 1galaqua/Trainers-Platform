@@ -13,18 +13,28 @@ import { siteConfig } from "@/config/site";
 import { AuthUserButton } from "@/features/dashboard/components/auth-user-button";
 import { cn } from "@/lib/utils";
 
-import { dashboardNavigation } from "../config/navigation";
+import type { UserRole } from "@prisma/client";
+
+import { getNavigationForRole } from "../config/navigation";
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  userRole: UserRole;
 };
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({
+  userRole,
+  onNavigate,
+}: {
+  userRole: UserRole;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+  const navigation = getNavigationForRole(userRole);
 
   return (
     <nav className="flex flex-col gap-1" aria-label="לוח בקרה">
-      {dashboardNavigation.map((item) => {
+      {navigation.map((item) => {
         const active =
           pathname === item.href ||
           (item.href !== "/dashboard" && pathname.startsWith(item.href));
@@ -49,7 +59,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function DashboardShell({ children }: DashboardShellProps) {
+export function DashboardShell({ children, userRole }: DashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
@@ -68,7 +78,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-3">
-            <NavLinks />
+            <NavLinks userRole={userRole} />
           </div>
         </ScrollArea>
         <Separator />
@@ -102,7 +112,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 </div>
                 <ScrollArea className="h-[calc(100dvh-3.5rem)]">
                   <div className="p-3">
-                    <NavLinks onNavigate={() => setMobileNavOpen(false)} />
+                    <NavLinks userRole={userRole} onNavigate={() => setMobileNavOpen(false)} />
                   </div>
                 </ScrollArea>
               </SheetContent>

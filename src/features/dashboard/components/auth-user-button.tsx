@@ -2,19 +2,23 @@
 
 import { UserButton } from "@clerk/nextjs";
 
-export function AuthUserButton() {
-  const hasKey = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim(),
-  );
+import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/server/actions/auth";
 
-  if (!hasKey) {
-    return (
-      <span className="max-w-[12rem] text-end text-muted-foreground text-xs leading-snug">
-        הוסיפו מפתחות Clerk בקובץ{" "}
-        <code className="font-mono text-[0.65rem]">.env.local</code>
-      </span>
-    );
+const hasClerk = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim(),
+);
+
+export function AuthUserButton() {
+  if (hasClerk) {
+    return <UserButton afterSignOutUrl="/" />;
   }
 
-  return <UserButton afterSignOutUrl="/" />;
+  return (
+    <form action={logoutAction}>
+      <Button type="submit" variant="outline" size="sm">
+        התנתקות
+      </Button>
+    </form>
+  );
 }
