@@ -1,12 +1,8 @@
-import Link from "next/link";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
+import { TraineeCard } from "@/features/trainees/components/trainee-card";
 import { requireCoach } from "@/lib/auth";
-import { getCoachTraineesAction } from "@/server/actions/programs";
-import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
+import { getCoachTraineeListAction } from "@/server/actions/trainees";
 
 export const metadata = {
   title: `מתאמנים | ${siteConfig.shortName}`,
@@ -14,7 +10,7 @@ export const metadata = {
 
 export default async function TraineesPage() {
   await requireCoach();
-  const trainees = await getCoachTraineesAction();
+  const trainees = await getCoachTraineeListAction();
 
   return (
     <div className="space-y-6">
@@ -31,42 +27,9 @@ export default async function TraineesPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {await Promise.all(
-            trainees.map(async (trainee) => {
-              const sessions = await getCoachTraineeProgressAction(trainee.id);
-              const activeProgram = trainee.programsAsTrainee[0];
-
-              return (
-                <Card key={trainee.id}>
-                  <CardHeader>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <CardTitle className="text-base">{trainee.displayName ?? "מתאמן"}</CardTitle>
-                      <div className="flex gap-2">
-                        {trainee.questionnaireResponse ? (
-                          <Badge variant="secondary">שאלון הושלם</Badge>
-                        ) : (
-                          <Badge variant="outline">ממתין לשאלון</Badge>
-                        )}
-                        {activeProgram && <Badge>תוכנית פעילה</Badge>}
-                      </div>
-                    </div>
-                    <CardDescription>
-                      {sessions.length} אימונים שבוצעו
-                      {activeProgram ? ` · ${activeProgram.name}` : ""}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}`} />}>
-                      צפייה בהתקדמות
-                    </Button>
-                    <Button variant="outline" size="sm" render={<Link href="/dashboard/workouts/new" />}>
-                      תוכנית חדשה
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            }),
-          )}
+          {trainees.map((trainee) => (
+            <TraineeCard key={trainee.id} trainee={trainee} />
+          ))}
         </div>
       )}
     </div>
