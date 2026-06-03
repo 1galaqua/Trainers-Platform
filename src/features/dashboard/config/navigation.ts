@@ -1,4 +1,4 @@
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/prisma-client";
 
 export const coachNavigation = [
   { title: "סקירה", href: "/dashboard", description: "סיכום ופעילות" },

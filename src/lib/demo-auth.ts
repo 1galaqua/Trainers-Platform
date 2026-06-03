@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import type { User, UserRole } from "@prisma/client";
+import type { User, UserRole } from "@/lib/prisma-client";
 
 import { prisma } from "@/lib/prisma";
 

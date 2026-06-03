@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import type { User, UserRole } from "@prisma/client";
+import type { User, UserRole } from "@/lib/prisma-client";
 import { redirect } from "next/navigation";
 
 import { isClerkConfigured } from "@/config/clerk";

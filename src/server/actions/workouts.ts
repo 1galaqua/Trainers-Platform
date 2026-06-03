@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
+import { getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
 export type ExerciseLogInput = {
   exerciseId: string;
@@ -51,6 +52,33 @@ export async function logWorkoutAction(formData: FormData) {
       where: { id: programId, traineeId: trainee.id },
     });
     if (!program) return { error: "אין הרשאה לתוכנית זו" };
+
+    const coachLink = await prisma.coachTrainee.findUnique({
+      where: { traineeId: trainee.id },
+      include: {
+        trainee: {
+          include: {
+            workoutSessions: {
+              where: { program: { coachId: program.coachId } },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!coachLink) return { error: "לא נמצא קשר מאמן-מתאמן" };
+
+    const sessionsCount = coachLink.trainee.workoutSessions.length;
+    const remaining = getWorkoutsRemaining(coachLink.workoutQuota, sessionsCount);
+
+    if (!isCoachingPeriodActive(coachLink.coachingStartDate, coachLink.coachingEndDate)) {
+      return { error: "תקופת הליווי הסתיימה או טרם החלה — לא ניתן לדווח אימון" };
+    }
+
+    if (remaining <= 0) {
+      return { error: "מכסת האימונים שלך הסתיימה — פנה למאמן/ית" };
+    }
 
     await prisma.workoutSession.create({
       data: {

@@ -13,7 +13,7 @@ import { siteConfig } from "@/config/site";
 import { AuthUserButton } from "@/features/dashboard/components/auth-user-button";
 import { cn } from "@/lib/utils";
 
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/prisma-client";
 
 import { getNavigationForRole } from "../config/navigation";
 

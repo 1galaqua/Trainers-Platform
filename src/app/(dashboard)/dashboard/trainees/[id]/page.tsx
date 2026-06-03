@@ -14,6 +14,8 @@ import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
 import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { getTraineePhotosAction } from "@/server/actions/photos";
+import { getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
+import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
 export const metadata = {
   title: `מתאמן | ${siteConfig.shortName}`,
@@ -48,6 +50,16 @@ export default async function TraineeDetailPage({ params }: PageProps) {
     getTraineeCoachingPeriodAction(id),
   ]);
 
+  const sessionsCount = sessions.length;
+  const workoutQuota = coachingPeriod?.workoutQuota ?? null;
+  const workoutsRemaining = getWorkoutsRemaining(workoutQuota, sessionsCount);
+  const status = getTraineeStatus({
+    coachingStartDate: coachingPeriod?.coachingStartDate ?? null,
+    coachingEndDate: coachingPeriod?.coachingEndDate ?? null,
+    workoutQuota,
+    sessionsCount,
+  });
+
   const name = trainee.displayName ?? "מתאמן";
   const questionnaire = trainee.questionnaireResponse
     ? {
@@ -71,8 +83,14 @@ export default async function TraineeDetailPage({ params }: PageProps) {
             <ArrowLeft className="size-4" />
           </Button>
           <div>
-            <h1 className="font-semibold text-2xl tracking-tight">{name}</h1>
-            <p className="mt-1 text-muted-foreground text-sm">היסטוריית אימונים ותמונות התקדמות</p>
+            <div className="flex items-center gap-2">
+              <TraineeStatusIndicator status={status} />
+              <h1 className="font-semibold text-2xl tracking-tight">{name}</h1>
+            </div>
+            <p className="mt-1 text-muted-foreground text-sm">
+              היסטוריית אימונים ותמונות התקדמות
+              {workoutQuota != null && ` · ${workoutsRemaining} מתוך ${workoutQuota} אימונים נותרו`}
+            </p>
           </div>
         </div>
         {questionnaire && <QuestionnaireSheet traineeName={name} questionnaire={questionnaire} />}
@@ -80,13 +98,15 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">תקופת ליווי</CardTitle>
+          <CardTitle className="text-base">תקופת ליווי ומכסת אימונים</CardTitle>
         </CardHeader>
         <CardContent>
           <CoachingPeriodForm
             traineeId={id}
             coachingStartDate={coachingPeriod?.coachingStartDate ?? null}
             coachingEndDate={coachingPeriod?.coachingEndDate ?? null}
+            workoutQuota={workoutQuota}
+            sessionsCount={sessionsCount}
           />
         </CardContent>
       </Card>

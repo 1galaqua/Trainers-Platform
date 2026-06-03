@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
+import { getTraineeStatus, getWorkoutsRemaining } from "@/lib/trainee-status";
 
 export type CoachTraineeListItem = {
   id: string;
@@ -12,6 +13,9 @@ export type CoachTraineeListItem = {
   email: string | null;
   activeProgramName: string | null;
   sessionsCount: number;
+  workoutQuota: number | null;
+  workoutsRemaining: number;
+  status: "active" | "inactive";
   coachingStartDate: string | null;
   coachingEndDate: string | null;
   questionnaire: {
@@ -54,13 +58,24 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
     return links.map((link) => {
       const t = link.trainee;
       const q = t.questionnaireResponse;
+      const sessionsCount = t.workoutSessions.length;
+      const workoutsRemaining = getWorkoutsRemaining(link.workoutQuota, sessionsCount);
+      const status = getTraineeStatus({
+        coachingStartDate: link.coachingStartDate,
+        coachingEndDate: link.coachingEndDate,
+        workoutQuota: link.workoutQuota,
+        sessionsCount,
+      });
 
       return {
         id: t.id,
         displayName: t.displayName,
         email: t.email,
         activeProgramName: t.programsAsTrainee[0]?.name ?? null,
-        sessionsCount: t.workoutSessions.length,
+        sessionsCount,
+        workoutQuota: link.workoutQuota,
+        workoutsRemaining,
+        status,
         coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
         coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
         questionnaire: q
@@ -89,6 +104,7 @@ export async function updateCoachingPeriodAction(formData: FormData) {
   const traineeId = String(formData.get("traineeId") ?? "");
   const startRaw = String(formData.get("coachingStartDate") ?? "").trim();
   const endRaw = String(formData.get("coachingEndDate") ?? "").trim();
+  const quotaRaw = String(formData.get("workoutQuota") ?? "").trim();
 
   if (!traineeId) return { error: "מתאמן לא נמצא" };
 
@@ -97,6 +113,15 @@ export async function updateCoachingPeriodAction(formData: FormData) {
 
   if (!startRaw || !endRaw) {
     return { error: "יש להזין תאריך התחלה ותאריך סיום" };
+  }
+
+  if (!quotaRaw) {
+    return { error: "יש להזין מכסת אימונים" };
+  }
+
+  const workoutQuota = Number.parseInt(quotaRaw, 10);
+  if (Number.isNaN(workoutQuota) || workoutQuota < 1) {
+    return { error: "מכסת אימונים חייבת להיות מספר חיובי" };
   }
 
   const coachingStartDate = new Date(startRaw);
@@ -113,7 +138,7 @@ export async function updateCoachingPeriodAction(formData: FormData) {
   try {
     await prisma.coachTrainee.update({
       where: { coachId_traineeId: { coachId: coach.id, traineeId } },
-      data: { coachingStartDate, coachingEndDate },
+      data: { coachingStartDate, coachingEndDate, workoutQuota },
     });
 
     revalidatePath("/dashboard/trainees");
@@ -136,6 +161,7 @@ export async function getTraineeCoachingPeriodAction(traineeId: string) {
     return {
       coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
       coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
+      workoutQuota: link.workoutQuota,
     };
   } catch {
     return null;

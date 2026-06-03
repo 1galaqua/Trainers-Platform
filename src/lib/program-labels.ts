@@ -1,4 +1,4 @@
-import type { PhotoCategory, ProgramType } from "@prisma/client";
+import type { PhotoCategory, ProgramType } from "@/lib/prisma-client";
 
 export const programTypeLabels: Record<ProgramType, string> = {
   STRENGTH: "כוח",

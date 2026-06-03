@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/prisma-client";
 
 import { isClerkConfigured } from "@/config/clerk";
 import { isDbConnectionError } from "@/lib/db-errors";

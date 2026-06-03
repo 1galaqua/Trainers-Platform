@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../src/generated/prisma";
 import bcrypt from "bcryptjs";
 
 /** מסונכרן עם `src/config/demo.ts` */

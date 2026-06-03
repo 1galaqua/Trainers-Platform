@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { TraineeCard } from "@/features/trainees/components/trainee-card";
+import { TraineesList } from "@/features/trainees/components/trainees-list";
 import { requireCoach } from "@/lib/auth";
 import { getCoachTraineeListAction } from "@/server/actions/trainees";
 
@@ -26,11 +26,7 @@ export default async function TraineesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {trainees.map((trainee) => (
-            <TraineeCard key={trainee.id} trainee={trainee} />
-          ))}
-        </div>
+        <TraineesList trainees={trainees} />
       )}
     </div>
   );

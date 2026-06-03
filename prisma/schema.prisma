@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -55,6 +56,7 @@ model CoachTrainee {
   traineeId         String    @unique @db.ObjectId
   coachingStartDate DateTime?
   coachingEndDate   DateTime?
+  workoutQuota      Int?
   coach             User      @relation("CoachRelation", fields: [coachId], references: [id])
   trainee           User      @relation("TraineeRelation", fields: [traineeId], references: [id])
   createdAt         DateTime  @default(now())

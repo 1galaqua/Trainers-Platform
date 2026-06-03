@@ -12,6 +12,8 @@ type CoachingPeriodFormProps = {
   traineeId: string;
   coachingStartDate: string | null;
   coachingEndDate: string | null;
+  workoutQuota: number | null;
+  sessionsCount?: number;
   compact?: boolean;
 };
 
@@ -33,11 +35,14 @@ export function CoachingPeriodForm({
   traineeId,
   coachingStartDate,
   coachingEndDate,
+  workoutQuota,
+  sessionsCount = 0,
   compact,
 }: CoachingPeriodFormProps) {
   const router = useRouter();
   const [start, setStart] = useState(toDateInputValue(coachingStartDate));
   const [end, setEnd] = useState(toDateInputValue(coachingEndDate));
+  const [quota, setQuota] = useState(workoutQuota != null ? String(workoutQuota) : "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +55,7 @@ export function CoachingPeriodForm({
     formData.set("traineeId", traineeId);
     formData.set("coachingStartDate", start);
     formData.set("coachingEndDate", end);
+    formData.set("workoutQuota", quota);
 
     const result = await updateCoachingPeriodAction(formData);
     setLoading(false);
@@ -63,15 +69,24 @@ export function CoachingPeriodForm({
   }
 
   const hasPeriod = coachingStartDate && coachingEndDate;
+  const remaining =
+    workoutQuota != null ? Math.max(0, workoutQuota - sessionsCount) : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {hasPeriod && (
         <p className="text-muted-foreground text-sm">
           ליווי: {formatDisplayDate(coachingStartDate)} — {formatDisplayDate(coachingEndDate)}
+          {workoutQuota != null && (
+            <>
+              {" "}
+              · מכסה: {workoutQuota} אימונים
+              {remaining != null && ` (נותרו ${remaining})`}
+            </>
+          )}
         </p>
       )}
-      <div className={`grid gap-3 ${compact ? "sm:grid-cols-2" : ""}`}>
+      <div className={`grid gap-3 ${compact ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <div className="space-y-1">
           <Label htmlFor={`start-${traineeId}`}>תאריך התחלה</Label>
           <Input
@@ -94,10 +109,23 @@ export function CoachingPeriodForm({
             dir="ltr"
           />
         </div>
+        <div className="space-y-1">
+          <Label htmlFor={`quota-${traineeId}`}>מכסת אימונים</Label>
+          <Input
+            id={`quota-${traineeId}`}
+            type="number"
+            min={1}
+            value={quota}
+            onChange={(e) => setQuota(e.target.value)}
+            required
+            dir="ltr"
+            placeholder="10"
+          />
+        </div>
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" size="sm" variant={compact ? "outline" : "default"} disabled={loading}>
-        {loading ? "שומר..." : hasPeriod ? "עדכון תקופת ליווי" : "שמירת תקופת ליווי"}
+        {loading ? "שומר..." : hasPeriod ? "עדכון הגדרות ליווי" : "שמירת הגדרות ליווי"}
       </Button>
     </form>
   );

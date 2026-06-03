@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/prisma-client";
 
 import { getSessionSecret } from "@/lib/server-env";
 

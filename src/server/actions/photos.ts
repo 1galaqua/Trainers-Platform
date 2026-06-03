@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { PhotoCategory } from "@prisma/client";
+import type { PhotoCategory } from "@/lib/prisma-client";
 
 import { requireCoach, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
