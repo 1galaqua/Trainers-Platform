@@ -48,6 +48,16 @@ model User {
   progressPhotos        ProgressPhoto[]
   questionnaireResponse QuestionnaireResponse?
   agreement             Agreement?
+  onboardingTemplate    CoachOnboardingTemplate?
+}
+
+model CoachOnboardingTemplate {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  coachId             String   @unique @db.ObjectId
+  questionnaireFields Json
+  agreementText       String
+  updatedAt           DateTime @updatedAt
+  coach               User     @relation(fields: [coachId], references: [id])
 }
 
 model CoachTrainee {
@@ -134,6 +144,7 @@ model ProgressPhoto {
 model QuestionnaireResponse {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   traineeId       String   @unique @db.ObjectId
+  answers         Json?
   age             Int?
   heightCm        Float?
   weightKg        Float?
@@ -147,11 +158,12 @@ model QuestionnaireResponse {
 }
 
 model Agreement {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  traineeId      String   @unique @db.ObjectId
-  agreedAt       DateTime @default(now())
-  ipAddress      String?
-  signatureUrl   String
-  contentVersion String   @default("1.0")
-  trainee        User     @relation(fields: [traineeId], references: [id])
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId             String   @unique @db.ObjectId
+  agreedAt              DateTime @default(now())
+  ipAddress             String?
+  signatureUrl          String
+  agreementTextSnapshot String?
+  contentVersion        String   @default("1.0")
+  trainee               User     @relation(fields: [traineeId], references: [id])
 }

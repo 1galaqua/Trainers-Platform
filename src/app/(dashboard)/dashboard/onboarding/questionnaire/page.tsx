@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { QuestionnaireForm } from "@/features/onboarding/components/questionnaire-form";
+import { DynamicQuestionnaireForm } from "@/features/onboarding/components/dynamic-questionnaire-form";
 import { getTraineeOnboardingStatus, requireTrainee } from "@/lib/auth";
+import { getTraineeOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 
 export const metadata = {
   title: `שאלון ראשוני | ${siteConfig.shortName}`,
@@ -13,6 +14,8 @@ export default async function QuestionnairePage() {
   const trainee = await requireTrainee();
   const status = await getTraineeOnboardingStatus(trainee.id);
   if (status.questionnaireComplete) redirect("/dashboard/onboarding/agreement");
+
+  const template = await getTraineeOnboardingTemplateAction();
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -28,7 +31,7 @@ export default async function QuestionnairePage() {
           <CardTitle className="text-base">פרטים אישיים ומטרות</CardTitle>
         </CardHeader>
         <CardContent>
-          <QuestionnaireForm />
+          <DynamicQuestionnaireForm fields={template.questionnaireFields} />
         </CardContent>
       </Card>
     </div>

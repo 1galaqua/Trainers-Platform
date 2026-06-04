@@ -4,31 +4,69 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { requireTrainee } from "@/lib/auth";
-import { agreementContent } from "@/lib/program-labels";
+import { getTraineeCoachId } from "@/lib/coach-trainee";
+import {
+  legacyFieldsFromAnswers,
+  parseQuestionFields,
+} from "@/lib/onboarding-template";
 import { prisma } from "@/lib/prisma";
+
+async function getCoachTemplateForTrainee(traineeId: string) {
+  const coachId = await getTraineeCoachId(traineeId);
+  if (!coachId) return null;
+
+  const template = await prisma.coachOnboardingTemplate.findUnique({
+    where: { coachId },
+  });
+  if (!template) return null;
+
+  return {
+    fields: parseQuestionFields(template.questionnaireFields),
+    agreementText: template.agreementText,
+    version: template.updatedAt.toISOString(),
+  };
+}
 
 export async function submitQuestionnaireAction(formData: FormData) {
   const trainee = await requireTrainee();
+  const template = await getCoachTemplateForTrainee(trainee.id);
 
-  const data = {
-    age: Number(formData.get("age")) || null,
-    heightCm: Number(formData.get("heightCm")) || null,
-    weightKg: Number(formData.get("weightKg")) || null,
-    goal: String(formData.get("goal") ?? "").trim() || null,
-    experience: String(formData.get("experience") ?? "").trim() || null,
-    injuries: String(formData.get("injuries") ?? "").trim() || null,
-    sessionsPerWeek: Number(formData.get("sessionsPerWeek")) || null,
-    equipment: String(formData.get("equipment") ?? "").trim() || null,
-  };
+  const fields = template?.fields ?? parseQuestionFields(null);
+  const answers: Record<string, string | number | null> = {};
+
+  for (const field of fields) {
+    const raw = formData.get(field.key);
+    if (field.type === "number") {
+      const value = raw === "" || raw == null ? null : Number(raw);
+      answers[field.key] = value != null && !Number.isNaN(value) ? value : null;
+    } else {
+      answers[field.key] = raw == null ? null : String(raw).trim() || null;
+    }
+
+    if (field.required && (answers[field.key] == null || answers[field.key] === "")) {
+      return { error: `יש למלא את השדה: ${field.label}` };
+    }
+  }
+
+  const legacy = legacyFieldsFromAnswers(answers);
 
   try {
     await prisma.questionnaireResponse.upsert({
       where: { traineeId: trainee.id },
-      create: { traineeId: trainee.id, ...data },
-      update: data,
+      create: {
+        traineeId: trainee.id,
+        answers,
+        ...legacy,
+      },
+      update: {
+        answers,
+        ...legacy,
+        completedAt: new Date(),
+      },
     });
 
     revalidatePath("/dashboard/onboarding");
+    revalidatePath("/dashboard/trainees");
     return { success: true };
   } catch {
     return { error: "שגיאה בשמירת השאלון" };
@@ -37,6 +75,7 @@ export async function submitQuestionnaireAction(formData: FormData) {
 
 export async function submitAgreementAction(formData: FormData) {
   const trainee = await requireTrainee();
+  const template = await getCoachTemplateForTrainee(trainee.id);
 
   const agreed = formData.get("agreed") === "on";
   const signatureDataUrl = String(formData.get("signature") ?? "");
@@ -52,6 +91,9 @@ export async function submitAgreementAction(formData: FormData) {
     headersList.get("x-real-ip") ??
     null;
 
+  const agreementText = template?.agreementText ?? "";
+  const contentVersion = template?.version ?? "1.0";
+
   try {
     await prisma.agreement.upsert({
       where: { traineeId: trainee.id },
@@ -59,12 +101,15 @@ export async function submitAgreementAction(formData: FormData) {
         traineeId: trainee.id,
         signatureUrl: signatureDataUrl,
         ipAddress,
-        contentVersion: "1.0",
+        contentVersion,
+        agreementTextSnapshot: agreementText,
       },
       update: {
         signatureUrl: signatureDataUrl,
         ipAddress,
         agreedAt: new Date(),
+        contentVersion,
+        agreementTextSnapshot: agreementText,
       },
     });
 
@@ -73,8 +118,4 @@ export async function submitAgreementAction(formData: FormData) {
   } catch {
     return { error: "שגיאה בשמירת החתימה" };
   }
-}
-
-export async function getAgreementTextAction() {
-  return agreementContent;
 }

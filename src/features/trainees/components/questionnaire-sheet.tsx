@@ -8,11 +8,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  answersFromLegacyResponse,
+  formatAnswerValue,
+  type QuestionField,
+} from "@/lib/onboarding-template";
+import { OnboardingDocumentDownload } from "@/features/onboarding/components/onboarding-document-download";
 import type { CoachTraineeListItem } from "@/server/actions/trainees";
 
 type QuestionnaireSheetProps = {
+  traineeId: string;
   traineeName: string;
   questionnaire: NonNullable<CoachTraineeListItem["questionnaire"]>;
+  fields: QuestionField[];
+  hasSignedAgreement?: boolean;
 };
 
 function formatDate(iso: string) {
@@ -23,7 +32,26 @@ function formatDate(iso: string) {
   });
 }
 
-export function QuestionnaireSheet({ traineeName, questionnaire }: QuestionnaireSheetProps) {
+export function QuestionnaireSheet({
+  traineeId,
+  traineeName,
+  questionnaire,
+  fields,
+  hasSignedAgreement = false,
+}: QuestionnaireSheetProps) {
+  const answers =
+    questionnaire.answers ??
+    answersFromLegacyResponse({
+      age: questionnaire.age,
+      heightCm: questionnaire.heightCm,
+      weightKg: questionnaire.weightKg,
+      goal: questionnaire.goal,
+      experience: questionnaire.experience,
+      injuries: questionnaire.injuries,
+      sessionsPerWeek: questionnaire.sessionsPerWeek,
+      equipment: questionnaire.equipment,
+    });
+
   return (
     <Sheet>
       <SheetTrigger
@@ -47,16 +75,19 @@ export function QuestionnaireSheet({ traineeName, questionnaire }: Questionnaire
           <p className="text-muted-foreground text-xs">
             הושלם ב-{formatDate(questionnaire.completedAt)}
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Field label="גיל" value={questionnaire.age?.toString()} />
-            <Field label="גובה" value={questionnaire.heightCm ? `${questionnaire.heightCm} ס״מ` : null} />
-            <Field label="משקל" value={questionnaire.weightKg ? `${questionnaire.weightKg} ק״ג` : null} />
-            <Field label="אימונים בשבוע" value={questionnaire.sessionsPerWeek?.toString()} />
-          </div>
-          <Field label="מטרת האימון" value={questionnaire.goal} multiline />
-          <Field label="ניסיון באימונים" value={questionnaire.experience} multiline />
-          <Field label="פציעות / מגבלות" value={questionnaire.injuries} multiline />
-          <Field label="ציוד זמין" value={questionnaire.equipment} multiline />
+          {fields.map((field) => (
+            <Field
+              key={field.key}
+              label={field.label}
+              value={formatAnswerValue(answers[field.key], field)}
+              multiline={field.type === "textarea"}
+            />
+          ))}
+          {hasSignedAgreement && (
+            <div className="pt-2">
+              <OnboardingDocumentDownload traineeId={traineeId} />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -69,13 +100,13 @@ function Field({
   multiline,
 }: {
   label: string;
-  value: string | null | undefined;
+  value: string;
   multiline?: boolean;
 }) {
   return (
     <div className={multiline ? "sm:col-span-2" : undefined}>
       <p className="font-medium text-muted-foreground text-xs">{label}</p>
-      <p className="mt-0.5 whitespace-pre-wrap">{value?.trim() || "—"}</p>
+      <p className="mt-0.5 whitespace-pre-wrap">{value}</p>
     </div>
   );
 }

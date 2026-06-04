@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { TraineeCard } from "@/features/trainees/components/trainee-card";
 import { matchesTraineeFilter, type TraineeFilter } from "@/lib/trainee-status";
+import type { QuestionField } from "@/lib/onboarding-template";
 import type { CoachTraineeListItem } from "@/server/actions/trainees";
 
 type TraineesListProps = {
   trainees: CoachTraineeListItem[];
+  questionnaireFields: QuestionField[];
 };
 
 const filterOptions: { value: TraineeFilter; label: string }[] = [
@@ -24,7 +26,7 @@ const filterOptions: { value: TraineeFilter; label: string }[] = [
   { value: "questionnaire_done", label: "שאלון הושלם" },
 ];
 
-export function TraineesList({ trainees }: TraineesListProps) {
+export function TraineesList({ trainees, questionnaireFields }: TraineesListProps) {
   const [filter, setFilter] = useState<TraineeFilter>("all");
 
   const filtered = useMemo(
@@ -61,7 +63,11 @@ export function TraineesList({ trainees }: TraineesListProps) {
       ) : (
         <div className="grid gap-4">
           {filtered.map((trainee) => (
-            <TraineeCard key={trainee.id} trainee={trainee} />
+            <TraineeCard
+              key={trainee.id}
+              trainee={trainee}
+              questionnaireFields={questionnaireFields}
+            />
           ))}
         </div>
       )}

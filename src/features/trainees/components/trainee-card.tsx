@@ -8,13 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
 import { QuestionnaireSheet } from "@/features/trainees/components/questionnaire-sheet";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
+import type { QuestionField } from "@/lib/onboarding-template";
 import type { CoachTraineeListItem } from "@/server/actions/trainees";
 
 type TraineeCardProps = {
   trainee: CoachTraineeListItem;
+  questionnaireFields: QuestionField[];
 };
 
-export function TraineeCard({ trainee }: TraineeCardProps) {
+export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) {
   const name = trainee.displayName ?? "מתאמן";
   const quotaLabel =
     trainee.workoutQuota != null
@@ -31,7 +33,13 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
           </div>
           <div className="flex flex-wrap gap-2">
             {trainee.questionnaire ? (
-              <QuestionnaireSheet traineeName={name} questionnaire={trainee.questionnaire} />
+              <QuestionnaireSheet
+                traineeId={trainee.id}
+                traineeName={name}
+                questionnaire={trainee.questionnaire}
+                fields={questionnaireFields}
+                hasSignedAgreement={trainee.hasSignedAgreement}
+              />
             ) : (
               <Badge variant="outline">ממתין לשאלון</Badge>
             )}

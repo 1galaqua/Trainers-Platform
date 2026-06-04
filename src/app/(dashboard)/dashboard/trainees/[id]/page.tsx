@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
+import { OnboardingDocumentDownload } from "@/features/onboarding/components/onboarding-document-download";
 import { QuestionnaireSheet } from "@/features/trainees/components/questionnaire-sheet";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { photoCategoryLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
+import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { getTraineePhotosAction } from "@/server/actions/photos";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
@@ -44,10 +46,11 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const [sessions, photos, coachingPeriod] = await Promise.all([
+  const [sessions, photos, coachingPeriod, template] = await Promise.all([
     getCoachTraineeProgressAction(id),
     getTraineePhotosAction(id),
     getTraineeCoachingPeriodAction(id),
+    getCoachOnboardingTemplateAction(),
   ]);
 
   const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
@@ -67,6 +70,12 @@ export default async function TraineeDetailPage({ params }: PageProps) {
   const name = trainee.displayName ?? "מתאמן";
   const questionnaire = trainee.questionnaireResponse
     ? {
+        answers:
+          trainee.questionnaireResponse.answers &&
+          typeof trainee.questionnaireResponse.answers === "object" &&
+          !Array.isArray(trainee.questionnaireResponse.answers)
+            ? (trainee.questionnaireResponse.answers as Record<string, string | number | null>)
+            : null,
         age: trainee.questionnaireResponse.age,
         heightCm: trainee.questionnaireResponse.heightCm,
         weightKg: trainee.questionnaireResponse.weightKg,
@@ -78,6 +87,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         completedAt: trainee.questionnaireResponse.completedAt.toISOString(),
       }
     : null;
+  const hasSignedAgreement = Boolean(trainee.agreement);
 
   return (
     <div className="space-y-6">
@@ -97,7 +107,18 @@ export default async function TraineeDetailPage({ params }: PageProps) {
             </p>
           </div>
         </div>
-        {questionnaire && <QuestionnaireSheet traineeName={name} questionnaire={questionnaire} />}
+        <div className="flex flex-wrap items-center gap-2">
+          {questionnaire && (
+            <QuestionnaireSheet
+              traineeId={id}
+              traineeName={name}
+              questionnaire={questionnaire}
+              fields={template.questionnaireFields}
+              hasSignedAgreement={hasSignedAgreement}
+            />
+          )}
+          {hasSignedAgreement && <OnboardingDocumentDownload traineeId={id} />}
+        </div>
       </div>
 
       <Card>

@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { TraineesList } from "@/features/trainees/components/trainees-list";
 import { requireCoach } from "@/lib/auth";
+import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { getCoachTraineeListAction } from "@/server/actions/trainees";
 
 export const metadata = {
@@ -10,7 +11,10 @@ export const metadata = {
 
 export default async function TraineesPage() {
   await requireCoach();
-  const trainees = await getCoachTraineeListAction();
+  const [trainees, template] = await Promise.all([
+    getCoachTraineeListAction(),
+    getCoachOnboardingTemplateAction(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -26,7 +30,7 @@ export default async function TraineesPage() {
           </CardContent>
         </Card>
       ) : (
-        <TraineesList trainees={trainees} />
+        <TraineesList trainees={trainees} questionnaireFields={template.questionnaireFields} />
       )}
     </div>
   );

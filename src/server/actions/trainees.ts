@@ -20,7 +20,9 @@ export type CoachTraineeListItem = {
   status: "active" | "inactive";
   coachingStartDate: string | null;
   coachingEndDate: string | null;
+  hasSignedAgreement: boolean;
   questionnaire: {
+    answers: Record<string, string | number | null> | null;
     age: number | null;
     heightCm: number | null;
     weightKg: number | null;
@@ -48,6 +50,7 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
               select: { id: true, name: true },
             },
             questionnaireResponse: true,
+            agreement: { select: { id: true } },
             workoutSessions: {
               where: { program: { coachId: coach.id } },
               select: { id: true },
@@ -87,8 +90,13 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
         status,
         coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
         coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
+        hasSignedAgreement: Boolean(t.agreement),
         questionnaire: q
           ? {
+              answers:
+                q.answers && typeof q.answers === "object" && !Array.isArray(q.answers)
+                  ? (q.answers as Record<string, string | number | null>)
+                  : null,
               age: q.age,
               heightCm: q.heightCm,
               weightKg: q.weightKg,

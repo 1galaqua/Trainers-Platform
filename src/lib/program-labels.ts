@@ -1,4 +1,5 @@
 import type { PhotoCategory, ProgramType } from "@/lib/prisma-client";
+import { DEFAULT_AGREEMENT_TEXT } from "@/lib/onboarding-template";
 
 export const programTypeLabels: Record<ProgramType, string> = {
   STRENGTH: "כוח",
@@ -27,15 +28,4 @@ export function getWeekStart(date: Date = new Date()): Date {
   return d;
 }
 
-export const agreementContent = `
-הסכם שירותי אימון אישי
-
-1. המתאמן/ה מתחייב/ת לדווח בכנות על ביצוע האימונים, משקלים וחזרות.
-2. המאמן/ית מתחייב/ת לבנות תוכנית אימון מותאמת אישית ולעקוב אחר ההתקדמות.
-3. יש לדווח על כל פציעה, כאב או מגבלה רפואית לפני ובמהלך האימון.
-4. המידע האישי והרפואי יישמר בצורה מאובטחת ולא יועבר לצד שלישי ללא הסכמה.
-5. ביטול או שינוי תוכנית יתואם מראש עם המאמן/ית.
-6. השימוש בפלטפורמה הוא לצורך מעקב אימונים בלבד ואינו מהווה ייעוץ רפואי.
-
-בחתימתי אני מאשר/ת שקראתי והבנתי את תנאי ההסכם.
-`.trim();
+export const agreementContent = DEFAULT_AGREEMENT_TEXT;
