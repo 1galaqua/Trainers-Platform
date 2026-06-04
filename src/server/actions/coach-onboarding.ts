@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach, requireTrainee } from "@/lib/auth";
 import { isCoachOwnerOfTrainee, getTraineeCoachId } from "@/lib/coach-trainee";
+import { fetchTraineeOnboardingExportData } from "@/lib/fetch-onboarding-export";
 import {
   DEFAULT_AGREEMENT_TEXT,
   DEFAULT_QUESTIONNAIRE_FIELDS,
@@ -115,49 +116,5 @@ export async function updateCoachOnboardingTemplateAction(formData: FormData) {
 
 export async function getTraineeOnboardingExportAction(traineeId: string) {
   const coach = await requireCoach();
-
-  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
-  if (!ownsTrainee) return null;
-
-  try {
-    const [trainee, questionnaire, agreement, template] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: traineeId },
-        select: { displayName: true, email: true },
-      }),
-      prisma.questionnaireResponse.findUnique({ where: { traineeId } }),
-      prisma.agreement.findUnique({ where: { traineeId } }),
-      ensureCoachTemplate(coach.id),
-    ]);
-
-    if (!trainee || !questionnaire || !agreement) return null;
-
-    const answers =
-      questionnaire.answers && typeof questionnaire.answers === "object"
-        ? (questionnaire.answers as Record<string, unknown>)
-        : null;
-
-    return {
-      traineeName: trainee.displayName ?? "מתאמן",
-      traineeEmail: trainee.email,
-      questionnaireCompletedAt: questionnaire.completedAt.toISOString(),
-      agreementSignedAt: agreement.agreedAt.toISOString(),
-      signatureUrl: agreement.signatureUrl,
-      agreementText: agreement.agreementTextSnapshot ?? template.agreementText,
-      fields: template.questionnaireFields,
-      answers,
-      legacy: {
-        age: questionnaire.age,
-        heightCm: questionnaire.heightCm,
-        weightKg: questionnaire.weightKg,
-        goal: questionnaire.goal,
-        experience: questionnaire.experience,
-        injuries: questionnaire.injuries,
-        sessionsPerWeek: questionnaire.sessionsPerWeek,
-        equipment: questionnaire.equipment,
-      },
-    };
-  } catch {
-    return null;
-  }
+  return fetchTraineeOnboardingExportData(coach.id, traineeId);
 }

@@ -1,41 +1,43 @@
 import { NextResponse } from "next/server";
 
-import { getSession } from "@/lib/session";
-import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import { getCurrentUser } from "@/lib/auth";
 import { buildOnboardingExportHtml } from "@/lib/onboarding-export-html";
-import { getTraineeOnboardingExportAction } from "@/server/actions/coach-onboarding";
+import { fetchTraineeOnboardingExportData } from "@/lib/fetch-onboarding-export";
+
+export const runtime = "nodejs";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const session = await getSession();
-  if (!session || session.role !== "COACH") {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "COACH") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id: traineeId } = await context.params;
-  const ownsTrainee = await isCoachOwnerOfTrainee(session.userId, traineeId);
-  if (!ownsTrainee) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const data = await fetchTraineeOnboardingExportData(user.id, traineeId);
 
-  const data = await getTraineeOnboardingExportAction(traineeId);
   if (!data) {
-    return NextResponse.json(
-      { error: "המתאמן טרם השלים שאלון או חתימה" },
-      { status: 404 },
+    return new NextResponse(
+      `<!DOCTYPE html><html lang="he" dir="rtl"><body style="font-family:Arial;padding:2rem"><h1>לא ניתן להוריד</h1><p>המתאמן טרם השלים את השאלון והחתימה, או שאין הרשאה.</p><p><a href="javascript:history.back()">חזרה</a></p></body></html>`,
+      {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      },
     );
   }
 
   const html = buildOnboardingExportHtml(data);
-  const safeName = data.traineeName.replace(/[^\w\u0590-\u05FF\s-]/g, "").trim() || "trainee";
+  const safeName =
+    data.traineeName.replace(/[^\w\u0590-\u05FF\s-]/g, "").trim() || "trainee";
 
   return new NextResponse(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Content-Disposition": `attachment; filename="onboarding-${safeName}.html"`,
+      "Cache-Control": "no-store",
     },
   });
 }
