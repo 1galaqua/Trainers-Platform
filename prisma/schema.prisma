@@ -46,9 +46,11 @@ model User {
   programsAsTrainee     TrainingProgram[]      @relation("ProgramTrainee")
   workoutSessions       WorkoutSession[]
   progressPhotos        ProgressPhoto[]
-  questionnaireResponse QuestionnaireResponse?
-  agreement             Agreement?
-  onboardingTemplate    CoachOnboardingTemplate?
+  questionnaireResponse    QuestionnaireResponse?
+  questionnaireSubmissions QuestionnaireSubmission[]
+  agreement                Agreement?
+  agreementSubmissions     AgreementSubmission[]
+  onboardingTemplate       CoachOnboardingTemplate?
 }
 
 model CoachOnboardingTemplate {
@@ -66,9 +68,11 @@ model CoachTrainee {
   traineeId         String    @unique @db.ObjectId
   coachingStartDate DateTime?
   coachingEndDate   DateTime?
-  workoutQuota      Int?
-  workoutsCompleted Int?
-  coach             User      @relation("CoachRelation", fields: [coachId], references: [id])
+  workoutQuota                  Int?
+  workoutsCompleted             Int?
+  questionnaireRedoRequestedAt  DateTime?
+  agreementRedoRequestedAt    DateTime?
+  coach                         User      @relation("CoachRelation", fields: [coachId], references: [id])
   trainee           User      @relation("TraineeRelation", fields: [traineeId], references: [id])
   createdAt         DateTime  @default(now())
 
@@ -166,4 +170,37 @@ model Agreement {
   agreementTextSnapshot String?
   contentVersion        String   @default("1.0")
   trainee               User     @relation(fields: [traineeId], references: [id])
+}
+
+model QuestionnaireSubmission {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId       String   @db.ObjectId
+  answers         Json?
+  age             Int?
+  heightCm        Float?
+  weightKg        Float?
+  goal            String?
+  experience      String?
+  injuries        String?
+  sessionsPerWeek Int?
+  equipment       String?
+  completedAt     DateTime
+  archivedAt      DateTime @default(now())
+  trainee         User     @relation(fields: [traineeId], references: [id])
+
+  @@index([traineeId, completedAt])
+}
+
+model AgreementSubmission {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId             String   @db.ObjectId
+  agreedAt              DateTime
+  ipAddress             String?
+  signatureUrl          String
+  agreementTextSnapshot String?
+  contentVersion        String   @default("1.0")
+  archivedAt            DateTime @default(now())
+  trainee               User     @relation(fields: [traineeId], references: [id])
+
+  @@index([traineeId, agreedAt])
 }

@@ -3,7 +3,11 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireTrainee } from "@/lib/auth";
+import { getTraineeOnboardingStatus, requireTrainee } from "@/lib/auth";
+import {
+  archiveAgreementIfExists,
+  archiveQuestionnaireIfExists,
+} from "@/lib/onboarding-archive";
 import { getTraineeCoachId } from "@/lib/coach-trainee";
 import {
   legacyFieldsFromAnswers,
@@ -51,23 +55,43 @@ export async function submitQuestionnaireAction(formData: FormData) {
   const legacy = legacyFieldsFromAnswers(answers);
 
   try {
+    const completedAt = new Date();
+
+    await archiveQuestionnaireIfExists(trainee.id);
+
     await prisma.questionnaireResponse.upsert({
       where: { traineeId: trainee.id },
       create: {
         traineeId: trainee.id,
         answers,
+        completedAt,
         ...legacy,
       },
       update: {
         answers,
         ...legacy,
-        completedAt: new Date(),
+        completedAt,
       },
     });
 
+    const coachId = await getTraineeCoachId(trainee.id);
+    if (coachId) {
+      await prisma.coachTrainee.updateMany({
+        where: { coachId, traineeId: trainee.id },
+        data: { questionnaireRedoRequestedAt: null },
+      });
+    }
+
+    const status = await getTraineeOnboardingStatus(trainee.id);
+    const redirectTo = status.agreementComplete
+      ? "/dashboard/my-program"
+      : "/dashboard/onboarding/agreement";
+
+    revalidatePath("/dashboard");
     revalidatePath("/dashboard/onboarding");
     revalidatePath("/dashboard/trainees");
-    return { success: true };
+    revalidatePath("/dashboard/my-program");
+    return { success: true, redirectTo };
   } catch {
     return { error: "שגיאה בשמירת השאלון" };
   }
@@ -95,6 +119,10 @@ export async function submitAgreementAction(formData: FormData) {
   const contentVersion = template?.version ?? "1.0";
 
   try {
+    const agreedAt = new Date();
+
+    await archiveAgreementIfExists(trainee.id);
+
     await prisma.agreement.upsert({
       where: { traineeId: trainee.id },
       create: {
@@ -103,17 +131,29 @@ export async function submitAgreementAction(formData: FormData) {
         ipAddress,
         contentVersion,
         agreementTextSnapshot: agreementText,
+        agreedAt,
       },
       update: {
         signatureUrl: signatureDataUrl,
         ipAddress,
-        agreedAt: new Date(),
+        agreedAt,
         contentVersion,
         agreementTextSnapshot: agreementText,
       },
     });
 
+    const coachId = await getTraineeCoachId(trainee.id);
+    if (coachId) {
+      await prisma.coachTrainee.updateMany({
+        where: { coachId, traineeId: trainee.id },
+        data: { agreementRedoRequestedAt: null },
+      });
+    }
+
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/onboarding");
+    revalidatePath("/dashboard/trainees");
+    revalidatePath("/dashboard/my-program");
     return { success: true };
   } catch {
     return { error: "שגיאה בשמירת החתימה" };

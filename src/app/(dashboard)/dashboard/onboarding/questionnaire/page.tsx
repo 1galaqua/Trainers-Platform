@@ -13,16 +13,25 @@ export const metadata = {
 export default async function QuestionnairePage() {
   const trainee = await requireTrainee();
   const status = await getTraineeOnboardingStatus(trainee.id);
-  if (status.questionnaireComplete) redirect("/dashboard/onboarding/agreement");
+  if (status.questionnaireComplete) {
+    redirect(
+      status.agreementComplete ? "/dashboard/my-program" : "/dashboard/onboarding/agreement",
+    );
+  }
 
   const template = await getTraineeOnboardingTemplateAction();
+  const isRedo = status.questionnaireRedoPending;
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-semibold text-2xl tracking-tight">שאלון ראשוני</h1>
+        <h1 className="font-semibold text-2xl tracking-tight">
+          {isRedo ? "עדכון שאלון" : "שאלון ראשוני"}
+        </h1>
         <p className="mt-1 text-muted-foreground text-sm">
-          מלא/י פעם אחת כדי שהמאמן/ית יוכל/י להתאים תוכנית
+          {isRedo
+            ? "המאמן/ית ביקש/ה שתמלא/י את השאלון מחדש. עדכן/י את התשובות ושמור/י."
+            : "מלא/י פעם אחת כדי שהמאמן/ית יוכל/י להתאים תוכנית"}
         </p>
       </div>
 
@@ -31,7 +40,7 @@ export default async function QuestionnairePage() {
           <CardTitle className="text-base">פרטים אישיים ומטרות</CardTitle>
         </CardHeader>
         <CardContent>
-          <DynamicQuestionnaireForm fields={template.questionnaireFields} />
+          <DynamicQuestionnaireForm fields={template.questionnaireFields} isRedo={isRedo} />
         </CardContent>
       </Card>
     </div>

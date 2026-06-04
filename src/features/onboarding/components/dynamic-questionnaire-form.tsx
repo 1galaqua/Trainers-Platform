@@ -12,9 +12,10 @@ import { submitQuestionnaireAction } from "@/server/actions/onboarding";
 
 type DynamicQuestionnaireFormProps = {
   fields: QuestionField[];
+  isRedo?: boolean;
 };
 
-export function DynamicQuestionnaireForm({ fields }: DynamicQuestionnaireFormProps) {
+export function DynamicQuestionnaireForm({ fields, isRedo }: DynamicQuestionnaireFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,7 @@ export function DynamicQuestionnaireForm({ fields }: DynamicQuestionnaireFormPro
       return;
     }
 
-    router.push("/dashboard/onboarding/agreement");
+    router.push(result.redirectTo ?? "/dashboard/onboarding/agreement");
     router.refresh();
   }
 
@@ -81,7 +82,7 @@ export function DynamicQuestionnaireForm({ fields }: DynamicQuestionnaireFormPro
       {otherFields.map(renderField)}
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={loading}>
-        {loading ? "שומר..." : "שמירה והמשך"}
+        {loading ? "שומר..." : isRedo ? "שמירת שאלון מעודכן" : "שמירה והמשך"}
       </Button>
     </form>
   );

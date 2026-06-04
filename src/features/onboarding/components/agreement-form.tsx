@@ -10,9 +10,10 @@ import { submitAgreementAction } from "@/server/actions/onboarding";
 
 type AgreementFormProps = {
   content: string;
+  isRedo?: boolean;
 };
 
-export function AgreementForm({ content }: AgreementFormProps) {
+export function AgreementForm({ content, isRedo }: AgreementFormProps) {
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState("");
@@ -64,7 +65,7 @@ export function AgreementForm({ content }: AgreementFormProps) {
       {error && <p className="text-destructive text-sm">{error}</p>}
 
       <Button type="submit" disabled={loading || !agreed || !signature}>
-        {loading ? "שומר..." : "חתימה וסיום"}
+        {loading ? "שומר..." : isRedo ? "שמירת חתימה מעודכנת" : "חתימה וסיום"}
       </Button>
     </form>
   );

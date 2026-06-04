@@ -2,21 +2,22 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
-import { OnboardingDocumentDownload } from "@/features/onboarding/components/onboarding-document-download";
-import { QuestionnaireSheet } from "@/features/trainees/components/questionnaire-sheet";
+import { RequestAgreementRedoButton } from "@/features/trainees/components/request-agreement-redo-button";
+import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
+import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
-import { photoCategoryLabels } from "@/lib/program-labels";
+import { isAgreementRedoPending, isQuestionnaireRedoPending } from "@/lib/questionnaire-status";
+import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
 import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
 import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
-import { getTraineePhotosAction } from "@/server/actions/photos";
-import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
 export const metadata = {
@@ -46,11 +47,17 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const [sessions, photos, coachingPeriod, template] = await Promise.all([
+  const [sessions, coachingPeriod, template, coachLink] = await Promise.all([
     getCoachTraineeProgressAction(id),
-    getTraineePhotosAction(id),
     getTraineeCoachingPeriodAction(id),
     getCoachOnboardingTemplateAction(),
+    prisma.coachTrainee.findFirst({
+      where: { coachId: coach.id, traineeId: id },
+      select: {
+        questionnaireRedoRequestedAt: true,
+        agreementRedoRequestedAt: true,
+      },
+    }),
   ]);
 
   const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
@@ -88,6 +95,14 @@ export default async function TraineeDetailPage({ params }: PageProps) {
       }
     : null;
   const hasSignedAgreement = Boolean(trainee.agreement);
+  const questionnaireRedoPending = isQuestionnaireRedoPending(
+    trainee.questionnaireResponse,
+    coachLink?.questionnaireRedoRequestedAt,
+  );
+  const agreementRedoPending = isAgreementRedoPending(
+    trainee.agreement,
+    coachLink?.agreementRedoRequestedAt,
+  );
 
   return (
     <div className="space-y-6">
@@ -102,22 +117,36 @@ export default async function TraineeDetailPage({ params }: PageProps) {
               <h1 className="font-semibold text-2xl tracking-tight">{name}</h1>
             </div>
             <p className="mt-1 text-muted-foreground text-sm">
-              היסטוריית אימונים ותמונות התקדמות
+              היסטוריית אימונים
               {workoutQuota != null && ` · ${workoutsRemaining} מתוך ${workoutQuota} אימונים נותרו`}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {questionnaireRedoPending && (
+            <Badge variant="secondary">ממתין למילוי שאלון מחדש</Badge>
+          )}
+          {agreementRedoPending && (
+            <Badge variant="secondary">ממתין לחתימת הסכם מחדש</Badge>
+          )}
           {questionnaire && (
-            <QuestionnaireSheet
+            <TraineeOnboardingSheet
               traineeId={id}
               traineeName={name}
-              questionnaire={questionnaire}
               fields={template.questionnaireFields}
-              hasSignedAgreement={hasSignedAgreement}
+              hasQuestionnaire
             />
           )}
-          {hasSignedAgreement && <OnboardingDocumentDownload traineeId={id} />}
+          <RequestQuestionnaireRedoButton
+            traineeId={id}
+            hasQuestionnaire={Boolean(questionnaire)}
+            questionnaireRedoPending={questionnaireRedoPending}
+          />
+          <RequestAgreementRedoButton
+            traineeId={id}
+            hasAgreement={hasSignedAgreement}
+            agreementRedoPending={agreementRedoPending}
+          />
         </div>
       </div>
 
@@ -158,30 +187,6 @@ export default async function TraineeDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
           ))
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="font-medium text-base">תמונות התקדמות</h2>
-        {photos.length === 0 ? (
-          <p className="text-muted-foreground text-sm">אין תמונות</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-3">
-            {photos.map((photo) => (
-              <div key={photo.id} className="space-y-1">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.imageUrl}
-                  alt={photoCategoryLabels[photo.category]}
-                  className="aspect-[3/4] w-full rounded-lg border border-border object-cover"
-                />
-                <p className="text-muted-foreground text-xs">
-                  {photoCategoryLabels[photo.category]} ·{" "}
-                  {new Date(photo.weekStart).toLocaleDateString("he-IL")}
-                </p>
-              </div>
-            ))}
-          </div>
         )}
       </div>
     </div>

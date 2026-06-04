@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 
 import { isClerkConfigured } from "@/config/clerk";
 import { prisma } from "@/lib/prisma";
+import {
+  isAgreementRedoPending,
+  isAgreementSatisfied,
+  isQuestionnaireRedoPending,
+  isQuestionnaireSatisfied,
+} from "@/lib/questionnaire-status";
 import { getSession, type SessionData } from "@/lib/session";
 
 export type SessionUser = User;
@@ -97,21 +103,59 @@ export async function requireTrainee(): Promise<SessionUser> {
 
 export async function getTraineeOnboardingStatus(traineeId: string) {
   if (await isOfflineDemoSession()) {
-    return { questionnaireComplete: true, agreementComplete: true, isComplete: true };
+    return {
+      questionnaireComplete: true,
+      agreementComplete: true,
+      isComplete: true,
+      questionnaireRedoPending: false,
+      agreementRedoPending: false,
+    };
   }
 
   try {
-    const [questionnaire, agreement] = await Promise.all([
+    const [questionnaire, agreement, coachLink] = await Promise.all([
       prisma.questionnaireResponse.findUnique({ where: { traineeId } }),
       prisma.agreement.findUnique({ where: { traineeId } }),
+      prisma.coachTrainee.findUnique({
+        where: { traineeId },
+        select: {
+          questionnaireRedoRequestedAt: true,
+          agreementRedoRequestedAt: true,
+        },
+      }),
     ]);
+
+    const questionnaireRedoRequestedAt = coachLink?.questionnaireRedoRequestedAt ?? null;
+    const agreementRedoRequestedAt = coachLink?.agreementRedoRequestedAt ?? null;
+    const questionnaireComplete = isQuestionnaireSatisfied(
+      questionnaire,
+      questionnaireRedoRequestedAt,
+    );
+    const agreementComplete = isAgreementSatisfied(agreement, agreementRedoRequestedAt);
+    const questionnaireRedoPending = isQuestionnaireRedoPending(
+      questionnaire,
+      questionnaireRedoRequestedAt,
+    );
+    const agreementRedoPending = isAgreementRedoPending(
+      agreement,
+      agreementRedoRequestedAt,
+    );
+
     return {
-      questionnaireComplete: Boolean(questionnaire),
-      agreementComplete: Boolean(agreement),
-      isComplete: Boolean(questionnaire && agreement),
+      questionnaireComplete,
+      agreementComplete,
+      isComplete: questionnaireComplete && agreementComplete,
+      questionnaireRedoPending,
+      agreementRedoPending,
     };
   } catch {
-    return { questionnaireComplete: false, agreementComplete: false, isComplete: false };
+    return {
+      questionnaireComplete: false,
+      agreementComplete: false,
+      isComplete: false,
+      questionnaireRedoPending: false,
+      agreementRedoPending: false,
+    };
   }
 }
 

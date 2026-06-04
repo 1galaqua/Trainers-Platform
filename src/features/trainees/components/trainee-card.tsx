@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
-import { QuestionnaireSheet } from "@/features/trainees/components/questionnaire-sheet";
+import { RequestAgreementRedoButton } from "@/features/trainees/components/request-agreement-redo-button";
+import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
+import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 import type { QuestionField } from "@/lib/onboarding-template";
 import type { CoachTraineeListItem } from "@/server/actions/trainees";
@@ -32,13 +34,18 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             <CardTitle className="text-base">{name}</CardTitle>
           </div>
           <div className="flex flex-wrap gap-2">
+            {trainee.questionnaireRedoPending && (
+              <Badge variant="secondary">ממתין למילוי שאלון מחדש</Badge>
+            )}
+            {trainee.agreementRedoPending && (
+              <Badge variant="secondary">ממתין לחתימת הסכם מחדש</Badge>
+            )}
             {trainee.questionnaire ? (
-              <QuestionnaireSheet
+              <TraineeOnboardingSheet
                 traineeId={trainee.id}
                 traineeName={name}
-                questionnaire={trainee.questionnaire}
                 fields={questionnaireFields}
-                hasSignedAgreement={trainee.hasSignedAgreement}
+                hasQuestionnaire
               />
             ) : (
               <Badge variant="outline">ממתין לשאלון</Badge>
@@ -72,7 +79,17 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             compact
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <RequestQuestionnaireRedoButton
+            traineeId={trainee.id}
+            hasQuestionnaire={Boolean(trainee.questionnaire)}
+            questionnaireRedoPending={trainee.questionnaireRedoPending}
+          />
+          <RequestAgreementRedoButton
+            traineeId={trainee.id}
+            hasAgreement={trainee.hasSignedAgreement}
+            agreementRedoPending={trainee.agreementRedoPending}
+          />
           <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}`} />}>
             צפייה בהתקדמות
           </Button>

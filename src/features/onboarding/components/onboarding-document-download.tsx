@@ -4,27 +4,62 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CURRENT_ONBOARDING_VERSION_ID } from "@/lib/onboarding-versions";
 
 type OnboardingDocumentDownloadProps = {
   traineeId: string;
   label?: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm";
+  questionnaireId?: string;
+  agreementId?: string;
+  includeQuestionnaire?: boolean;
+  includeAgreement?: boolean;
+  disabled?: boolean;
 };
+
+function buildExportUrl(
+  traineeId: string,
+  options: {
+    questionnaireId: string;
+    agreementId: string;
+    includeQuestionnaire: boolean;
+    includeAgreement: boolean;
+  },
+) {
+  const params = new URLSearchParams();
+  params.set("questionnaireId", options.questionnaireId);
+  params.set("agreementId", options.agreementId);
+  if (!options.includeQuestionnaire) params.set("questionnaire", "0");
+  if (!options.includeAgreement) params.set("agreement", "0");
+  return `/api/trainees/${traineeId}/onboarding-export?${params.toString()}`;
+}
 
 export function OnboardingDocumentDownload({
   traineeId,
-  label = "הורדת שאלון + חתימה",
+  label = "הורדה",
   variant = "outline",
   size = "sm",
+  questionnaireId = CURRENT_ONBOARDING_VERSION_ID,
+  agreementId = CURRENT_ONBOARDING_VERSION_ID,
+  includeQuestionnaire = true,
+  includeAgreement = true,
+  disabled = false,
 }: OnboardingDocumentDownloadProps) {
   const [loading, setLoading] = useState(false);
 
   async function handleDownload() {
+    if (disabled || (!includeQuestionnaire && !includeAgreement)) return;
+
     setLoading(true);
     try {
-      const url = `/api/trainees/${traineeId}/onboarding-export`;
-      const previewUrl = `/dashboard/trainees/${traineeId}/onboarding-export`;
+      const url = buildExportUrl(traineeId, {
+        questionnaireId,
+        agreementId,
+        includeQuestionnaire,
+        includeAgreement,
+      });
+      const previewUrl = `/dashboard/trainees/${traineeId}/onboarding-export?${new URL(url).searchParams.toString()}`;
       const response = await fetch(url, { credentials: "include" });
 
       if (!response.ok) {
@@ -37,7 +72,13 @@ export function OnboardingDocumentDownload({
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = `onboarding-${traineeId}.html`;
+      const suffix = [
+        includeQuestionnaire ? "questionnaire" : null,
+        includeAgreement ? "agreement" : null,
+      ]
+        .filter(Boolean)
+        .join("-");
+      link.download = `onboarding-${suffix}-${traineeId}.html`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -54,7 +95,7 @@ export function OnboardingDocumentDownload({
       type="button"
       variant={variant}
       size={size}
-      disabled={loading}
+      disabled={loading || disabled}
       onClick={handleDownload}
     >
       <Download className="size-4" />

@@ -5,6 +5,18 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
+import {
+  CURRENT_ONBOARDING_VERSION_ID,
+  mapAgreementToVersion,
+  mapQuestionnaireToVersion,
+  type OnboardingAgreementVersion,
+  type OnboardingQuestionnaireVersion,
+} from "@/lib/onboarding-versions";
+import { DEFAULT_AGREEMENT_TEXT } from "@/lib/onboarding-template";
+import {
+  isAgreementRedoPending,
+  isQuestionnaireRedoPending,
+} from "@/lib/questionnaire-status";
 import { getEffectiveWorkoutsCompleted, getTraineeStatus, getWorkoutsRemaining } from "@/lib/trainee-status";
 
 export type CoachTraineeListItem = {
@@ -21,6 +33,8 @@ export type CoachTraineeListItem = {
   coachingStartDate: string | null;
   coachingEndDate: string | null;
   hasSignedAgreement: boolean;
+  questionnaireRedoPending: boolean;
+  agreementRedoPending: boolean;
   questionnaire: {
     answers: Record<string, string | number | null> | null;
     age: number | null;
@@ -50,7 +64,7 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
               select: { id: true, name: true },
             },
             questionnaireResponse: true,
-            agreement: { select: { id: true } },
+            agreement: { select: { id: true, agreedAt: true } },
             workoutSessions: {
               where: { program: { coachId: coach.id } },
               select: { id: true },
@@ -91,6 +105,14 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
         coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
         coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
         hasSignedAgreement: Boolean(t.agreement),
+        questionnaireRedoPending: isQuestionnaireRedoPending(
+          q,
+          link.questionnaireRedoRequestedAt,
+        ),
+        agreementRedoPending: isAgreementRedoPending(
+          t.agreement,
+          link.agreementRedoRequestedAt,
+        ),
         questionnaire: q
           ? {
               answers:
@@ -200,6 +222,152 @@ export async function getTraineeCoachingPeriodAction(traineeId: string) {
       workoutsCompleted: link.workoutsCompleted,
       loggedSessionsCount,
     };
+  } catch {
+    return null;
+  }
+}
+
+export async function requestQuestionnaireRedoAction(traineeId: string) {
+  const coach = await requireCoach();
+
+  if (!traineeId) return { error: "מתאמן לא נמצא" };
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return { error: "אין הרשאה" };
+
+  try {
+    const questionnaire = await prisma.questionnaireResponse.findUnique({
+      where: { traineeId },
+    });
+    if (!questionnaire) {
+      return { error: "המתאמן עדיין לא מילא שאלון" };
+    }
+
+    const link = await prisma.coachTrainee.findFirst({
+      where: { coachId: coach.id, traineeId },
+      select: { questionnaireRedoRequestedAt: true },
+    });
+    if (
+      link &&
+      isQuestionnaireRedoPending(questionnaire, link.questionnaireRedoRequestedAt)
+    ) {
+      return { error: "כבר נשלחה בקשה למילוי שאלון מחדש" };
+    }
+
+    await prisma.coachTrainee.update({
+      where: { coachId_traineeId: { coachId: coach.id, traineeId } },
+      data: { questionnaireRedoRequestedAt: new Date() },
+    });
+
+    revalidatePath("/dashboard/trainees");
+    revalidatePath(`/dashboard/trainees/${traineeId}`);
+    return { success: true };
+  } catch {
+    return { error: "שגיאה בשליחת הבקשה" };
+  }
+}
+
+export async function requestAgreementRedoAction(traineeId: string) {
+  const coach = await requireCoach();
+
+  if (!traineeId) return { error: "מתאמן לא נמצא" };
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return { error: "אין הרשאה" };
+
+  try {
+    const agreement = await prisma.agreement.findUnique({
+      where: { traineeId },
+    });
+    if (!agreement) {
+      return { error: "המתאמן עדיין לא חתם על ההסכם" };
+    }
+
+    const link = await prisma.coachTrainee.findFirst({
+      where: { coachId: coach.id, traineeId },
+      select: { agreementRedoRequestedAt: true },
+    });
+    if (link && isAgreementRedoPending(agreement, link.agreementRedoRequestedAt)) {
+      return { error: "כבר נשלחה בקשה למילוי הסכם מחדש" };
+    }
+
+    await prisma.coachTrainee.update({
+      where: { coachId_traineeId: { coachId: coach.id, traineeId } },
+      data: { agreementRedoRequestedAt: new Date() },
+    });
+
+    revalidatePath("/dashboard/trainees");
+    revalidatePath(`/dashboard/trainees/${traineeId}`);
+    return { success: true };
+  } catch {
+    return { error: "שגיאה בשליחת הבקשה" };
+  }
+}
+
+export type TraineeOnboardingVersions = {
+  questionnaires: OnboardingQuestionnaireVersion[];
+  agreements: OnboardingAgreementVersion[];
+};
+
+export async function getTraineeOnboardingVersionsAction(
+  traineeId: string,
+): Promise<TraineeOnboardingVersions | null> {
+  const coach = await requireCoach();
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return null;
+
+  try {
+    const [currentQ, historyQ, currentA, historyA, template] = await Promise.all([
+      prisma.questionnaireResponse.findUnique({ where: { traineeId } }),
+      prisma.questionnaireSubmission.findMany({
+        where: { traineeId },
+        orderBy: { completedAt: "desc" },
+      }),
+      prisma.agreement.findUnique({ where: { traineeId } }),
+      prisma.agreementSubmission.findMany({
+        where: { traineeId },
+        orderBy: { agreedAt: "desc" },
+      }),
+      prisma.coachOnboardingTemplate.findUnique({
+        where: { coachId: coach.id },
+        select: { agreementText: true },
+      }),
+    ]);
+
+    const agreementFallback = template?.agreementText ?? DEFAULT_AGREEMENT_TEXT;
+
+    const questionnaires: OnboardingQuestionnaireVersion[] = [
+      ...(currentQ
+        ? [
+            mapQuestionnaireToVersion(currentQ, {
+              id: CURRENT_ONBOARDING_VERSION_ID,
+              isCurrent: true,
+            }),
+          ]
+        : []),
+      ...historyQ.map((row) =>
+        mapQuestionnaireToVersion(row, { id: row.id, isCurrent: false }),
+      ),
+    ].sort(
+      (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
+    );
+
+    const agreements: OnboardingAgreementVersion[] = [
+      ...(currentA
+        ? [
+            mapAgreementToVersion(currentA, agreementFallback, {
+              id: CURRENT_ONBOARDING_VERSION_ID,
+              isCurrent: true,
+            }),
+          ]
+        : []),
+      ...historyA.map((row) =>
+        mapAgreementToVersion(row, agreementFallback, { id: row.id, isCurrent: false }),
+      ),
+    ].sort((a, b) => new Date(b.agreedAt).getTime() - new Date(a.agreedAt).getTime());
+
+    return { questionnaires, agreements };
   } catch {
     return null;
   }

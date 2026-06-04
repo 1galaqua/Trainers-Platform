@@ -17,12 +17,19 @@ export default async function AgreementPage() {
   if (status.agreementComplete) redirect("/dashboard/my-program");
 
   const template = await getTraineeOnboardingTemplateAction();
+  const isRedo = status.agreementRedoPending;
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-semibold text-2xl tracking-tight">הסכם וחתימה</h1>
-        <p className="mt-1 text-muted-foreground text-sm">קרא/י את ההסכם וחתום/י דיגיטלית</p>
+        <h1 className="font-semibold text-2xl tracking-tight">
+          {isRedo ? "חתימת הסכם מחדש" : "הסכם וחתימה"}
+        </h1>
+        <p className="mt-1 text-muted-foreground text-sm">
+          {isRedo
+            ? "המאמן/ית ביקש/ה שתחתום/י על ההסכם מחדש. קרא/י וחתום/י דיגיטלית."
+            : "קרא/י את ההסכם וחתום/י דיגיטלית"}
+        </p>
       </div>
 
       <Card>
@@ -30,7 +37,7 @@ export default async function AgreementPage() {
           <CardTitle className="text-base">הסכם שירותי אימון</CardTitle>
         </CardHeader>
         <CardContent>
-          <AgreementForm content={template.agreementText} />
+          <AgreementForm content={template.agreementText} isRedo={isRedo} />
         </CardContent>
       </Card>
     </div>

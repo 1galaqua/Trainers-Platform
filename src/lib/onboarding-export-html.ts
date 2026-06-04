@@ -7,10 +7,12 @@ import {
 export type OnboardingExportData = {
   traineeName: string;
   traineeEmail: string | null;
-  questionnaireCompletedAt: string;
-  agreementSignedAt: string;
-  signatureUrl: string;
-  agreementText: string;
+  includeQuestionnaire: boolean;
+  includeAgreement: boolean;
+  questionnaireCompletedAt: string | null;
+  agreementSignedAt: string | null;
+  signatureUrl: string | null;
+  agreementText: string | null;
   fields: QuestionField[];
   answers: Record<string, unknown> | null;
   legacy: {
@@ -22,7 +24,7 @@ export type OnboardingExportData = {
     injuries: string | null;
     sessionsPerWeek: number | null;
     equipment: string | null;
-  };
+  } | null;
 };
 
 function formatDate(iso: string) {
@@ -44,31 +46,63 @@ function escapeHtml(text: string) {
 }
 
 export function buildOnboardingExportHtml(data: OnboardingExportData) {
-  const answerMap =
-    data.answers ??
-    answersFromLegacyResponse({
-      age: data.legacy.age,
-      heightCm: data.legacy.heightCm,
-      weightKg: data.legacy.weightKg,
-      sessionsPerWeek: data.legacy.sessionsPerWeek,
-      goal: data.legacy.goal,
-      experience: data.legacy.experience,
-      injuries: data.legacy.injuries,
-      equipment: data.legacy.equipment,
-    });
+  const sections: string[] = [];
 
-  const questionnaireRows = data.fields
-    .map((field) => {
-      const value = formatAnswerValue(answerMap[field.key], field);
-      return `<tr><th>${escapeHtml(field.label)}</th><td>${escapeHtml(value)}</td></tr>`;
-    })
-    .join("");
+  if (data.includeQuestionnaire && data.legacy && data.questionnaireCompletedAt) {
+    const answerMap =
+      data.answers ??
+      answersFromLegacyResponse({
+        age: data.legacy.age,
+        heightCm: data.legacy.heightCm,
+        weightKg: data.legacy.weightKg,
+        sessionsPerWeek: data.legacy.sessionsPerWeek,
+        goal: data.legacy.goal,
+        experience: data.legacy.experience,
+        injuries: data.legacy.injuries,
+        equipment: data.legacy.equipment,
+      });
+
+    const questionnaireRows = data.fields
+      .map((field) => {
+        const value = formatAnswerValue(answerMap[field.key], field);
+        return `<tr><th>${escapeHtml(field.label)}</th><td>${escapeHtml(value)}</td></tr>`;
+      })
+      .join("");
+
+    sections.push(`
+  <h2>שאלון ראשוני</h2>
+  <p class="meta">הושלם ב-${formatDate(data.questionnaireCompletedAt)}</p>
+  <table>${questionnaireRows}</table>`);
+  }
+
+  if (
+    data.includeAgreement &&
+    data.agreementSignedAt &&
+    data.signatureUrl &&
+    data.agreementText != null
+  ) {
+    sections.push(`
+  <h2>הסכם וחתימה דיגיטלית</h2>
+  <p class="meta">נחתם ב-${formatDate(data.agreementSignedAt)}</p>
+  <div class="agreement">${escapeHtml(data.agreementText)}</div>
+  <div class="signature">
+    <p><strong>חתימה:</strong></p>
+    <img src="${data.signatureUrl}" alt="חתימת המתאמן" />
+  </div>`);
+  }
+
+  const title =
+    data.includeQuestionnaire && data.includeAgreement
+      ? "שאלון ראשוני והסכם חתום"
+      : data.includeQuestionnaire
+        ? "שאלון ראשוני"
+        : "הסכם חתום";
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>שאלון וחתימה — ${escapeHtml(data.traineeName)}</title>
+  <title>${escapeHtml(title)} — ${escapeHtml(data.traineeName)}</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; color: #111; line-height: 1.6; }
     h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
@@ -84,20 +118,9 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
   </style>
 </head>
 <body>
-  <h1>שאלון ראשוני והסכם חתום</h1>
+  <h1>${escapeHtml(title)}</h1>
   <p class="meta">מתאמן/ית: ${escapeHtml(data.traineeName)}${data.traineeEmail ? ` · ${escapeHtml(data.traineeEmail)}` : ""}</p>
-
-  <h2>שאלון ראשוני</h2>
-  <p class="meta">הושלם ב-${formatDate(data.questionnaireCompletedAt)}</p>
-  <table>${questionnaireRows}</table>
-
-  <h2>הסכם וחתימה דיגיטלית</h2>
-  <p class="meta">נחתם ב-${formatDate(data.agreementSignedAt)}</p>
-  <div class="agreement">${escapeHtml(data.agreementText)}</div>
-  <div class="signature">
-    <p><strong>חתימה:</strong></p>
-    <img src="${data.signatureUrl}" alt="חתימת המתאמן" />
-  </div>
+  ${sections.join("\n")}
 </body>
 </html>`;
 }

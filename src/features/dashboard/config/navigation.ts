@@ -12,7 +12,6 @@ export const traineeNavigation = [
   { title: "התוכניות שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
   { title: "דיווח אימון", href: "/dashboard/workouts/log", description: "משקלים וחזרות" },
   { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
-  { title: "תמונות", href: "/dashboard/photos", description: "העלאה ומעקב" },
 ] as const;
 
 export function getNavigationForRole(role: UserRole) {
