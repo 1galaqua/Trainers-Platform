@@ -113,8 +113,30 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
     th { background: #f5f5f5; width: 35%; }
     .agreement { white-space: pre-wrap; background: #fafafa; padding: 1rem; border: 1px solid #ddd; margin-top: 1rem; }
     .signature { margin-top: 1rem; }
-    .signature img { max-width: 320px; border: 1px solid #ddd; }
-    @media print { body { margin: 1rem; } }
+    .signature img { max-width: 320px; max-height: 200px; border: 1px solid #ddd; }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      h1, h2 { page-break-after: avoid; break-after: avoid-page; }
+      table { page-break-inside: auto; break-inside: auto; }
+      tr, th, td { page-break-inside: avoid; break-inside: avoid-page; }
+      .agreement {
+        page-break-inside: auto;
+        break-inside: auto;
+        overflow: visible !important;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .signature { page-break-inside: avoid; break-inside: avoid-page; }
+      .signature img { max-width: 100% !important; height: auto !important; }
+    }
   </style>
 </head>
 <body>
