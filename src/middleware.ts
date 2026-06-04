@@ -8,6 +8,9 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email(.*)",
 ]);
 
 async function localAuthMiddleware(req: NextRequest) {

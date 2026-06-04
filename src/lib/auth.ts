@@ -21,6 +21,7 @@ function userFromSession(session: SessionData): SessionUser {
     displayName: session.displayName || null,
     email: session.email || null,
     passwordHash: null,
+    emailVerifiedAt: session.isOfflineDemo ? new Date() : null,
     role: session.role,
     createdAt: new Date(),
     updatedAt: new Date(),

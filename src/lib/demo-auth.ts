@@ -11,13 +11,13 @@ export const DEMO_AUTH: Record<
     clerkId: "demo_clerk_coach",
     displayName: "יהודה אמסלם",
     role: "COACH",
-    password: "demo1234",
+    password: "Demo1234",
   },
   "trainee@demo.com": {
     clerkId: "demo_clerk_trainee",
     displayName: "גל אקוע",
     role: "TRAINEE",
-    password: "demo1234",
+    password: "Demo1234",
   },
 };
 
@@ -42,6 +42,7 @@ export async function resolveLoginUser(email: string): Promise<User | null> {
         passwordHash,
         displayName: demo.displayName,
         role: demo.role,
+        emailVerifiedAt: new Date(),
       },
     });
   }
@@ -53,6 +54,7 @@ export async function resolveLoginUser(email: string): Promise<User | null> {
         email: user.email ?? email,
         passwordHash: user.passwordHash ?? passwordHash,
         displayName: user.displayName ?? demo.displayName,
+        emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
       },
     });
   }

@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Select } from "@/components/ui/select";
+import { PASSWORD_HINT } from "@/lib/password";
 import { registerAction } from "@/server/actions/auth";
 
 export type CoachOption = {
@@ -23,6 +25,7 @@ type EmailRegisterFormProps = {
 export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<"TRAINEE" | "COACH">("TRAINEE");
 
@@ -30,6 +33,7 @@ export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setDevPreviewUrl(null);
 
     const formData = new FormData(e.currentTarget);
     formData.set("role", role);
@@ -43,7 +47,10 @@ export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
     }
 
     if (result && "success" in result && result.success) {
-      router.push("/dashboard");
+      if ("devPreviewUrl" in result && result.devPreviewUrl) {
+        sessionStorage.setItem("tp_dev_verify_url", result.devPreviewUrl);
+      }
+      router.push("/verify-email/pending");
       router.refresh();
     }
   }
@@ -60,15 +67,15 @@ export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">סיסמה</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
-          minLength={6}
+          minLength={8}
+          maxLength={16}
           autoComplete="new-password"
-          dir="ltr"
         />
+        <p className="text-muted-foreground text-xs">{PASSWORD_HINT}</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="role">סוג משתמש</Label>
@@ -106,6 +113,13 @@ export function EmailRegisterForm({ coaches }: EmailRegisterFormProps) {
       )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
+      {devPreviewUrl && (
+        <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
+          <a href={devPreviewUrl} className="text-primary underline" dir="ltr">
+            קישור אימות (פיתוח)
+          </a>
+        </p>
+      )}
       <Button
         type="submit"
         className="w-full"

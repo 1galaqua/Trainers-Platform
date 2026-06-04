@@ -1,9 +1,11 @@
 import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { siteConfig } from "@/config/site";
 import { isClerkConfigured } from "@/config/clerk";
 import { EmailLoginForm } from "@/features/auth/components/email-login-form";
+import { SignInResetNotice } from "@/features/auth/components/sign-in-reset-notice";
 
 export const metadata: Metadata = {
   title: "התחברות",
@@ -25,10 +27,13 @@ export default function SignInPage() {
         <h1 className="font-semibold text-xl">התחברות</h1>
         <p className="text-muted-foreground text-sm">{siteConfig.name}</p>
       </div>
+      <Suspense fallback={null}>
+        <SignInResetNotice />
+      </Suspense>
       <EmailLoginForm />
       <p className="max-w-sm text-center text-muted-foreground text-xs leading-relaxed">
         חשבונות דemo: <span dir="ltr">coach@demo.com</span> / <span dir="ltr">trainee@demo.com</span> — סיסמה:{" "}
-        <span dir="ltr">demo1234</span>
+        <span dir="ltr">Demo1234</span>
       </p>
     </div>
   );

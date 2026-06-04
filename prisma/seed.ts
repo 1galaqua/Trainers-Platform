@@ -7,13 +7,13 @@ const DEMO = {
     fullName: "יהודה אמסלם",
     clerkId: "demo_clerk_coach",
     email: "coach@demo.com",
-    password: "demo1234",
+    password: "Demo1234",
   },
   trainee: {
     fullName: "גל אקוע",
     clerkId: "demo_clerk_trainee",
     email: "trainee@demo.com",
-    password: "demo1234",
+    password: "Demo1234",
   },
 } as const;
 
@@ -30,12 +30,14 @@ async function main() {
       email: DEMO.trainer.email,
       passwordHash,
       role: "COACH",
+      emailVerifiedAt: new Date(),
     },
     update: {
       displayName: DEMO.trainer.fullName,
       email: DEMO.trainer.email,
       passwordHash,
       role: "COACH",
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -47,12 +49,14 @@ async function main() {
       email: DEMO.trainee.email,
       passwordHash,
       role: "TRAINEE",
+      emailVerifiedAt: new Date(),
     },
     update: {
       displayName: DEMO.trainee.fullName,
       email: DEMO.trainee.email,
       passwordHash,
       role: "TRAINEE",
+      emailVerifiedAt: new Date(),
     },
   });
 

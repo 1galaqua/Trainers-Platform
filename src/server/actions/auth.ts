@@ -4,12 +4,15 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import type { UserRole } from "@/lib/prisma-client";
+import type { User, UserRole } from "@/lib/prisma-client";
 
 import { isClerkConfigured } from "@/config/clerk";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/auth-email";
+import { consumeAuthToken } from "@/lib/auth-tokens";
 import { isDbConnectionError } from "@/lib/db-errors";
 import { linkTraineeToCoach } from "@/lib/coach-trainee";
 import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
+import { validatePassword } from "@/lib/password";
 import {
   getDatabaseUrl,
   getServerConfigIssue,
@@ -20,6 +23,10 @@ import { prisma } from "@/lib/prisma";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function isEmailVerified(user: Pick<User, "emailVerifiedAt">) {
+  return Boolean(user.emailVerifiedAt);
 }
 
 async function loginDemoOffline(email: string, password: string) {
@@ -42,6 +49,18 @@ function isDemoCredentials(email: string, password: string) {
   return Boolean(demo && password === demo.password);
 }
 
+async function startEmailVerification(userId: string, email: string) {
+  const sent = await sendVerificationEmail(userId, email);
+  if (!sent.ok) {
+    return { error: sent.error };
+  }
+  return {
+    success: true as const,
+    needsVerification: true as const,
+    devPreviewUrl: sent.dev ? sent.previewUrl : undefined,
+  };
+}
+
 export async function registerAction(formData: FormData) {
   if (isClerkConfigured()) {
     return { error: "ההרשמה מתבצעת דרך Clerk" };
@@ -54,7 +73,7 @@ export async function registerAction(formData: FormData) {
   if (configIssue === "missing_database_url") {
     return {
       error:
-        "DATABASE_URL לא מוגדר ב-Vercel — לא ניתן ליצור חשבון. השתמש ב-coach@demo.com / demo1234 לדdemo.",
+        "DATABASE_URL לא מוגדר — לא ניתן ליצור חשבון. ניתן להשתמש בחשבונות הדמו.",
     };
   }
 
@@ -76,9 +95,8 @@ export async function registerAction(formData: FormData) {
     return { error: "מאמן/ית לא צריך לבחור מאמן בהרשמה" };
   }
 
-  if (password.length < 6) {
-    return { error: "הסיסמה חייבת להכיל לפחות 6 תווים" };
-  }
+  const passwordError = validatePassword(password);
+  if (passwordError) return { error: passwordError };
 
   if (role !== "COACH" && role !== "TRAINEE") {
     return { error: "תפקיד לא תקין" };
@@ -87,6 +105,9 @@ export async function registerAction(formData: FormData) {
   try {
     const existing = await prisma.user.findFirst({ where: { email } });
     if (existing) {
+      if (!isEmailVerified(existing)) {
+        return startEmailVerification(existing.id, email);
+      }
       return { error: "כתובת האימייל כבר רשומה במערכת" };
     }
 
@@ -113,21 +134,13 @@ export async function registerAction(formData: FormData) {
       }
     }
 
-    await createUserSession({
-      userId: user.id,
-      clerkId: user.clerkId,
-      email: user.email ?? email,
-      displayName: user.displayName ?? displayName,
-      role: user.role,
-    });
-    revalidatePath("/dashboard");
-    return { success: true };
+    return startEmailVerification(user.id, email);
   } catch (error) {
     if (isRedirectError(error)) throw error;
     if (isDbConnectionError(error)) {
       return {
         error:
-          "מסד הנתונים לא זמין. ב-Atlas: Network Access → Allow Access from Anywhere (0.0.0.0/0) ל-Vercel.",
+          "מסד הנתונים לא זמין. בדוק/י את חיבור MongoDB Atlas.",
       };
     }
     return { error: "שגיאה ביצירת החשבון" };
@@ -151,7 +164,6 @@ export async function loginAction(formData: FormData) {
     return { error: serverConfigErrorMessage(configIssue) };
   }
 
-  // No DB on Vercel — demo accounts still work
   if (!getDatabaseUrl() && isDemoCredentials(email, password)) {
     try {
       const offline = await loginDemoOffline(email, password);
@@ -178,6 +190,15 @@ export async function loginAction(formData: FormData) {
     const valid = await verifyPassword(user, password, email);
     if (!valid) {
       return { error: "אימייל או סיסמה שגויים" };
+    }
+
+    if (!isEmailVerified(user) && !isDemoCredentials(email, password)) {
+      const resent = await sendVerificationEmail(user.id, email);
+      return {
+        error: "יש לאמת את כתובת האימייל לפני ההתחברות. נשלח אליך מייל אימות מחדש.",
+        needsVerification: true,
+        devPreviewUrl: resent.ok && resent.dev ? resent.previewUrl : undefined,
+      };
     }
 
     await createUserSession({
@@ -216,11 +237,128 @@ export async function loginAction(formData: FormData) {
     if (isDbConnectionError(error)) {
       return {
         error:
-          "לא ניתן להתחבר ל-MongoDB Atlas מ-Vercel. Network Access → Allow Access from Anywhere (0.0.0.0/0).",
+          "לא ניתן להתחבר ל-MongoDB Atlas. Network Access → Allow Access from Anywhere (0.0.0.0/0).",
       };
     }
 
     return { error: "שגיאה בהתחברות" };
+  }
+}
+
+export async function verifyEmailAction(token: string) {
+  if (!token?.trim()) {
+    return { error: "קישור אימות לא תקין" };
+  }
+
+  try {
+    const user = await consumeAuthToken(token.trim(), "EMAIL_VERIFICATION");
+    if (!user) {
+      return { error: "קישור האימות פג תוקף או אינו תקין" };
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifiedAt: new Date() },
+    });
+
+    await createUserSession({
+      userId: updated.id,
+      clerkId: updated.clerkId,
+      email: updated.email ?? "",
+      displayName: updated.displayName ?? "",
+      role: updated.role,
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return { error: "שגיאה באימות האימייל" };
+  }
+}
+
+export async function resendVerificationAction(formData: FormData) {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  if (!email) return { error: "יש להזין אימייל" };
+
+  try {
+    const user = await prisma.user.findFirst({ where: { email } });
+    if (!user) {
+      return {
+        success: true,
+        message: "אם החשבון קיים, נשלח מייל אימות.",
+      };
+    }
+    if (isEmailVerified(user)) {
+      return { error: "האימייל כבר אומת. ניתן להתחבר." };
+    }
+
+    return startEmailVerification(user.id, email);
+  } catch {
+    return { error: "שגיאה בשליחת מייל האימות" };
+  }
+}
+
+export async function forgotPasswordAction(formData: FormData) {
+  const email = normalizeEmail(String(formData.get("email") ?? ""));
+  if (!email) return { error: "יש להזין אימייל" };
+
+  const genericSuccess = {
+    success: true as const,
+    message: "אם קיים חשבון עם אימייל זה, נשלח קישור לאיפוס סיסמה.",
+  };
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true, emailVerifiedAt: true },
+    });
+
+    if (!user?.passwordHash || !user.email) {
+      return genericSuccess;
+    }
+
+    const sent = await sendPasswordResetEmail(user.id, user.email);
+    if (!sent.ok) {
+      return { error: sent.error };
+    }
+
+    return {
+      ...genericSuccess,
+      devPreviewUrl: sent.dev ? sent.previewUrl : undefined,
+    };
+  } catch {
+    return { error: "שגיאה בשליחת מייל איפוס הסיסמה" };
+  }
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+
+  if (!token) return { error: "קישור איפוס לא תקין" };
+  if (!password) return { error: "יש להזין סיסמה" };
+  if (password !== confirm) return { error: "הסיסמאות אינן תואמות" };
+
+  const passwordError = validatePassword(password);
+  if (passwordError) return { error: passwordError };
+
+  try {
+    const user = await consumeAuthToken(token, "PASSWORD_RESET");
+    if (!user) {
+      return { error: "קישור האיפוס פג תוקף או אינו תקין" };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return { success: true };
+  } catch {
+    return { error: "שגיאה בעדכון הסיסמה" };
   }
 }
 
