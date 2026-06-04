@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { requireCoach } from "@/lib/auth";
+import { ExerciseDetailText } from "@/features/programs/components/exercise-detail-text";
 import { programTypeLabels } from "@/lib/program-labels";
 import { getProgramByIdAction } from "@/server/actions/programs";
 
@@ -27,19 +28,26 @@ export default async function ProgramDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon-sm" render={<Link href="/dashboard/workouts" aria-label="חזרה" />}>
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-semibold text-2xl tracking-tight">{program.name}</h1>
-            <Badge variant="secondary">{programTypeLabels[program.type]}</Badge>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon-sm" render={<Link href="/dashboard/workouts" aria-label="חזרה" />}>
+            <ArrowLeft className="size-4" />
+          </Button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-semibold text-2xl tracking-tight">{program.name}</h1>
+              <Badge variant="secondary">{programTypeLabels[program.type]}</Badge>
+              {!program.isActive && <Badge variant="outline">לא פעילה</Badge>}
+            </div>
+            <p className="mt-1 text-muted-foreground text-sm">
+              {program.trainee.displayName ?? "מתאמן"} · {program.exercises.length} תרגילים
+            </p>
           </div>
-          <p className="mt-1 text-muted-foreground text-sm">
-            {program.trainee.displayName ?? "מתאמן"} · {program.exercises.length} תרגילים
-          </p>
         </div>
+        <Button variant="outline" render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}>
+          <Pencil className="size-4" />
+          עריכה
+        </Button>
       </div>
 
       {program.description && (
@@ -59,12 +67,10 @@ export default async function ProgramDetailPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {ex.instructions && <p>{ex.instructions}</p>}
-              {ex.coachNotes && (
-                <p className="text-muted-foreground">
-                  <span className="font-medium">הערות מאמן:</span> {ex.coachNotes}
-                </p>
-              )}
+              <ExerciseDetailText
+                instructions={ex.instructions}
+                coachNotes={ex.coachNotes}
+              />
               {ex.youtubeUrl && (
                 <a
                   href={ex.youtubeUrl}

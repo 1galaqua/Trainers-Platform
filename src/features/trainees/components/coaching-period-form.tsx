@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getEffectiveWorkoutsCompleted } from "@/lib/trainee-status";
 import { updateCoachingPeriodAction } from "@/server/actions/trainees";
 
 type CoachingPeriodFormProps = {
@@ -13,7 +14,8 @@ type CoachingPeriodFormProps = {
   coachingStartDate: string | null;
   coachingEndDate: string | null;
   workoutQuota: number | null;
-  sessionsCount?: number;
+  workoutsCompleted: number | null;
+  loggedSessionsCount?: number;
   compact?: boolean;
 };
 
@@ -36,13 +38,20 @@ export function CoachingPeriodForm({
   coachingStartDate,
   coachingEndDate,
   workoutQuota,
-  sessionsCount = 0,
+  workoutsCompleted,
+  loggedSessionsCount = 0,
   compact,
 }: CoachingPeriodFormProps) {
   const router = useRouter();
+  const effectiveCompleted = getEffectiveWorkoutsCompleted(
+    workoutsCompleted,
+    loggedSessionsCount,
+  );
+
   const [start, setStart] = useState(toDateInputValue(coachingStartDate));
   const [end, setEnd] = useState(toDateInputValue(coachingEndDate));
   const [quota, setQuota] = useState(workoutQuota != null ? String(workoutQuota) : "");
+  const [completed, setCompleted] = useState(String(effectiveCompleted));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +65,7 @@ export function CoachingPeriodForm({
     formData.set("coachingStartDate", start);
     formData.set("coachingEndDate", end);
     formData.set("workoutQuota", quota);
+    formData.set("workoutsCompleted", completed);
 
     const result = await updateCoachingPeriodAction(formData);
     setLoading(false);
@@ -70,7 +80,10 @@ export function CoachingPeriodForm({
 
   const hasPeriod = coachingStartDate && coachingEndDate;
   const remaining =
-    workoutQuota != null ? Math.max(0, workoutQuota - sessionsCount) : null;
+    workoutQuota != null ? Math.max(0, workoutQuota - effectiveCompleted) : null;
+  const showLoggedHint =
+    loggedSessionsCount !== effectiveCompleted ||
+    workoutsCompleted != null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -86,7 +99,9 @@ export function CoachingPeriodForm({
           )}
         </p>
       )}
-      <div className={`grid gap-3 ${compact ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+      <div
+        className={`grid gap-3 ${compact ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2"}`}
+      >
         <div className="space-y-1">
           <Label htmlFor={`start-${traineeId}`}>תאריך התחלה</Label>
           <Input
@@ -121,6 +136,24 @@ export function CoachingPeriodForm({
             dir="ltr"
             placeholder="10"
           />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`completed-${traineeId}`}>אימונים שבוצעו</Label>
+          <Input
+            id={`completed-${traineeId}`}
+            type="number"
+            min={0}
+            value={completed}
+            onChange={(e) => setCompleted(e.target.value)}
+            required
+            dir="ltr"
+            placeholder="0"
+          />
+          {showLoggedHint && (
+            <p className="text-muted-foreground text-xs">
+              {loggedSessionsCount} דווחו במערכת על ידי המתאמן
+            </p>
+          )}
         </div>
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}

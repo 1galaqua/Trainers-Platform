@@ -48,9 +48,17 @@ export function isCoachingPeriodExpired(
   return startOfDay(now) > endOfDay(end);
 }
 
-export function getWorkoutsRemaining(workoutQuota: number | null, sessionsCount: number): number {
+export function getEffectiveWorkoutsCompleted(
+  workoutsCompleted: number | null | undefined,
+  loggedSessionsCount: number,
+): number {
+  if (workoutsCompleted != null && workoutsCompleted >= 0) return workoutsCompleted;
+  return loggedSessionsCount;
+}
+
+export function getWorkoutsRemaining(workoutQuota: number | null, completedCount: number): number {
   if (workoutQuota == null || workoutQuota <= 0) return 0;
-  return Math.max(0, workoutQuota - sessionsCount);
+  return Math.max(0, workoutQuota - completedCount);
 }
 
 export function getTraineeStatus(input: TraineeStatusInput): TraineeStatus {

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { CreateProgramForm } from "@/features/programs/components/create-program-form";
+import { CreateProgramForm } from "@/features/programs/components/program-form-wrapper";
 import { requireCoach } from "@/lib/auth";
 import { getCoachTraineesAction } from "@/server/actions/programs";
 

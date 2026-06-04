@@ -57,6 +57,7 @@ model CoachTrainee {
   coachingStartDate DateTime?
   coachingEndDate   DateTime?
   workoutQuota      Int?
+  workoutsCompleted Int?
   coach             User      @relation("CoachRelation", fields: [coachId], references: [id])
   trainee           User      @relation("TraineeRelation", fields: [traineeId], references: [id])
   createdAt         DateTime  @default(now())

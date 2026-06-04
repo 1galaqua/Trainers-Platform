@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { programTypeLabels } from "@/lib/program-labels";
+import { CoachProgramsList } from "@/features/programs/components/coach-programs-list";
 import { requireCoach } from "@/lib/auth";
 import { getCoachProgramsAction } from "@/server/actions/programs";
 
@@ -16,6 +14,17 @@ export const metadata = {
 export default async function WorkoutsPage() {
   await requireCoach();
   const programs = await getCoachProgramsAction();
+
+  const programItems = programs.map((program) => ({
+    id: program.id,
+    name: program.name,
+    type: program.type,
+    isActive: program.isActive,
+    traineeId: program.traineeId,
+    traineeName: program.trainee.displayName,
+    exerciseCount: program._count.exercises,
+    sessionCount: program._count.sessions,
+  }));
 
   return (
     <div className="space-y-6">
@@ -30,35 +39,7 @@ export default async function WorkoutsPage() {
         </Button>
       </div>
 
-      {programs.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
-            אין עדיין תוכניות. צור תוכנית ראשונה למתאמן.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {programs.map((program) => (
-            <Card key={program.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base">{program.name}</CardTitle>
-                  <Badge variant="secondary">{programTypeLabels[program.type]}</Badge>
-                </div>
-                <CardDescription>{program.trainee.displayName ?? "מתאמן"}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground text-xs">
-                  {program._count.exercises} תרגילים · {program._count.sessions} אימונים שבוצעו
-                </span>
-                <Button variant="outline" size="sm" render={<Link href={`/dashboard/workouts/${program.id}`} />}>
-                  צפייה
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <CoachProgramsList programs={programItems} />
     </div>
   );
 }

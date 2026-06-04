@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
 import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { getTraineePhotosAction } from "@/server/actions/photos";
-import { getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
+import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
 export const metadata = {
@@ -50,14 +50,18 @@ export default async function TraineeDetailPage({ params }: PageProps) {
     getTraineeCoachingPeriodAction(id),
   ]);
 
-  const sessionsCount = sessions.length;
+  const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
   const workoutQuota = coachingPeriod?.workoutQuota ?? null;
-  const workoutsRemaining = getWorkoutsRemaining(workoutQuota, sessionsCount);
+  const effectiveCompleted = getEffectiveWorkoutsCompleted(
+    coachingPeriod?.workoutsCompleted ?? null,
+    loggedSessionsCount,
+  );
+  const workoutsRemaining = getWorkoutsRemaining(workoutQuota, effectiveCompleted);
   const status = getTraineeStatus({
     coachingStartDate: coachingPeriod?.coachingStartDate ?? null,
     coachingEndDate: coachingPeriod?.coachingEndDate ?? null,
     workoutQuota,
-    sessionsCount,
+    sessionsCount: effectiveCompleted,
   });
 
   const name = trainee.displayName ?? "מתאמן";
@@ -106,7 +110,8 @@ export default async function TraineeDetailPage({ params }: PageProps) {
             coachingStartDate={coachingPeriod?.coachingStartDate ?? null}
             coachingEndDate={coachingPeriod?.coachingEndDate ?? null}
             workoutQuota={workoutQuota}
-            sessionsCount={sessionsCount}
+            workoutsCompleted={coachingPeriod?.workoutsCompleted ?? null}
+            loggedSessionsCount={loggedSessionsCount}
           />
         </CardContent>
       </Card>

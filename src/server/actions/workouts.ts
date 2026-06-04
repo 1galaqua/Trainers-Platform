@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
-import { getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
+import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
 export type ExerciseLogInput = {
   exerciseId: string;
@@ -14,11 +14,11 @@ export type ExerciseLogInput = {
   notes?: string;
 };
 
-export async function getActiveProgramAction() {
+export async function getTraineeProgramsAction() {
   const trainee = await requireTraineeOnboarded();
 
   try {
-    return await prisma.trainingProgram.findFirst({
+    return await prisma.trainingProgram.findMany({
       where: { traineeId: trainee.id, isActive: true },
       include: {
         exercises: { orderBy: { sortOrder: "asc" } },
@@ -27,8 +27,29 @@ export async function getActiveProgramAction() {
       orderBy: { updatedAt: "desc" },
     });
   } catch {
+    return [];
+  }
+}
+
+export async function getTraineeProgramByIdAction(programId: string) {
+  const trainee = await requireTraineeOnboarded();
+
+  try {
+    return await prisma.trainingProgram.findFirst({
+      where: { id: programId, traineeId: trainee.id, isActive: true },
+      include: {
+        exercises: { orderBy: { sortOrder: "asc" } },
+        coach: true,
+      },
+    });
+  } catch {
     return null;
   }
+}
+
+export async function getActiveProgramAction() {
+  const programs = await getTraineeProgramsAction();
+  return programs[0] ?? null;
 }
 
 export async function logWorkoutAction(formData: FormData) {
@@ -69,8 +90,12 @@ export async function logWorkoutAction(formData: FormData) {
 
     if (!coachLink) return { error: "לא נמצא קשר מאמן-מתאמן" };
 
-    const sessionsCount = coachLink.trainee.workoutSessions.length;
-    const remaining = getWorkoutsRemaining(coachLink.workoutQuota, sessionsCount);
+    const loggedSessionsCount = coachLink.trainee.workoutSessions.length;
+    const completedCount = getEffectiveWorkoutsCompleted(
+      coachLink.workoutsCompleted,
+      loggedSessionsCount,
+    );
+    const remaining = getWorkoutsRemaining(coachLink.workoutQuota, completedCount);
 
     if (!isCoachingPeriodActive(coachLink.coachingStartDate, coachLink.coachingEndDate)) {
       return { error: "תקופת הליווי הסתיימה או טרם החלה — לא ניתן לדווח אימון" };
@@ -96,8 +121,16 @@ export async function logWorkoutAction(formData: FormData) {
       },
     });
 
+    if (coachLink.workoutsCompleted != null) {
+      await prisma.coachTrainee.update({
+        where: { traineeId: trainee.id },
+        data: { workoutsCompleted: coachLink.workoutsCompleted + 1 },
+      });
+    }
+
     revalidatePath("/dashboard/workouts/log");
     revalidatePath("/dashboard/progress");
+    revalidatePath("/dashboard/my-program");
     revalidatePath("/dashboard/trainees");
     return { success: true };
   } catch {

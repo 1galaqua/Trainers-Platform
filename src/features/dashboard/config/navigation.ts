@@ -8,7 +8,7 @@ export const coachNavigation = [
 
 export const traineeNavigation = [
   { title: "סקירה", href: "/dashboard", description: "סיכום" },
-  { title: "התוכנית שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
+  { title: "התוכניות שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
   { title: "דיווח אימון", href: "/dashboard/workouts/log", description: "משקלים וחזרות" },
   { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
   { title: "תמונות", href: "/dashboard/photos", description: "העלאה ומעקב" },

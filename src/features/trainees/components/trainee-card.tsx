@@ -35,12 +35,20 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
             ) : (
               <Badge variant="outline">ממתין לשאלון</Badge>
             )}
-            {trainee.activeProgramName && <Badge>תוכנית פעילה</Badge>}
+            {trainee.activePrograms.length > 0 && (
+              <Badge>{trainee.activePrograms.length} תוכניות</Badge>
+            )}
           </div>
         </div>
         <CardDescription>
-          {trainee.sessionsCount} אימונים שבוצעו · {quotaLabel}
-          {trainee.activeProgramName ? ` · ${trainee.activeProgramName}` : ""}
+          {trainee.sessionsCount} אימונים שבוצעו (למכסה)
+          {trainee.loggedSessionsCount !== trainee.sessionsCount &&
+            ` · ${trainee.loggedSessionsCount} דווחו במערכת`}
+          {" · "}
+          {quotaLabel}
+          {trainee.activePrograms.length > 0
+            ? ` · ${trainee.activePrograms.map((p) => p.name).join(" · ")}`
+            : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -51,7 +59,8 @@ export function TraineeCard({ trainee }: TraineeCardProps) {
             coachingStartDate={trainee.coachingStartDate}
             coachingEndDate={trainee.coachingEndDate}
             workoutQuota={trainee.workoutQuota}
-            sessionsCount={trainee.sessionsCount}
+            workoutsCompleted={trainee.workoutsCompleted}
+            loggedSessionsCount={trainee.loggedSessionsCount}
             compact
           />
         </div>
