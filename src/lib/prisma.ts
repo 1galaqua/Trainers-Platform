@@ -13,11 +13,9 @@ function createPrismaClient() {
   });
 }
 
-/** Dev hot-reload can keep an old client missing new models (e.g. authToken). */
 function getPrismaClient(): PrismaClient {
-  const cached = globalForPrisma.prisma;
-  if (cached && typeof cached.authToken !== "undefined") {
-    return cached;
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
   }
 
   const client = createPrismaClient();

@@ -8,12 +8,16 @@ const DEMO = {
     clerkId: "demo_clerk_coach",
     email: "coach@demo.com",
     password: "Demo1234",
+    age: 35,
+    phoneNumber: "0501234567",
   },
   trainee: {
     fullName: "גל אקוע",
     clerkId: "demo_clerk_trainee",
     email: "trainee@demo.com",
     password: "Demo1234",
+    age: 28,
+    phoneNumber: "0507654321",
   },
 } as const;
 
@@ -30,14 +34,16 @@ async function main() {
       email: DEMO.trainer.email,
       passwordHash,
       role: "COACH",
-      emailVerifiedAt: new Date(),
+      age: DEMO.trainer.age,
+      phoneNumber: DEMO.trainer.phoneNumber,
     },
     update: {
       displayName: DEMO.trainer.fullName,
       email: DEMO.trainer.email,
       passwordHash,
       role: "COACH",
-      emailVerifiedAt: new Date(),
+      age: DEMO.trainer.age,
+      phoneNumber: DEMO.trainer.phoneNumber,
     },
   });
 
@@ -49,14 +55,16 @@ async function main() {
       email: DEMO.trainee.email,
       passwordHash,
       role: "TRAINEE",
-      emailVerifiedAt: new Date(),
+      age: DEMO.trainee.age,
+      phoneNumber: DEMO.trainee.phoneNumber,
     },
     update: {
       displayName: DEMO.trainee.fullName,
       email: DEMO.trainee.email,
       passwordHash,
       role: "TRAINEE",
-      emailVerifiedAt: new Date(),
+      age: DEMO.trainee.age,
+      phoneNumber: DEMO.trainee.phoneNumber,
     },
   });
 

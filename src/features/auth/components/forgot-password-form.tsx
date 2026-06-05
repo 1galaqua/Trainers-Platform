@@ -2,24 +2,24 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PASSWORD_HINT } from "@/lib/password";
 import { forgotPasswordAction } from "@/server/actions/auth";
 
 export function ForgotPasswordForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [devPreviewUrl, setDevPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
-    setDevPreviewUrl(null);
 
     const result = await forgotPasswordAction(new FormData(e.currentTarget));
     setLoading(false);
@@ -29,38 +29,72 @@ export function ForgotPasswordForm() {
       return;
     }
 
-    if (result && "message" in result && result.message) {
-      setMessage(result.message);
-    }
-    if (result && "devPreviewUrl" in result && result.devPreviewUrl) {
-      setDevPreviewUrl(result.devPreviewUrl);
+    if (result && "success" in result && result.success) {
+      router.push("/sign-in?reset=1");
+      router.refresh();
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto w-full max-w-sm space-y-4">
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        לאימות הזהות יש להזין את אותם אימייל, גיל ומספר טלפון שבהם נרשמתם, ולבחור סיסמה חדשה.
+      </p>
       <div className="space-y-2">
         <Label htmlFor="email">אימייל</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" dir="ltr" />
       </div>
-      {error && (
-        <p className="text-destructive text-sm leading-relaxed whitespace-pre-wrap">{error}</p>
-      )}
-      {message && <p className="text-sm text-muted-foreground">{message}</p>}
-      {devPreviewUrl && (
-        <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
-          <span className="font-medium">פיתוח:</span>{" "}
-          <a href={devPreviewUrl} className="text-primary underline" dir="ltr">
-            קישור איפוס
-          </a>
-        </p>
-      )}
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        עם <span dir="ltr">onboarding@resend.dev</span> ניתן לשלוח בדיקה רק לכתובת האימייל של חשבון
-        Resend (למשל <span dir="ltr">trainersplatformapp@gmail.com</span>).
-      </p>
+      <div className="space-y-2">
+        <Label htmlFor="age">גיל</Label>
+        <Input
+          id="age"
+          name="age"
+          type="number"
+          required
+          min={1}
+          max={120}
+          autoComplete="off"
+          dir="ltr"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phoneNumber">מספר טלפון</Label>
+        <Input
+          id="phoneNumber"
+          name="phoneNumber"
+          type="tel"
+          required
+          autoComplete="tel"
+          dir="ltr"
+          placeholder="050-1234567"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">סיסמה חדשה</Label>
+        <PasswordInput
+          id="password"
+          name="password"
+          required
+          minLength={8}
+          maxLength={16}
+          autoComplete="new-password"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">אימות סיסמה</Label>
+        <PasswordInput
+          id="confirmPassword"
+          name="confirmPassword"
+          required
+          minLength={8}
+          maxLength={16}
+          autoComplete="new-password"
+        />
+        <p className="text-muted-foreground text-xs">{PASSWORD_HINT}</p>
+      </div>
+      {error && <p className="text-destructive text-sm leading-relaxed">{error}</p>}
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "שולח..." : "שליחת קישור לאיפוס"}
+        {loading ? "מעדכן..." : "עדכון סיסמה"}
       </Button>
       <p className="text-center text-muted-foreground text-sm">
         <Link href="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">

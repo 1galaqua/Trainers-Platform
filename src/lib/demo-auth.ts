@@ -5,19 +5,30 @@ import { prisma } from "@/lib/prisma";
 
 export const DEMO_AUTH: Record<
   string,
-  { clerkId: string; displayName: string; role: UserRole; password: string }
+  {
+    clerkId: string;
+    displayName: string;
+    role: UserRole;
+    password: string;
+    age: number;
+    phoneNumber: string;
+  }
 > = {
   "coach@demo.com": {
     clerkId: "demo_clerk_coach",
     displayName: "יהודה אמסלם",
     role: "COACH",
     password: "Demo1234",
+    age: 35,
+    phoneNumber: "0501234567",
   },
   "trainee@demo.com": {
     clerkId: "demo_clerk_trainee",
     displayName: "גל אקוע",
     role: "TRAINEE",
     password: "Demo1234",
+    age: 28,
+    phoneNumber: "0507654321",
   },
 };
 
@@ -42,7 +53,8 @@ export async function resolveLoginUser(email: string): Promise<User | null> {
         passwordHash,
         displayName: demo.displayName,
         role: demo.role,
-        emailVerifiedAt: new Date(),
+        age: demo.age,
+        phoneNumber: demo.phoneNumber,
       },
     });
   }
@@ -54,7 +66,8 @@ export async function resolveLoginUser(email: string): Promise<User | null> {
         email: user.email ?? email,
         passwordHash: user.passwordHash ?? passwordHash,
         displayName: user.displayName ?? demo.displayName,
-        emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+        age: user.age ?? demo.age,
+        phoneNumber: user.phoneNumber ?? demo.phoneNumber,
       },
     });
   }

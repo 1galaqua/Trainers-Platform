@@ -4,11 +4,9 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import type { User, UserRole } from "@/lib/prisma-client";
+import type { UserRole } from "@/lib/prisma-client";
 
 import { isClerkConfigured } from "@/config/clerk";
-import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/auth-email";
-import { consumeAuthToken } from "@/lib/auth-tokens";
 import { isDbConnectionError } from "@/lib/db-errors";
 import { linkTraineeToCoach } from "@/lib/coach-trainee";
 import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
@@ -18,15 +16,12 @@ import {
   getServerConfigIssue,
   serverConfigErrorMessage,
 } from "@/lib/server-env";
+import { normalizePhone, parseAge, validatePhone } from "@/lib/user-identity";
 import { createUserSession, clearSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
-}
-
-function isEmailVerified(user: Pick<User, "emailVerifiedAt">) {
-  return Boolean(user.emailVerifiedAt);
 }
 
 async function loginDemoOffline(email: string, password: string) {
@@ -49,18 +44,6 @@ function isDemoCredentials(email: string, password: string) {
   return Boolean(demo && password === demo.password);
 }
 
-async function startEmailVerification(userId: string, email: string) {
-  const sent = await sendVerificationEmail(userId, email);
-  if (!sent.ok) {
-    return { error: sent.error };
-  }
-  return {
-    success: true as const,
-    needsVerification: true as const,
-    devPreviewUrl: sent.dev ? sent.previewUrl : undefined,
-  };
-}
-
 export async function registerAction(formData: FormData) {
   if (isClerkConfigured()) {
     return { error: "ההרשמה מתבצעת דרך Clerk" };
@@ -80,12 +63,22 @@ export async function registerAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("displayName") ?? "").trim();
+  const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
+  const ageRaw = String(formData.get("age") ?? "").trim();
   const role = String(formData.get("role") ?? "TRAINEE") as UserRole;
   const coachId = String(formData.get("coachId") ?? "").trim();
 
-  if (!email || !password || !displayName) {
+  if (!email || !password || !displayName || !phoneRaw || !ageRaw) {
     return { error: "יש למלא את כל השדות" };
   }
+
+  const phoneError = validatePhone(phoneRaw);
+  if (phoneError) return { error: phoneError };
+
+  const age = parseAge(ageRaw);
+  if (age == null) return { error: "גיל לא תקין (1–120)" };
+
+  const phoneNumber = normalizePhone(phoneRaw);
 
   if (role === "TRAINEE" && !coachId) {
     return { error: "יש לבחור מאמן/ית" };
@@ -105,9 +98,6 @@ export async function registerAction(formData: FormData) {
   try {
     const existing = await prisma.user.findFirst({ where: { email } });
     if (existing) {
-      if (!isEmailVerified(existing)) {
-        return startEmailVerification(existing.id, email);
-      }
       return { error: "כתובת האימייל כבר רשומה במערכת" };
     }
 
@@ -118,6 +108,8 @@ export async function registerAction(formData: FormData) {
         email,
         passwordHash,
         displayName,
+        phoneNumber,
+        age,
         role,
       },
     });
@@ -134,13 +126,12 @@ export async function registerAction(formData: FormData) {
       }
     }
 
-    return startEmailVerification(user.id, email);
+    return { success: true };
   } catch (error) {
     if (isRedirectError(error)) throw error;
     if (isDbConnectionError(error)) {
       return {
-        error:
-          "מסד הנתונים לא זמין. בדוק/י את חיבור MongoDB Atlas.",
+        error: "מסד הנתונים לא זמין. בדוק/י את חיבור MongoDB Atlas.",
       };
     }
     return { error: "שגיאה ביצירת החשבון" };
@@ -192,15 +183,6 @@ export async function loginAction(formData: FormData) {
       return { error: "אימייל או סיסמה שגויים" };
     }
 
-    if (!isEmailVerified(user) && !isDemoCredentials(email, password)) {
-      const resent = await sendVerificationEmail(user.id, email);
-      return {
-        error: "יש לאמת את כתובת האימייל לפני ההתחברות. נשלח אליך מייל אימות מחדש.",
-        needsVerification: true,
-        devPreviewUrl: resent.ok && resent.dev ? resent.previewUrl : undefined,
-      };
-    }
-
     await createUserSession({
       userId: user.id,
       clerkId: user.clerkId,
@@ -245,119 +227,42 @@ export async function loginAction(formData: FormData) {
   }
 }
 
-export async function verifyEmailAction(token: string) {
-  if (!token?.trim()) {
-    return { error: "קישור אימות לא תקין" };
-  }
-
-  try {
-    const user = await consumeAuthToken(token.trim(), "EMAIL_VERIFICATION");
-    if (!user) {
-      return { error: "קישור האימות פג תוקף או אינו תקין" };
-    }
-
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerifiedAt: new Date() },
-    });
-
-    await createUserSession({
-      userId: updated.id,
-      clerkId: updated.clerkId,
-      email: updated.email ?? "",
-      displayName: updated.displayName ?? "",
-      role: updated.role,
-    });
-
-    revalidatePath("/dashboard");
-    return { success: true };
-  } catch (error) {
-    if (isRedirectError(error)) throw error;
-    return { error: "שגיאה באימות האימייל" };
-  }
-}
-
-export async function resendVerificationAction(formData: FormData) {
-  const email = normalizeEmail(String(formData.get("email") ?? ""));
-  if (!email) return { error: "יש להזין אימייל" };
-
-  try {
-    const user = await prisma.user.findFirst({ where: { email } });
-    if (!user) {
-      return {
-        success: true,
-        message: "אם החשבון קיים, נשלח מייל אימות.",
-      };
-    }
-    if (isEmailVerified(user)) {
-      return { error: "האימייל כבר אומת. ניתן להתחבר." };
-    }
-
-    return startEmailVerification(user.id, email);
-  } catch {
-    return { error: "שגיאה בשליחת מייל האימות" };
-  }
-}
-
 export async function forgotPasswordAction(formData: FormData) {
   const email = normalizeEmail(String(formData.get("email") ?? ""));
-  if (!email) return { error: "יש להזין אימייל" };
-
-  const genericSuccess = {
-    success: true as const,
-    message: "אם קיים חשבון עם אימייל זה, נשלח קישור לאיפוס סיסמה.",
-  };
-
-  try {
-    const user = await prisma.user.findFirst({
-      where: { email },
-      select: { id: true, email: true, passwordHash: true, emailVerifiedAt: true },
-    });
-
-    if (!user?.passwordHash || !user.email) {
-      return genericSuccess;
-    }
-
-    const sent = await sendPasswordResetEmail(user.id, user.email);
-    if (!sent.ok) {
-      return { error: sent.error };
-    }
-
-    return {
-      ...genericSuccess,
-      devPreviewUrl: sent.dev ? sent.previewUrl : undefined,
-    };
-  } catch (error) {
-    console.error("forgotPasswordAction:", error);
-    if (error instanceof Error && error.message.includes("PRISMA_AUTH_TOKEN_MISSING")) {
-      return {
-        error:
-          "השרת לא מעודכן (מסד נתונים). הרץ/י prisma db push מקומית ו-Deploy מחדש ב-Vercel.",
-      };
-    }
-    if (error instanceof Error) {
-      return { error: `שגיאה בשליחת מייל איפוס הסיסמה: ${error.message}` };
-    }
-    return { error: "שגיאה בשליחת מייל איפוס הסיסמה" };
-  }
-}
-
-export async function resetPasswordAction(formData: FormData) {
-  const token = String(formData.get("token") ?? "").trim();
+  const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
+  const ageRaw = String(formData.get("age") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirmPassword") ?? "");
 
-  if (!token) return { error: "קישור איפוס לא תקין" };
-  if (!password) return { error: "יש להזין סיסמה" };
+  if (!email || !phoneRaw || !ageRaw) {
+    return { error: "יש למלא אימייל, גיל ומספר טלפון" };
+  }
+  if (!password) return { error: "יש להזין סיסמה חדשה" };
   if (password !== confirm) return { error: "הסיסמאות אינן תואמות" };
+
+  const phoneError = validatePhone(phoneRaw);
+  if (phoneError) return { error: phoneError };
+
+  const age = parseAge(ageRaw);
+  if (age == null) return { error: "גיל לא תקין (1–120)" };
 
   const passwordError = validatePassword(password);
   if (passwordError) return { error: passwordError };
 
+  const phoneNumber = normalizePhone(phoneRaw);
+
   try {
-    const user = await consumeAuthToken(token, "PASSWORD_RESET");
-    if (!user) {
-      return { error: "קישור האיפוס פג תוקף או אינו תקין" };
+    const user = await prisma.user.findFirst({
+      where: { email },
+      select: { id: true, phoneNumber: true, age: true, passwordHash: true },
+    });
+
+    if (
+      !user?.passwordHash ||
+      user.age !== age ||
+      normalizePhone(user.phoneNumber ?? "") !== phoneNumber
+    ) {
+      return { error: "הפרטים לא תואמים לחשבון. בדוק/י אימייל, גיל וטלפון." };
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -367,7 +272,8 @@ export async function resetPasswordAction(formData: FormData) {
     });
 
     return { success: true };
-  } catch {
+  } catch (error) {
+    console.error("forgotPasswordAction:", error);
     return { error: "שגיאה בעדכון הסיסמה" };
   }
 }
