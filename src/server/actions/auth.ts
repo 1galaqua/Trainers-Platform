@@ -16,7 +16,7 @@ import {
   getServerConfigIssue,
   serverConfigErrorMessage,
 } from "@/lib/server-env";
-import { normalizePhone, parseAge, validatePhone } from "@/lib/user-identity";
+import { normalizePhone, parseAge, validatePhone, phonesMatch, agesMatch } from "@/lib/user-identity";
 import { createUserSession, clearSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
@@ -228,6 +228,15 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function forgotPasswordAction(formData: FormData) {
+  if (isClerkConfigured()) {
+    return { error: "איפוס סיסמה מתבצע דרך Clerk" };
+  }
+
+  const configIssue = getServerConfigIssue();
+  if (configIssue === "missing_database_url") {
+    return { error: serverConfigErrorMessage(configIssue) };
+  }
+
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
   const ageRaw = String(formData.get("age") ?? "").trim();
@@ -259,8 +268,8 @@ export async function forgotPasswordAction(formData: FormData) {
 
     if (
       !user?.passwordHash ||
-      user.age !== age ||
-      normalizePhone(user.phoneNumber ?? "") !== phoneNumber
+      !agesMatch(user.age, age) ||
+      !phonesMatch(user.phoneNumber, phoneNumber)
     ) {
       return { error: "הפרטים לא תואמים לחשבון. בדוק/י אימייל, גיל וטלפון." };
     }
@@ -274,7 +283,15 @@ export async function forgotPasswordAction(formData: FormData) {
     return { success: true };
   } catch (error) {
     console.error("forgotPasswordAction:", error);
-    return { error: "שגיאה בעדכון הסיסמה" };
+
+    if (isDbConnectionError(error)) {
+      return {
+        error:
+          "לא ניתן להתחבר למסד הנתונים. אם נרשמתם מקומית, נסו שוב באותה כתובת (localhost) או ודאו ש-DATABASE_URL מוגדר ב-Vercel.",
+      };
+    }
+
+    return { error: "שגיאה בעדכון הסיסמה. נסו שוב או פנו לתמיכה." };
   }
 }
 
