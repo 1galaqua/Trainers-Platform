@@ -14,11 +14,21 @@ export function hashAuthToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+function assertAuthTokenDelegate() {
+  if (typeof prisma.authToken === "undefined") {
+    throw new Error(
+      "PRISMA_AUTH_TOKEN_MISSING: הרץ npx prisma generate && npx prisma db push ואז Deploy מחדש ב-Vercel",
+    );
+  }
+}
+
 export async function createAuthToken(
   userId: string,
   type: AuthTokenType,
   expiresInMs: number,
 ): Promise<string> {
+  assertAuthTokenDelegate();
+
   const token = generateAuthTokenValue();
   const tokenHash = hashAuthToken(token);
   const expiresAt = new Date(Date.now() + expiresInMs);
@@ -32,6 +42,8 @@ export async function createAuthToken(
 }
 
 export async function consumeAuthToken(token: string, type: AuthTokenType) {
+  assertAuthTokenDelegate();
+
   const tokenHash = hashAuthToken(token);
   const record = await prisma.authToken.findUnique({
     where: { tokenHash },

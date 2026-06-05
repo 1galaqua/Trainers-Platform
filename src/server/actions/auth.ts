@@ -327,7 +327,17 @@ export async function forgotPasswordAction(formData: FormData) {
       ...genericSuccess,
       devPreviewUrl: sent.dev ? sent.previewUrl : undefined,
     };
-  } catch {
+  } catch (error) {
+    console.error("forgotPasswordAction:", error);
+    if (error instanceof Error && error.message.includes("PRISMA_AUTH_TOKEN_MISSING")) {
+      return {
+        error:
+          "השרת לא מעודכן (מסד נתונים). הרץ/י prisma db push מקומית ו-Deploy מחדש ב-Vercel.",
+      };
+    }
+    if (error instanceof Error) {
+      return { error: `שגיאה בשליחת מייל איפוס הסיסמה: ${error.message}` };
+    }
     return { error: "שגיאה בשליחת מייל איפוס הסיסמה" };
   }
 }

@@ -1,3 +1,4 @@
+import { siteConfig } from "@/config/site";
 import { getAppUrl } from "@/lib/app-url";
 
 type SendEmailInput = {
@@ -11,11 +12,44 @@ export type SendEmailResult =
   | { ok: true; dev?: boolean; previewUrl?: string }
   | { ok: false; error: string };
 
+function formatFromAddress(from: string): string {
+  const trimmed = from.trim();
+  if (trimmed.includes("<")) return trimmed;
+  return `${siteConfig.shortName} <${trimmed}>`;
+}
+
+function mapResendError(status: number, body: string): string {
+  try {
+    const json = JSON.parse(body) as { message?: string };
+    const msg = String(json.message ?? "");
+
+    if (
+      msg.includes("only send testing emails to your own email") ||
+      msg.includes("verify a domain")
+    ) {
+      return (
+        "במצב בדיקה (onboarding@resend.dev) אפשר לשלוח רק לכתובת האימייל שממנה נרשמתם ב-Resend. " +
+        "לבדיקה: הזינו את trainersplatformapp@gmail.com. לפרודקשן: אמתו דומיין ב-resend.com/domains."
+      );
+    }
+
+    if (status === 401 || status === 403) {
+      return "מפתח Resend לא תקין. בדוק/י את RESEND_API_KEY ב-Vercel והפעילו Deploy מחדש.";
+    }
+
+    if (msg) return `שליחת המייל נכשלה: ${msg}`;
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  return `שליחת המייל נכשלה (קוד ${status}). בדוק/י RESEND_API_KEY ו-EMAIL_FROM ב-Vercel.`;
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.EMAIL_FROM?.trim();
+  const fromRaw = process.env.EMAIL_FROM?.trim();
 
-  if (!apiKey || !from) {
+  if (!apiKey || !fromRaw) {
     if (process.env.NODE_ENV === "development") {
       const previewUrl = extractFirstUrl(input.text) ?? extractFirstUrl(input.html);
       console.info("[email:dev]", {
@@ -28,9 +62,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     }
     return {
       ok: false,
-      error: "שליחת מייל לא מוגדרת (RESEND_API_KEY, EMAIL_FROM)",
+      error:
+        "שליחת מייל לא מוגדרת בשרת. הוסיפו RESEND_API_KEY ו-EMAIL_FROM ב-Vercel ועשו Redeploy.",
     };
   }
+
+  const from = formatFromAddress(fromRaw);
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -41,7 +78,7 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
       },
       body: JSON.stringify({
         from,
-        to: [input.to],
+        to: [input.to.trim()],
         subject: input.subject,
         html: input.html,
         text: input.text,
@@ -50,14 +87,14 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      console.error("Resend error:", response.status, body);
-      return { ok: false, error: "שליחת המייל נכשלה" };
+      console.error("Resend error:", response.status, body, { from, to: input.to });
+      return { ok: false, error: mapResendError(response.status, body) };
     }
 
     return { ok: true };
   } catch (error) {
     console.error("sendEmail error:", error);
-    return { ok: false, error: "שליחת המייל נכשלה" };
+    return { ok: false, error: "שגיאת רשת בשליחת המייל. נסה/י שוב בעוד רגע." };
   }
 }
 

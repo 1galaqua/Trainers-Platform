@@ -43,7 +43,9 @@ export function ForgotPasswordForm() {
         <Label htmlFor="email">אימייל</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" dir="ltr" />
       </div>
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error && (
+        <p className="text-destructive text-sm leading-relaxed whitespace-pre-wrap">{error}</p>
+      )}
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
       {devPreviewUrl && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
@@ -53,6 +55,10 @@ export function ForgotPasswordForm() {
           </a>
         </p>
       )}
+      <p className="text-muted-foreground text-xs leading-relaxed">
+        עם <span dir="ltr">onboarding@resend.dev</span> ניתן לשלוח בדיקה רק לכתובת האימייל של חשבון
+        Resend (למשל <span dir="ltr">trainersplatformapp@gmail.com</span>).
+      </p>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "שולח..." : "שליחת קישור לאיפוס"}
       </Button>
