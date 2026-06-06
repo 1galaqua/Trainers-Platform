@@ -21,17 +21,22 @@ export function ForgotPasswordForm() {
     setLoading(true);
     setError(null);
 
-    const result = await forgotPasswordAction(new FormData(e.currentTarget));
-    setLoading(false);
+    try {
+      const result = await forgotPasswordAction(new FormData(e.currentTarget));
 
-    if (result && "error" in result && result.error) {
-      setError(result.error);
-      return;
-    }
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
 
-    if (result && "success" in result && result.success) {
-      router.push("/sign-in?reset=1");
-      router.refresh();
+      if (result && "success" in result && result.success) {
+        router.push("/sign-in?reset=1");
+        router.refresh();
+      }
+    } catch {
+      setError("שגיאה בעדכון הסיסמה. נסו שוב.");
+    } finally {
+      setLoading(false);
     }
   }
 

@@ -7,7 +7,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import type { UserRole } from "@/lib/prisma-client";
 
 import { isClerkConfigured } from "@/config/clerk";
-import { isDbConnectionError } from "@/lib/db-errors";
+import { dbActionErrorMessage, isDbConnectionError } from "@/lib/db-errors";
 import { linkTraineeToCoach } from "@/lib/coach-trainee";
 import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
 import { validatePassword } from "@/lib/password";
@@ -283,15 +283,7 @@ export async function forgotPasswordAction(formData: FormData) {
     return { success: true };
   } catch (error) {
     console.error("forgotPasswordAction:", error);
-
-    if (isDbConnectionError(error)) {
-      return {
-        error:
-          "לא ניתן להתחבר למסד הנתונים. אם נרשמתם מקומית, נסו שוב באותה כתובת (localhost) או ודאו ש-DATABASE_URL מוגדר ב-Vercel.",
-      };
-    }
-
-    return { error: "שגיאה בעדכון הסיסמה. נסו שוב או פנו לתמיכה." };
+    return { error: dbActionErrorMessage(error) };
   }
 }
 
