@@ -58,7 +58,8 @@ function parseSessionPayload(payload: Record<string, unknown>): SessionData | nu
     clerkId,
     email: typeof email === "string" ? email : "",
     displayName: typeof displayName === "string" ? displayName : "",
-    role: role === "COACH" || role === "TRAINEE" ? role : "TRAINEE",
+    role:
+      role === "ADMIN" || role === "COACH" || role === "TRAINEE" ? role : "TRAINEE",
   };
 }
 

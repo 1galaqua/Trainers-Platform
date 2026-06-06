@@ -14,6 +14,12 @@ export const traineeNavigation = [
   { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
 ] as const;
 
+export const adminNavigation = [
+  { title: "ניהול מאמנים", href: "/dashboard", description: "מאמנים ומתאמנים" },
+] as const;
+
 export function getNavigationForRole(role: UserRole) {
-  return role === "COACH" ? coachNavigation : traineeNavigation;
+  if (role === "ADMIN") return adminNavigation;
+  if (role === "COACH") return coachNavigation;
+  return traineeNavigation;
 }

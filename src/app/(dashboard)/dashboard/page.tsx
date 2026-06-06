@@ -3,12 +3,20 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { siteConfig } from "@/config/site";
-import { getCurrentUser } from "@/lib/auth";
+import { getAdminCoachStats } from "@/lib/admin-stats";
+import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getCoachProgramsAction } from "@/server/actions/programs";
 
 export default async function DashboardHomePage() {
   const user = await getCurrentUser();
+
+  if (user?.role === "ADMIN") {
+    await requireAdmin();
+    const coaches = await getAdminCoachStats();
+    return <AdminDashboard coaches={coaches} adminName={user.displayName} />;
+  }
 
   if (user?.role === "TRAINEE") {
     redirect("/dashboard/my-program");

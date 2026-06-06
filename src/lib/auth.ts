@@ -89,6 +89,10 @@ export async function requireCoach(): Promise<SessionUser> {
   return requireRole("COACH");
 }
 
+export async function requireAdmin(): Promise<SessionUser> {
+  return requireRole("ADMIN");
+}
+
 export async function requireTrainee(): Promise<SessionUser> {
   return requireRole("TRAINEE");
 }
