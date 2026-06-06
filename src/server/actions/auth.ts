@@ -12,11 +12,15 @@ import { linkTraineeToCoach } from "@/lib/coach-trainee";
 import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
 import { validatePassword } from "@/lib/password";
 import {
+  resetPasswordByIdentity,
+  resetPasswordInputFromFormData,
+} from "@/lib/reset-password";
+import {
   getDatabaseUrl,
   getServerConfigIssue,
   serverConfigErrorMessage,
 } from "@/lib/server-env";
-import { normalizePhone, parseAge, validatePhone, phonesMatch, agesMatch } from "@/lib/user-identity";
+import { normalizePhone, parseAge, validatePhone } from "@/lib/user-identity";
 import { createUserSession, clearSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
@@ -237,50 +241,8 @@ export async function forgotPasswordAction(formData: FormData) {
     return { error: serverConfigErrorMessage(configIssue) };
   }
 
-  const email = normalizeEmail(String(formData.get("email") ?? ""));
-  const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
-  const ageRaw = String(formData.get("age") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const confirm = String(formData.get("confirmPassword") ?? "");
-
-  if (!email || !phoneRaw || !ageRaw) {
-    return { error: "יש למלא אימייל, גיל ומספר טלפון" };
-  }
-  if (!password) return { error: "יש להזין סיסמה חדשה" };
-  if (password !== confirm) return { error: "הסיסמאות אינן תואמות" };
-
-  const phoneError = validatePhone(phoneRaw);
-  if (phoneError) return { error: phoneError };
-
-  const age = parseAge(ageRaw);
-  if (age == null) return { error: "גיל לא תקין (1–120)" };
-
-  const passwordError = validatePassword(password);
-  if (passwordError) return { error: passwordError };
-
-  const phoneNumber = normalizePhone(phoneRaw);
-
   try {
-    const user = await prisma.user.findFirst({
-      where: { email },
-      select: { id: true, phoneNumber: true, age: true, passwordHash: true },
-    });
-
-    if (
-      !user?.passwordHash ||
-      !agesMatch(user.age, age) ||
-      !phonesMatch(user.phoneNumber, phoneNumber)
-    ) {
-      return { error: "הפרטים לא תואמים לחשבון. בדוק/י אימייל, גיל וטלפון." };
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash },
-    });
-
-    return { success: true };
+    return await resetPasswordByIdentity(resetPasswordInputFromFormData(formData));
   } catch (error) {
     console.error("forgotPasswordAction:", error);
     return { error: dbActionErrorMessage(error) };

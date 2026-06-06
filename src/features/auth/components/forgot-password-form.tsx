@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PASSWORD_HINT } from "@/lib/password";
-import { forgotPasswordAction } from "@/server/actions/auth";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -22,14 +21,20 @@ export function ForgotPasswordForm() {
     setError(null);
 
     try {
-      const result = await forgotPasswordAction(new FormData(e.currentTarget));
+      const formData = new FormData(e.currentTarget);
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (result && "error" in result && result.error) {
-        setError(result.error);
+      const result = (await response.json()) as { error?: string; success?: boolean };
+
+      if (!response.ok || result.error) {
+        setError(result.error ?? "שגיאה בעדכון הסיסמה. נסו שוב.");
         return;
       }
 
-      if (result && "success" in result && result.success) {
+      if (result.success) {
         router.push("/sign-in?reset=1");
         router.refresh();
       }

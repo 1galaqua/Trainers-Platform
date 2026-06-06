@@ -1,3 +1,5 @@
+import { Prisma } from "@/lib/prisma-client";
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
@@ -26,6 +28,12 @@ export function isDbConnectionError(error: unknown): boolean {
 }
 
 export function dbActionErrorMessage(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2025") {
+      return "החשבון לא נמצא.";
+    }
+  }
+
   if (isDbConnectionError(error)) {
     const message = getErrorMessage(error);
     if (
