@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { demoPeople } from "@/config/demo";
 import { siteConfig } from "@/config/site";
 import { MarketingAuthCta } from "@/features/marketing/components/marketing-auth-cta";
 
@@ -29,18 +27,8 @@ export default function HomePage() {
             <p className="text-lg text-muted-foreground leading-relaxed">
               {siteConfig.description}
             </p>
-            <p className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3 text-foreground text-sm leading-relaxed">
-              <span className="text-muted-foreground">דמו: </span>
-              המאמן{" "}
-              <span className="font-medium">{demoPeople.trainer.fullName}</span>
-              {`, המתאמן `}
-              <span className="font-medium">{demoPeople.trainee.fullName}</span>.
-            </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button render={<Link href="/dashboard" />} size="lg">
-                כניסה לאפליקציה
-              </Button>
-              <MarketingAuthCta size="lg" variant="outline" />
+              <MarketingAuthCta size="lg" />
             </div>
           </div>
 

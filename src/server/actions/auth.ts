@@ -9,7 +9,7 @@ import type { UserRole } from "@/lib/prisma-client";
 import { isClerkConfigured } from "@/config/clerk";
 import { dbActionErrorMessage, isDbConnectionError } from "@/lib/db-errors";
 import { linkTraineeToCoach } from "@/lib/coach-trainee";
-import { DEMO_AUTH, resolveLoginUser, verifyPassword } from "@/lib/demo-auth";
+import { findUserByEmail, verifyUserPassword } from "@/lib/local-auth";
 import { validatePassword } from "@/lib/password";
 import {
   resetPasswordByIdentity,
@@ -28,26 +28,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-async function loginDemoOffline(email: string, password: string) {
-  const demo = DEMO_AUTH[email];
-  if (!demo || password !== demo.password) return null;
-
-  await createUserSession({
-    userId: demo.clerkId,
-    clerkId: demo.clerkId,
-    email,
-    displayName: demo.displayName,
-    role: demo.role,
-    isOfflineDemo: true,
-  });
-  return { success: true as const, offline: true as const };
-}
-
-function isDemoCredentials(email: string, password: string) {
-  const demo = DEMO_AUTH[email];
-  return Boolean(demo && password === demo.password);
-}
-
 export async function registerAction(formData: FormData) {
   if (isClerkConfigured()) {
     return { error: "ההרשמה מתבצעת דרך Clerk" };
@@ -58,10 +38,7 @@ export async function registerAction(formData: FormData) {
     return { error: serverConfigErrorMessage(configIssue) };
   }
   if (configIssue === "missing_database_url") {
-    return {
-      error:
-        "DATABASE_URL לא מוגדר — לא ניתן ליצור חשבון. ניתן להשתמש בחשבונות הדמו.",
-    };
+    return { error: serverConfigErrorMessage(configIssue) };
   }
 
   const email = normalizeEmail(String(formData.get("email") ?? ""));
@@ -159,30 +136,17 @@ export async function loginAction(formData: FormData) {
     return { error: serverConfigErrorMessage(configIssue) };
   }
 
-  if (!getDatabaseUrl() && isDemoCredentials(email, password)) {
-    try {
-      const offline = await loginDemoOffline(email, password);
-      if (offline) {
-        revalidatePath("/dashboard");
-        return offline;
-      }
-    } catch (error) {
-      if (isRedirectError(error)) throw error;
-      return { error: serverConfigErrorMessage("missing_session_secret") };
-    }
-  }
-
   if (!getDatabaseUrl()) {
     return { error: serverConfigErrorMessage("missing_database_url") };
   }
 
   try {
-    const user = await resolveLoginUser(email);
+    const user = await findUserByEmail(email);
     if (!user) {
       return { error: "אימייל או סיסמה שגויים" };
     }
 
-    const valid = await verifyPassword(user, password, email);
+    const valid = await verifyUserPassword(user, password);
     if (!valid) {
       return { error: "אימייל או סיסמה שגויים" };
     }
@@ -202,22 +166,6 @@ export async function loginAction(formData: FormData) {
 
     if (error instanceof Error && error.message.includes("SESSION_SECRET")) {
       return { error: serverConfigErrorMessage("missing_session_secret") };
-    }
-
-    if (isDbConnectionError(error) && isDemoCredentials(email, password)) {
-      try {
-        const offline = await loginDemoOffline(email, password);
-        if (offline) {
-          revalidatePath("/dashboard");
-          return offline;
-        }
-      } catch (sessionError) {
-        if (isRedirectError(sessionError)) throw sessionError;
-      }
-      return {
-        error:
-          "Atlas חוסם את Vercel. ב-Network Access הוסף 0.0.0.0/0, ואז הרץ npm run db:seed מהמחשב.",
-      };
     }
 
     if (isDbConnectionError(error)) {

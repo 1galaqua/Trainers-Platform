@@ -20,7 +20,6 @@ export type SessionData = {
   email: string;
   displayName: string;
   role: UserRole;
-  isOfflineDemo?: boolean;
 };
 
 export async function createUserSession(data: SessionData) {
@@ -30,7 +29,6 @@ export async function createUserSession(data: SessionData) {
     email: data.email,
     displayName: data.displayName,
     role: data.role,
-    isOfflineDemo: data.isOfflineDemo ?? false,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
@@ -61,7 +59,6 @@ function parseSessionPayload(payload: Record<string, unknown>): SessionData | nu
     email: typeof email === "string" ? email : "",
     displayName: typeof displayName === "string" ? displayName : "",
     role: role === "COACH" || role === "TRAINEE" ? role : "TRAINEE",
-    isOfflineDemo: payload.isOfflineDemo === true,
   };
 }
 

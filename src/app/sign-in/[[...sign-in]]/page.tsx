@@ -31,10 +31,6 @@ export default function SignInPage() {
         <SignInResetNotice />
       </Suspense>
       <EmailLoginForm />
-      <p className="max-w-sm text-center text-muted-foreground text-xs leading-relaxed">
-        חשבונות דemo: <span dir="ltr">coach@demo.com</span> / <span dir="ltr">trainee@demo.com</span> — סיסמה:{" "}
-        <span dir="ltr">Demo1234</span>
-      </p>
     </div>
   );
 }
