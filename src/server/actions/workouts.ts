@@ -14,6 +14,113 @@ export type ExerciseLogInput = {
   notes?: string;
 };
 
+export type LogWorkoutActionResult = { success: true } | { error: string };
+
+type PersistWorkoutOptions = {
+  coachId?: string;
+  forCoach?: boolean;
+};
+
+async function persistWorkoutSession(
+  traineeId: string,
+  programId: string,
+  sessionNotes: string | null,
+  logs: ExerciseLogInput[],
+  options: PersistWorkoutOptions = {},
+): Promise<LogWorkoutActionResult> {
+  const programWhere = options.coachId
+    ? { id: programId, traineeId, coachId: options.coachId }
+    : { id: programId, traineeId };
+
+  const program = await prisma.trainingProgram.findFirst({ where: programWhere });
+  if (!program) return { error: "אין הרשאה לתוכנית זו" };
+
+  const coachLink = await prisma.coachTrainee.findUnique({
+    where: { traineeId },
+    include: {
+      trainee: {
+        include: {
+          workoutSessions: {
+            where: { program: { coachId: program.coachId } },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!coachLink) return { error: "לא נמצא קשר מאמן-מתאמן" };
+
+  const loggedSessionsCount = coachLink.trainee.workoutSessions.length;
+  const completedCount = getEffectiveWorkoutsCompleted(
+    coachLink.workoutsCompleted,
+    loggedSessionsCount,
+  );
+  const remaining = getWorkoutsRemaining(coachLink.workoutQuota, completedCount);
+
+  if (!isCoachingPeriodActive(coachLink.coachingStartDate, coachLink.coachingEndDate)) {
+    return {
+      error: options.forCoach
+        ? "תקופת הליווי של המתאמן הסתיימה או טרם החלה — לא ניתן לדווח אימון"
+        : "תקופת הליווי הסתיימה או טרם החלה — לא ניתן לדווח אימון",
+    };
+  }
+
+  if (remaining <= 0) {
+    return {
+      error: options.forCoach
+        ? "מכסת האימונים של המתאמן הסתיימה"
+        : "מכסת האימונים שלך הסתיימה — פנה למאמן/ית",
+    };
+  }
+
+  await prisma.workoutSession.create({
+    data: {
+      programId,
+      traineeId,
+      notes: sessionNotes,
+      logs: {
+        create: logs.map((log) => ({
+          exerciseId: log.exerciseId,
+          weightKg: log.weightKg ?? null,
+          repsCompleted: log.repsCompleted ?? null,
+          notes: log.notes || null,
+        })),
+      },
+    },
+  });
+
+  if (coachLink.workoutsCompleted != null) {
+    await prisma.coachTrainee.update({
+      where: { traineeId },
+      data: { workoutsCompleted: coachLink.workoutsCompleted + 1 },
+    });
+  }
+
+  return { success: true };
+}
+
+type ParsedWorkoutLogFormData =
+  | { error: string }
+  | { programId: string; sessionNotes: string | null; logs: ExerciseLogInput[] };
+
+function parseWorkoutLogFormData(formData: FormData): ParsedWorkoutLogFormData {
+  const programId = String(formData.get("programId") ?? "");
+  const sessionNotes = String(formData.get("notes") ?? "").trim() || null;
+  const logsJson = String(formData.get("logs") ?? "[]");
+
+  let logs: ExerciseLogInput[] = [];
+  try {
+    logs = JSON.parse(logsJson) as ExerciseLogInput[];
+  } catch {
+    return { error: "נתוני דיווח לא תקינים" };
+  }
+
+  if (!programId) return { error: "תוכנית לא נמצאה" };
+
+  return { programId, sessionNotes, logs };
+}
+
 export async function getTraineeProgramsAction() {
   const trainee = await requireTraineeOnboarded();
 
@@ -52,86 +159,77 @@ export async function getActiveProgramAction() {
   return programs[0] ?? null;
 }
 
-export async function logWorkoutAction(formData: FormData) {
+export async function logWorkoutAction(formData: FormData): Promise<LogWorkoutActionResult> {
   const trainee = await requireTraineeOnboarded();
-
-  const programId = String(formData.get("programId") ?? "");
-  const sessionNotes = String(formData.get("notes") ?? "").trim() || null;
-  const logsJson = String(formData.get("logs") ?? "[]");
-
-  let logs: ExerciseLogInput[] = [];
-  try {
-    logs = JSON.parse(logsJson) as ExerciseLogInput[];
-  } catch {
-    return { error: "נתוני דיווח לא תקינים" };
-  }
-
-  if (!programId) return { error: "תוכנית לא נמצאה" };
+  const parsed = parseWorkoutLogFormData(formData);
+  if ("error" in parsed) return parsed;
 
   try {
-    const program = await prisma.trainingProgram.findFirst({
-      where: { id: programId, traineeId: trainee.id },
-    });
-    if (!program) return { error: "אין הרשאה לתוכנית זו" };
-
-    const coachLink = await prisma.coachTrainee.findUnique({
-      where: { traineeId: trainee.id },
-      include: {
-        trainee: {
-          include: {
-            workoutSessions: {
-              where: { program: { coachId: program.coachId } },
-              select: { id: true },
-            },
-          },
-        },
-      },
-    });
-
-    if (!coachLink) return { error: "לא נמצא קשר מאמן-מתאמן" };
-
-    const loggedSessionsCount = coachLink.trainee.workoutSessions.length;
-    const completedCount = getEffectiveWorkoutsCompleted(
-      coachLink.workoutsCompleted,
-      loggedSessionsCount,
+    const result = await persistWorkoutSession(
+      trainee.id,
+      parsed.programId,
+      parsed.sessionNotes,
+      parsed.logs,
     );
-    const remaining = getWorkoutsRemaining(coachLink.workoutQuota, completedCount);
-
-    if (!isCoachingPeriodActive(coachLink.coachingStartDate, coachLink.coachingEndDate)) {
-      return { error: "תקופת הליווי הסתיימה או טרם החלה — לא ניתן לדווח אימון" };
-    }
-
-    if (remaining <= 0) {
-      return { error: "מכסת האימונים שלך הסתיימה — פנה למאמן/ית" };
-    }
-
-    await prisma.workoutSession.create({
-      data: {
-        programId,
-        traineeId: trainee.id,
-        notes: sessionNotes,
-        logs: {
-          create: logs.map((log) => ({
-            exerciseId: log.exerciseId,
-            weightKg: log.weightKg ?? null,
-            repsCompleted: log.repsCompleted ?? null,
-            notes: log.notes || null,
-          })),
-        },
-      },
-    });
-
-    if (coachLink.workoutsCompleted != null) {
-      await prisma.coachTrainee.update({
-        where: { traineeId: trainee.id },
-        data: { workoutsCompleted: coachLink.workoutsCompleted + 1 },
-      });
-    }
+    if ("error" in result) return result;
 
     revalidatePath("/dashboard/workouts/log");
     revalidatePath("/dashboard/progress");
     revalidatePath("/dashboard/my-program");
     revalidatePath("/dashboard/trainees");
+    return { success: true };
+  } catch {
+    return { error: "שגיאה בשמירת האימון" };
+  }
+}
+
+export async function getCoachTraineeProgramsAction(traineeId: string) {
+  const coach = await requireCoach();
+
+  try {
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) return [];
+
+    return await prisma.trainingProgram.findMany({
+      where: { traineeId, coachId: coach.id, isActive: true },
+      include: {
+        exercises: { orderBy: { sortOrder: "asc" } },
+        coach: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function logCoachTraineeWorkoutAction(
+  formData: FormData,
+): Promise<LogWorkoutActionResult> {
+  const coach = await requireCoach();
+  const traineeId = String(formData.get("traineeId") ?? "");
+  if (!traineeId) return { error: "מתאמן לא נמצא" };
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return { error: "אין הרשאה למתאמן זה" };
+
+  const parsed = parseWorkoutLogFormData(formData);
+  if ("error" in parsed) return parsed;
+
+  try {
+    const result = await persistWorkoutSession(
+      traineeId,
+      parsed.programId,
+      parsed.sessionNotes,
+      parsed.logs,
+      { coachId: coach.id, forCoach: true },
+    );
+    if ("error" in result) return result;
+
+    revalidatePath(`/dashboard/trainees/${traineeId}`);
+    revalidatePath(`/dashboard/trainees/${traineeId}/log`);
+    revalidatePath("/dashboard/trainees");
+    revalidatePath("/dashboard/progress");
     return { success: true };
   } catch {
     return { error: "שגיאה בשמירת האימון" };

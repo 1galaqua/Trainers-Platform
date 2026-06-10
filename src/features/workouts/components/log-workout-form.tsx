@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { logWorkoutAction } from "@/server/actions/workouts";
+import {
+  logWorkoutAction,
+  type LogWorkoutActionResult,
+} from "@/server/actions/workouts";
 
 type Exercise = {
   id: string;
@@ -20,9 +23,18 @@ type Exercise = {
 type LogWorkoutFormProps = {
   programId: string;
   exercises: Exercise[];
+  traineeId?: string;
+  submitAction?: (formData: FormData) => Promise<LogWorkoutActionResult>;
+  redirectTo?: string;
 };
 
-export function LogWorkoutForm({ programId, exercises }: LogWorkoutFormProps) {
+export function LogWorkoutForm({
+  programId,
+  exercises,
+  traineeId,
+  submitAction = logWorkoutAction,
+  redirectTo = "/dashboard/progress",
+}: LogWorkoutFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +58,7 @@ export function LogWorkoutForm({ programId, exercises }: LogWorkoutFormProps) {
 
     const formData = new FormData(e.currentTarget);
     formData.set("programId", programId);
+    if (traineeId) formData.set("traineeId", traineeId);
     formData.set(
       "logs",
       JSON.stringify(
@@ -58,15 +71,15 @@ export function LogWorkoutForm({ programId, exercises }: LogWorkoutFormProps) {
       ),
     );
 
-    const result = await logWorkoutAction(formData);
+    const result = await submitAction(formData);
     setLoading(false);
 
-    if (result.error) {
+    if ("error" in result) {
       setError(result.error);
       return;
     }
 
-    router.push("/dashboard/progress");
+    router.push(redirectTo);
     router.refresh();
   }
 

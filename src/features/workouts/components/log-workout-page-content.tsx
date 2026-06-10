@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { LogWorkoutForm } from "@/features/workouts/components/log-workout-form";
+import { logCoachTraineeWorkoutAction } from "@/server/actions/workouts";
 import {
   TraineeProgramPicker,
   type TraineeProgramPickerItem,
@@ -28,6 +29,11 @@ type ProgramOption = TraineeProgramPickerItem & {
 type LogWorkoutPageContentProps = {
   programs: ProgramOption[];
   initialProgramId?: string;
+  logBasePath?: string;
+  emptyBackHref?: string;
+  emptyBackLabel?: string;
+  coachTraineeId?: string;
+  redirectTo?: string;
 };
 
 function resolveSelectedId(programs: ProgramOption[], preferredId?: string) {
@@ -35,7 +41,15 @@ function resolveSelectedId(programs: ProgramOption[], preferredId?: string) {
   return programs[0]?.id ?? "";
 }
 
-export function LogWorkoutPageContent({ programs, initialProgramId }: LogWorkoutPageContentProps) {
+export function LogWorkoutPageContent({
+  programs,
+  initialProgramId,
+  logBasePath = "/dashboard/workouts/log",
+  emptyBackHref = "/dashboard/my-program",
+  emptyBackLabel = "חזרה לתוכניות",
+  coachTraineeId,
+  redirectTo,
+}: LogWorkoutPageContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState(() =>
@@ -50,9 +64,9 @@ export function LogWorkoutPageContent({ programs, initialProgramId }: LogWorkout
   const selectProgram = useCallback(
     (programId: string) => {
       setSelectedId(programId);
-      router.replace(`/dashboard/workouts/log?program=${programId}`, { scroll: false });
+      router.replace(`${logBasePath}?program=${programId}`, { scroll: false });
     },
-    [router],
+    [router, logBasePath],
   );
 
   const program = programs.find((p) => p.id === selectedId) ?? programs[0];
@@ -62,8 +76,8 @@ export function LogWorkoutPageContent({ programs, initialProgramId }: LogWorkout
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground text-sm">
           אין תוכניות פעילות.{" "}
-          <Link href="/dashboard/my-program" className="text-primary underline">
-            חזרה לתוכניות
+          <Link href={emptyBackHref} className="text-primary underline">
+            {emptyBackLabel}
           </Link>
         </CardContent>
       </Card>
@@ -114,6 +128,9 @@ export function LogWorkoutPageContent({ programs, initialProgramId }: LogWorkout
             key={program.id}
             programId={program.id}
             exercises={program.exercises}
+            traineeId={coachTraineeId}
+            submitAction={coachTraineeId ? logCoachTraineeWorkoutAction : undefined}
+            redirectTo={redirectTo}
           />
         </CardContent>
       </Card>

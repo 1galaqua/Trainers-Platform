@@ -147,6 +147,13 @@ export default async function TraineeDetailPage({ params }: PageProps) {
             hasAgreement={hasSignedAgreement}
             agreementRedoPending={agreementRedoPending}
           />
+          <Button
+            variant="default"
+            size="sm"
+            render={<Link href={`/dashboard/trainees/${id}/log`} />}
+          >
+            דיווח אימון
+          </Button>
         </div>
       </div>
 

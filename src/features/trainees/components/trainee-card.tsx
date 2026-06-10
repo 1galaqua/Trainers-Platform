@@ -90,6 +90,9 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             hasAgreement={trainee.hasSignedAgreement}
             agreementRedoPending={trainee.agreementRedoPending}
           />
+          <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}/log`} />}>
+            דיווח אימון
+          </Button>
           <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}`} />}>
             צפייה בהתקדמות
           </Button>
