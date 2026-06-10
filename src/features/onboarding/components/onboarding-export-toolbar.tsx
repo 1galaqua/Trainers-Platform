@@ -37,14 +37,14 @@ export function OnboardingExportToolbar({
   const downloadHref =
     htmlDownloadHref ?? `/api/trainees/${traineeId}/onboarding-export`;
 
-  const exportDisabled = !iframeReady || printing || pdfLoading;
+  const exportDisabled = printing || pdfLoading;
 
   async function handlePrint() {
     setPrinting(true);
     setError(null);
     try {
       const iframe = iframeRef.current;
-      if (iframe?.contentDocument?.body) {
+      if (iframe) {
         await printOnboardingFromIframe(iframe);
       } else {
         printOnboardingHtml(html);

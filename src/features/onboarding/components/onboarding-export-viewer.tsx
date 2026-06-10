@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { OnboardingExportToolbar } from "@/features/onboarding/components/onboarding-export-toolbar";
 
@@ -24,6 +24,39 @@ export function OnboardingExportViewer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeReady, setIframeReady] = useState(false);
 
+  useEffect(() => {
+    setIframeReady(false);
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const markReady = () => {
+      const doc = iframe.contentDocument;
+      if (doc?.body) {
+        setIframeReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (markReady()) return;
+
+    const handleLoad = () => {
+      markReady();
+    };
+
+    iframe.addEventListener("load", handleLoad);
+    const interval = window.setInterval(() => {
+      if (markReady()) {
+        window.clearInterval(interval);
+      }
+    }, 100);
+
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      window.clearInterval(interval);
+    };
+  }, [html]);
+
   return (
     <div className="space-y-4">
       <OnboardingExportToolbar
@@ -39,7 +72,6 @@ export function OnboardingExportViewer({
         ref={iframeRef}
         title={title}
         srcDoc={html}
-        onLoad={() => setIframeReady(true)}
         className="min-h-[75vh] w-full rounded-lg border border-border bg-white"
       />
     </div>
