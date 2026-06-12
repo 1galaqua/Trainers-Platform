@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +9,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEffectiveWorkoutsCompleted } from "@/lib/trainee-status";
 import { updateCoachingPeriodAction } from "@/server/actions/trainees";
+
+type DateInputFieldProps = {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function DateInputField({ id, label, value, onChange }: DateInputFieldProps) {
+  return (
+    <div className="min-w-0 w-full space-y-1">
+      <Label className="block w-full text-right" htmlFor={id}>
+        {label}
+      </Label>
+      <div className="relative w-full">
+        <Input
+          id={id}
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          className="input-date-rtl"
+        />
+        <CalendarDays
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+      </div>
+    </div>
+  );
+}
 
 type CoachingPeriodFormProps = {
   traineeId: string;
@@ -104,28 +136,18 @@ export function CoachingPeriodForm({
         </p>
       )}
       <div className={fieldGridClass}>
-        <div className="min-w-0 w-full space-y-1">
-          <Label className="block w-full text-right" htmlFor={`start-${traineeId}`}>תאריך התחלה</Label>
-          <Input
-            id={`start-${traineeId}`}
-            type="date"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            required
-            className="input-date-rtl"
-          />
-        </div>
-        <div className="min-w-0 w-full space-y-1">
-          <Label className="block w-full text-right" htmlFor={`end-${traineeId}`}>תאריך סיום</Label>
-          <Input
-            id={`end-${traineeId}`}
-            type="date"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            required
-            className="input-date-rtl"
-          />
-        </div>
+        <DateInputField
+          id={`start-${traineeId}`}
+          label="תאריך התחלה"
+          value={start}
+          onChange={setStart}
+        />
+        <DateInputField
+          id={`end-${traineeId}`}
+          label="תאריך סיום"
+          value={end}
+          onChange={setEnd}
+        />
         <div className="min-w-0 w-full space-y-1">
           <Label className="block w-full text-right" htmlFor={`quota-${traineeId}`}>מכסת אימונים</Label>
           <Input

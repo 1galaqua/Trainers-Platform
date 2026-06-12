@@ -131,25 +131,41 @@
 
 @layer components {
   .input-date-rtl {
+    position: relative;
     box-sizing: border-box;
-    display: block;
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    height: 2rem;
+    min-height: 2rem;
     direction: rtl;
     text-align: right;
     -webkit-min-logical-width: 0;
     color-scheme: light;
-    padding-inline: 0.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    padding-right: 0.625rem;
+    padding-left: 2.25rem;
+    line-height: 1.25rem;
+    appearance: none;
+    -webkit-appearance: none;
   }
 
   .input-date-rtl::-webkit-date-and-time-value {
+    min-height: 1.25rem;
     text-align: right;
   }
 
+  /* אזור לחיץ שקוף מעל אייקון היומן — עובד גם ב-iOS/Android */
   .input-date-rtl::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2.5rem;
+    height: 100%;
+    margin: 0;
+    padding: 0;
     cursor: pointer;
-    margin-inline-start: 0.25rem;
-    opacity: 1;
+    opacity: 0;
   }
 }
