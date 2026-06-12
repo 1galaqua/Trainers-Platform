@@ -72,8 +72,8 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-[1] min-w-0 space-y-4">
-        <div className="pointer-events-auto isolate min-w-0 w-full rounded-lg border border-border p-3 sm:p-4">
-          <p className="mb-3 text-end font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
+        <div className="pointer-events-auto isolate min-w-0 w-full rounded-lg border border-border p-3 text-right sm:p-4">
+          <p className="mb-3 font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
           <CoachingPeriodForm
             traineeId={trainee.id}
             coachingStartDate={trainee.coachingStartDate}

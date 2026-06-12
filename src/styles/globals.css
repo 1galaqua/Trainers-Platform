@@ -136,6 +136,7 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    direction: rtl;
     text-align: right;
     -webkit-min-logical-width: 0;
     color-scheme: light;
