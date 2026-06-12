@@ -35,26 +35,30 @@ export default async function DashboardHomePage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">תוכניות פעילות</CardTitle>
-            <CardDescription>סה״כ במערכת</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-3xl">{programs.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">אימונים שבוצעו</CardTitle>
-            <CardDescription>על ידי מתאמנים</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-3xl">
-              {programs.reduce((sum, p) => sum + p._count.sessions, 0)}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/trainees" className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="h-full cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
+            <CardHeader>
+              <CardTitle className="text-base">תוכניות פעילות</CardTitle>
+              <CardDescription>סה״כ במערכת</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-3xl">{programs.length}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/workouts" className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="h-full cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
+            <CardHeader>
+              <CardTitle className="text-base">אימונים שבוצעו</CardTitle>
+              <CardDescription>על ידי מתאמנים</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-3xl">
+                {programs.reduce((sum, p) => sum + p._count.sessions, 0)}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">פעולות מהירות</CardTitle>

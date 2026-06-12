@@ -26,14 +26,19 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
       : "מכסת אימונים לא הוגדרה";
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="relative cursor-pointer overflow-hidden transition-colors hover:border-primary/40 hover:bg-muted/20">
+      <Link
+        href={`/dashboard/trainees/${trainee.id}`}
+        className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`צפייה בהתקדמות של ${name}`}
+      />
+      <CardHeader className="relative z-[1] pointer-events-none">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <TraineeStatusIndicator status={trainee.status} />
             <CardTitle className="text-base">{name}</CardTitle>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="pointer-events-auto flex flex-wrap gap-2">
             {trainee.questionnaireRedoPending && (
               <Badge variant="secondary">ממתין למילוי שאלון מחדש</Badge>
             )}
@@ -66,8 +71,8 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             : ""}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border border-border p-4">
+      <CardContent className="relative z-[1] space-y-4">
+        <div className="pointer-events-auto rounded-lg border border-border p-4">
           <p className="mb-3 font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
           <CoachingPeriodForm
             traineeId={trainee.id}
@@ -79,7 +84,7 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             compact
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
           <RequestQuestionnaireRedoButton
             traineeId={trainee.id}
             hasQuestionnaire={Boolean(trainee.questionnaire)}

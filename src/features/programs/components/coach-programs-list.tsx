@@ -109,8 +109,16 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {filtered.map((program) => (
-            <Card key={program.id}>
-              <CardHeader>
+            <Card
+              key={program.id}
+              className="relative cursor-pointer overflow-hidden transition-colors hover:border-primary/40 hover:bg-muted/20"
+            >
+              <Link
+                href={`/dashboard/workouts/${program.id}`}
+                className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`צפייה בתוכנית ${program.name}`}
+              />
+              <CardHeader className="relative z-[1] pointer-events-none">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{program.name}</CardTitle>
                   <div className="flex flex-wrap justify-end gap-1">
@@ -120,26 +128,18 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
                 </div>
                 <CardDescription>{traineeLabel(program.traineeName)}</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-muted-foreground text-xs">
+              <CardContent className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
+                <span className="pointer-events-none text-muted-foreground text-xs">
                   {program.exerciseCount} תרגילים · {program.sessionCount} אימונים שבוצעו
                 </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    render={<Link href={`/dashboard/workouts/${program.id}`} />}
-                  >
-                    צפייה
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}
-                  >
-                    עריכה
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="pointer-events-auto"
+                  render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}
+                >
+                  עריכה
+                </Button>
               </CardContent>
             </Card>
           ))}
