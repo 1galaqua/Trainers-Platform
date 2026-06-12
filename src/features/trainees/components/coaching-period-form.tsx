@@ -92,7 +92,7 @@ export function CoachingPeriodForm({
   return (
     <form onSubmit={handleSubmit} className="min-w-0 space-y-3">
       {hasPeriod && (
-        <p className="break-words text-muted-foreground text-sm leading-relaxed">
+        <p className="break-words text-end text-muted-foreground text-sm leading-relaxed">
           ליווי: {formatDisplayDate(coachingStartDate)} — {formatDisplayDate(coachingEndDate)}
           {workoutQuota != null && (
             <>
@@ -104,7 +104,7 @@ export function CoachingPeriodForm({
         </p>
       )}
       <div className={fieldGridClass}>
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 w-full space-y-1 text-end">
           <Label htmlFor={`start-${traineeId}`}>תאריך התחלה</Label>
           <Input
             id={`start-${traineeId}`}
@@ -112,10 +112,10 @@ export function CoachingPeriodForm({
             value={start}
             onChange={(e) => setStart(e.target.value)}
             required
-            dir="ltr"
+            className="input-date-rtl"
           />
         </div>
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 w-full space-y-1 text-end">
           <Label htmlFor={`end-${traineeId}`}>תאריך סיום</Label>
           <Input
             id={`end-${traineeId}`}
@@ -123,10 +123,10 @@ export function CoachingPeriodForm({
             value={end}
             onChange={(e) => setEnd(e.target.value)}
             required
-            dir="ltr"
+            className="input-date-rtl"
           />
         </div>
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 w-full space-y-1 text-end">
           <Label htmlFor={`quota-${traineeId}`}>מכסת אימונים</Label>
           <Input
             id={`quota-${traineeId}`}
@@ -135,11 +135,12 @@ export function CoachingPeriodForm({
             value={quota}
             onChange={(e) => setQuota(e.target.value)}
             required
-            dir="ltr"
+            inputMode="numeric"
+            className="text-end"
             placeholder="10"
           />
         </div>
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 w-full space-y-1 text-end">
           <Label htmlFor={`completed-${traineeId}`}>אימונים שבוצעו</Label>
           <Input
             id={`completed-${traineeId}`}
@@ -148,17 +149,19 @@ export function CoachingPeriodForm({
             value={completed}
             onChange={(e) => setCompleted(e.target.value)}
             required
-            dir="ltr"
+            inputMode="numeric"
+            className="text-end"
             placeholder="0"
           />
           {showLoggedHint && (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-end text-muted-foreground text-xs">
               {loggedSessionsCount} דווחו במערכת על ידי המתאמן
             </p>
           )}
         </div>
       </div>
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error && <p className="text-end text-destructive text-sm">{error}</p>}
+      <div className="flex justify-end">
       <Button
         type="submit"
         size="sm"
@@ -168,6 +171,7 @@ export function CoachingPeriodForm({
       >
         {loading ? "שומר..." : hasPeriod ? "עדכון הגדרות ליווי" : "שמירת הגדרות ליווי"}
       </Button>
+      </div>
     </form>
   );
 }

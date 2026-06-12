@@ -128,3 +128,27 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .input-date-rtl {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    text-align: right;
+    -webkit-min-logical-width: 0;
+    color-scheme: light;
+    padding-inline: 0.5rem;
+  }
+
+  .input-date-rtl::-webkit-date-and-time-value {
+    text-align: right;
+  }
+
+  .input-date-rtl::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    margin-inline-start: 0.25rem;
+    opacity: 1;
+  }
+}

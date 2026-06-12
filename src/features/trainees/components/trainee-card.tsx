@@ -26,7 +26,7 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
       : "מכסת אימונים לא הוגדרה";
 
   return (
-    <Card className="relative min-w-0 cursor-pointer overflow-hidden transition-colors hover:border-primary/40 hover:bg-muted/20">
+    <Card className="relative min-w-0 cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
       <Link
         href={`/dashboard/trainees/${trainee.id}`}
         className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -72,8 +72,8 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
         </CardDescription>
       </CardHeader>
       <CardContent className="relative z-[1] min-w-0 space-y-4">
-        <div className="pointer-events-auto min-w-0 rounded-lg border border-border p-3 sm:p-4">
-          <p className="mb-3 font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
+        <div className="pointer-events-auto isolate min-w-0 w-full rounded-lg border border-border p-3 sm:p-4">
+          <p className="mb-3 text-end font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
           <CoachingPeriodForm
             traineeId={trainee.id}
             coachingStartDate={trainee.coachingStartDate}
