@@ -36,8 +36,8 @@ export function TraineesList({ trainees, questionnaireFields }: TraineesListProp
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[220px] space-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="w-full min-w-0 space-y-1 sm:max-w-xs sm:flex-1">
           <Label htmlFor="trainee-filter">סינון מתאמנים</Label>
           <Select
             id="trainee-filter"

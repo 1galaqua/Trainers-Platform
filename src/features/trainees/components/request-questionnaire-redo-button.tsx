@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { requestQuestionnaireRedoAction } from "@/server/actions/trainees";
 
 type RequestQuestionnaireRedoButtonProps = {
@@ -12,6 +13,7 @@ type RequestQuestionnaireRedoButtonProps = {
   hasQuestionnaire: boolean;
   size?: "sm" | "default";
   variant?: "outline" | "secondary";
+  className?: string;
 };
 
 export function RequestQuestionnaireRedoButton({
@@ -20,6 +22,7 @@ export function RequestQuestionnaireRedoButton({
   hasQuestionnaire,
   size = "sm",
   variant = "outline",
+  className,
 }: RequestQuestionnaireRedoButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,7 @@ export function RequestQuestionnaireRedoButton({
         size={size}
         disabled={loading || questionnaireRedoPending}
         onClick={handleClick}
+        className={cn(className)}
       >
         {questionnaireRedoPending
           ? "ממתין למילוי שאלון מחדש"

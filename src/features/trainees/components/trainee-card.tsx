@@ -26,19 +26,19 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
       : "מכסת אימונים לא הוגדרה";
 
   return (
-    <Card className="relative cursor-pointer overflow-hidden transition-colors hover:border-primary/40 hover:bg-muted/20">
+    <Card className="relative min-w-0 cursor-pointer overflow-hidden transition-colors hover:border-primary/40 hover:bg-muted/20">
       <Link
         href={`/dashboard/trainees/${trainee.id}`}
         className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={`צפייה בהתקדמות של ${name}`}
       />
       <CardHeader className="relative z-[1] pointer-events-none">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-2">
             <TraineeStatusIndicator status={trainee.status} />
-            <CardTitle className="text-base">{name}</CardTitle>
+            <CardTitle className="min-w-0 break-words text-base">{name}</CardTitle>
           </div>
-          <div className="pointer-events-auto flex flex-wrap gap-2">
+          <div className="pointer-events-auto flex min-w-0 flex-wrap gap-2">
             {trainee.questionnaireRedoPending && (
               <Badge variant="secondary">ממתין למילוי שאלון מחדש</Badge>
             )}
@@ -60,7 +60,7 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             )}
           </div>
         </div>
-        <CardDescription>
+        <CardDescription className="break-words leading-relaxed">
           {trainee.sessionsCount} אימונים שבוצעו (למכסה)
           {trainee.loggedSessionsCount !== trainee.sessionsCount &&
             ` · ${trainee.loggedSessionsCount} דווחו במערכת`}
@@ -71,8 +71,8 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             : ""}
         </CardDescription>
       </CardHeader>
-      <CardContent className="relative z-[1] space-y-4">
-        <div className="pointer-events-auto rounded-lg border border-border p-4">
+      <CardContent className="relative z-[1] min-w-0 space-y-4">
+        <div className="pointer-events-auto min-w-0 rounded-lg border border-border p-3 sm:p-4">
           <p className="mb-3 font-medium text-sm">תקופת ליווי ומכסת אימונים</p>
           <CoachingPeriodForm
             traineeId={trainee.id}
@@ -84,24 +84,41 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             compact
           />
         </div>
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+        <div className="pointer-events-auto grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <RequestQuestionnaireRedoButton
             traineeId={trainee.id}
             hasQuestionnaire={Boolean(trainee.questionnaire)}
             questionnaireRedoPending={trainee.questionnaireRedoPending}
+            className="w-full"
           />
           <RequestAgreementRedoButton
             traineeId={trainee.id}
             hasAgreement={trainee.hasSignedAgreement}
             agreementRedoPending={trainee.agreementRedoPending}
+            className="w-full"
           />
-          <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}/log`} />}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            render={<Link href={`/dashboard/trainees/${trainee.id}/log`} />}
+          >
             דיווח אימון
           </Button>
-          <Button variant="outline" size="sm" render={<Link href={`/dashboard/trainees/${trainee.id}`} />}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            render={<Link href={`/dashboard/trainees/${trainee.id}`} />}
+          >
             צפייה בהתקדמות
           </Button>
-          <Button variant="outline" size="sm" render={<Link href="/dashboard/workouts/new" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            render={<Link href="/dashboard/workouts/new" />}
+          >
             תוכנית חדשה
           </Button>
         </div>

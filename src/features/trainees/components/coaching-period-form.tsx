@@ -85,10 +85,14 @@ export function CoachingPeriodForm({
     loggedSessionsCount !== effectiveCompleted ||
     workoutsCompleted != null;
 
+  const fieldGridClass = compact
+    ? "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    : "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="min-w-0 space-y-3">
       {hasPeriod && (
-        <p className="text-muted-foreground text-sm">
+        <p className="break-words text-muted-foreground text-sm leading-relaxed">
           ליווי: {formatDisplayDate(coachingStartDate)} — {formatDisplayDate(coachingEndDate)}
           {workoutQuota != null && (
             <>
@@ -99,10 +103,8 @@ export function CoachingPeriodForm({
           )}
         </p>
       )}
-      <div
-        className={`grid gap-3 ${compact ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2"}`}
-      >
-        <div className="space-y-1">
+      <div className={fieldGridClass}>
+        <div className="min-w-0 space-y-1">
           <Label htmlFor={`start-${traineeId}`}>תאריך התחלה</Label>
           <Input
             id={`start-${traineeId}`}
@@ -113,7 +115,7 @@ export function CoachingPeriodForm({
             dir="ltr"
           />
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label htmlFor={`end-${traineeId}`}>תאריך סיום</Label>
           <Input
             id={`end-${traineeId}`}
@@ -124,7 +126,7 @@ export function CoachingPeriodForm({
             dir="ltr"
           />
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label htmlFor={`quota-${traineeId}`}>מכסת אימונים</Label>
           <Input
             id={`quota-${traineeId}`}
@@ -137,7 +139,7 @@ export function CoachingPeriodForm({
             placeholder="10"
           />
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label htmlFor={`completed-${traineeId}`}>אימונים שבוצעו</Label>
           <Input
             id={`completed-${traineeId}`}
@@ -157,7 +159,13 @@ export function CoachingPeriodForm({
         </div>
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
-      <Button type="submit" size="sm" variant={compact ? "outline" : "default"} disabled={loading}>
+      <Button
+        type="submit"
+        size="sm"
+        variant={compact ? "outline" : "default"}
+        disabled={loading}
+        className="w-full sm:w-auto"
+      >
         {loading ? "שומר..." : hasPeriod ? "עדכון הגדרות ליווי" : "שמירת הגדרות ליווי"}
       </Button>
     </form>

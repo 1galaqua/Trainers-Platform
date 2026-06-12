@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { requestAgreementRedoAction } from "@/server/actions/trainees";
 
 type RequestAgreementRedoButtonProps = {
@@ -12,6 +13,7 @@ type RequestAgreementRedoButtonProps = {
   hasAgreement: boolean;
   size?: "sm" | "default";
   variant?: "outline" | "secondary";
+  className?: string;
 };
 
 export function RequestAgreementRedoButton({
@@ -20,6 +22,7 @@ export function RequestAgreementRedoButton({
   hasAgreement,
   size = "sm",
   variant = "outline",
+  className,
 }: RequestAgreementRedoButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,7 @@ export function RequestAgreementRedoButton({
         size={size}
         disabled={loading || agreementRedoPending}
         onClick={handleClick}
+        className={cn(className)}
       >
         {agreementRedoPending
           ? "ממתין לחתימת הסכם מחדש"
