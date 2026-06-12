@@ -77,6 +77,46 @@ export function printOnboardingHtml(html: string) {
   );
 }
 
+async function renderElementToPdfPages(
+  element: HTMLElement,
+  pdf: import("jspdf").jsPDF,
+  html2canvas: typeof import("html2canvas").default,
+  options: { isFirstPage: boolean },
+) {
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    backgroundColor: "#ffffff",
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    windowWidth: element.scrollWidth,
+    windowHeight: element.scrollHeight,
+    scrollX: 0,
+    scrollY: 0,
+    x: 0,
+    y: 0,
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imgData = canvas.toDataURL("image/png");
+
+  let heightLeft = imgHeight;
+  let position = 0;
+  let isFirstSlice = options.isFirstPage;
+
+  while (heightLeft > 0) {
+    if (!isFirstSlice) pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    position = heightLeft - imgHeight;
+    isFirstSlice = false;
+  }
+}
+
 /** מוריד PDF מתוך גוף המסמך ב-iframe (ללא UI נוסף). */
 export async function downloadOnboardingPdfFromIframe(
   iframe: HTMLIFrameElement,
@@ -91,21 +131,6 @@ export async function downloadOnboardingPdfFromIframe(
   const html2canvas = (await import("html2canvas")).default;
   const { jsPDF } = await import("jspdf");
 
-  const canvas = await html2canvas(body, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    backgroundColor: "#ffffff",
-    width: body.scrollWidth,
-    height: body.scrollHeight,
-    windowWidth: body.scrollWidth,
-    windowHeight: body.scrollHeight,
-    scrollX: 0,
-    scrollY: 0,
-    x: 0,
-    y: 0,
-  });
-
   const pdf = new jsPDF({
     unit: "mm",
     format: "a4",
@@ -113,23 +138,13 @@ export async function downloadOnboardingPdfFromIframe(
     compress: true,
   });
 
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  const imgData = canvas.toDataURL("image/png");
+  const exportPages = Array.from(body.querySelectorAll<HTMLElement>(".export-page"));
+  const targets = exportPages.length > 0 ? exportPages : [body];
+  let isFirstPage = true;
 
-  let heightLeft = imgHeight;
-  let position = 0;
-
-  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+  for (const target of targets) {
+    await renderElementToPdfPages(target, pdf, html2canvas, { isFirstPage });
+    isFirstPage = false;
   }
 
   pdf.save(`${fileName}.pdf`);

@@ -45,8 +45,13 @@ function escapeHtml(text: string) {
     .replace(/"/g, "&quot;");
 }
 
+function traineeMetaLine(data: OnboardingExportData) {
+  return `מתאמן/ית: ${escapeHtml(data.traineeName)}${data.traineeEmail ? ` · ${escapeHtml(data.traineeEmail)}` : ""}`;
+}
+
 export function buildOnboardingExportHtml(data: OnboardingExportData) {
-  const sections: string[] = [];
+  const pages: string[] = [];
+  const includeBoth = data.includeQuestionnaire && data.includeAgreement;
 
   if (data.includeQuestionnaire && data.legacy && data.questionnaireCompletedAt) {
     const answerMap =
@@ -69,10 +74,13 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
       })
       .join("");
 
-    sections.push(`
-  <h2>שאלון ראשוני</h2>
-  <p class="meta">הושלם ב-${formatDate(data.questionnaireCompletedAt)}</p>
-  <table>${questionnaireRows}</table>`);
+    pages.push(`
+  <section class="export-page${includeBoth ? " export-page--break" : ""}">
+    <h1>שאלון ראשוני</h1>
+    <p class="meta">${traineeMetaLine(data)}</p>
+    <p class="meta">הושלם ב-${formatDate(data.questionnaireCompletedAt)}</p>
+    <table>${questionnaireRows}</table>
+  </section>`);
   }
 
   if (
@@ -81,14 +89,17 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
     data.signatureUrl &&
     data.agreementText != null
   ) {
-    sections.push(`
-  <h2>הסכם וחתימה דיגיטלית</h2>
-  <p class="meta">נחתם ב-${formatDate(data.agreementSignedAt)}</p>
-  <div class="agreement">${escapeHtml(data.agreementText)}</div>
-  <div class="signature">
-    <p><strong>חתימה:</strong></p>
-    <img src="${data.signatureUrl}" alt="חתימת המתאמן" />
-  </div>`);
+    pages.push(`
+  <section class="export-page">
+    <h1>הסכם וחתימה דיגיטלית</h1>
+    <p class="meta">${traineeMetaLine(data)}</p>
+    <p class="meta">נחתם ב-${formatDate(data.agreementSignedAt)}</p>
+    <div class="agreement">${escapeHtml(data.agreementText)}</div>
+    <div class="signature">
+      <p><strong>חתימה:</strong></p>
+      <img src="${data.signatureUrl}" alt="חתימת המתאמן" />
+    </div>
+  </section>`);
   }
 
   const title =
@@ -104,10 +115,12 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
   <meta charset="utf-8" />
   <title>${escapeHtml(title)} — ${escapeHtml(data.traineeName)}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; color: #111; line-height: 1.6; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-    h2 { font-size: 1.1rem; margin-top: 2rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
-    .meta { color: #555; font-size: 0.9rem; }
+    body { font-family: Arial, sans-serif; margin: 0; color: #111; line-height: 1.6; }
+    .export-page { padding: 2rem; }
+    .export-page--break { min-height: 100vh; box-sizing: border-box; }
+    .export-page + .export-page { border-top: 1px solid #ddd; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .meta { color: #555; font-size: 0.9rem; margin: 0.15rem 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     th, td { border: 1px solid #ddd; padding: 0.5rem 0.75rem; text-align: right; vertical-align: top; }
     th { background: #f5f5f5; width: 35%; }
@@ -124,7 +137,15 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      h1, h2 { page-break-after: avoid; break-after: avoid-page; }
+      .export-page {
+        padding: 0;
+        border: none;
+      }
+      .export-page--break {
+        page-break-after: always;
+        break-after: page;
+      }
+      h1 { page-break-after: avoid; break-after: avoid-page; }
       table { page-break-inside: auto; break-inside: auto; }
       tr, th, td { page-break-inside: avoid; break-inside: avoid-page; }
       .agreement {
@@ -140,9 +161,7 @@ export function buildOnboardingExportHtml(data: OnboardingExportData) {
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(title)}</h1>
-  <p class="meta">מתאמן/ית: ${escapeHtml(data.traineeName)}${data.traineeEmail ? ` · ${escapeHtml(data.traineeEmail)}` : ""}</p>
-  ${sections.join("\n")}
+  ${pages.join("\n")}
 </body>
 </html>`;
 }
