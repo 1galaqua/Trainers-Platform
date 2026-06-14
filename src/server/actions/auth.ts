@@ -8,7 +8,6 @@ import type { UserRole } from "@/lib/prisma-client";
 
 import { isClerkConfigured } from "@/config/clerk";
 import { dbActionErrorMessage, isDbConnectionError } from "@/lib/db-errors";
-import { linkTraineeToCoach } from "@/lib/coach-trainee";
 import { findUserByEmail, verifyUserPassword } from "@/lib/local-auth";
 import { validatePassword } from "@/lib/password";
 import {
@@ -46,7 +45,7 @@ export async function registerAction(formData: FormData) {
   const displayName = String(formData.get("displayName") ?? "").trim();
   const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
   const ageRaw = String(formData.get("age") ?? "").trim();
-  const role = String(formData.get("role") ?? "TRAINEE") as UserRole;
+  const role = String(formData.get("role") ?? "COACH") as UserRole;
   const coachId = String(formData.get("coachId") ?? "").trim();
 
   if (!email || !password || !displayName || !phoneRaw || !ageRaw) {
@@ -61,20 +60,22 @@ export async function registerAction(formData: FormData) {
 
   const phoneNumber = normalizePhone(phoneRaw);
 
-  if (role === "TRAINEE" && !coachId) {
-    return { error: "יש לבחור מאמן/ית" };
+  if (role === "TRAINEE") {
+    return {
+      error: "מתאמנים נרשמים דרך קישור הזמנה מהמאמן/ית. בקש/י מהמאמן/ית לשלוח לך קישור.",
+    };
   }
 
-  if (role === "COACH" && coachId) {
+  if (role !== "COACH") {
+    return { error: "תפקיד לא תקין" };
+  }
+
+  if (coachId) {
     return { error: "מאמן/ית לא צריך לבחור מאמן בהרשמה" };
   }
 
   const passwordError = validatePassword(password);
   if (passwordError) return { error: passwordError };
-
-  if (role !== "COACH" && role !== "TRAINEE") {
-    return { error: "תפקיד לא תקין" };
-  }
 
   try {
     const existing = await prisma.user.findFirst({ where: { email } });
@@ -91,21 +92,9 @@ export async function registerAction(formData: FormData) {
         displayName,
         phoneNumber,
         age,
-        role,
+        role: "COACH",
       },
     });
-
-    if (role === "TRAINEE") {
-      try {
-        await linkTraineeToCoach(user.id, coachId);
-      } catch (linkError) {
-        await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
-        if (linkError instanceof Error && linkError.message === "COACH_NOT_FOUND") {
-          return { error: "המאמן שנבחר לא נמצא" };
-        }
-        return { error: "שגיאה בשיוך למאמן" };
-      }
-    }
 
     return { success: true };
   } catch (error) {

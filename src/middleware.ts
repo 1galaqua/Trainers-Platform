@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/forgot-password",
   "/reset-password",
+  "/invite(.*)",
   "/api/auth/forgot-password",
 ]);
 

@@ -39,10 +39,11 @@ model User {
   phoneNumber  String?
   age          Int?
   passwordHash String?
-  role         UserRole @default(TRAINEE)
+  role         UserRole @default(COACH)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  traineeInvites           TraineeInvite[]           @relation("CoachInvites")
   coachedTrainees          CoachTrainee[]            @relation("CoachRelation")
   coaches               CoachTrainee[]         @relation("TraineeRelation")
   programsAsCoach       TrainingProgram[]      @relation("ProgramCoach")
@@ -54,6 +55,18 @@ model User {
   agreement                Agreement?
   agreementSubmissions     AgreementSubmission[]
   onboardingTemplate       CoachOnboardingTemplate?
+}
+
+model TraineeInvite {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  token     String    @unique
+  coachId   String    @db.ObjectId
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  coach     User      @relation("CoachInvites", fields: [coachId], references: [id])
+
+  @@index([coachId, createdAt])
 }
 
 model CoachOnboardingTemplate {
