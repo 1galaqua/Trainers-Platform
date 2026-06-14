@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  getLastWorkoutLogPrefillAction,
   logWorkoutAction,
   type LogWorkoutActionResult,
 } from "@/server/actions/workouts";
@@ -19,6 +20,38 @@ type Exercise = {
   reps: number;
   restSeconds: number;
 };
+
+type ExerciseLogState = {
+  exerciseId: string;
+  weightKg: string;
+  repsCompleted: string;
+  notes: string;
+};
+
+function buildLogsFromExercises(
+  exercises: Exercise[],
+  prefill: Awaited<ReturnType<typeof getLastWorkoutLogPrefillAction>>,
+): ExerciseLogState[] {
+  return exercises.map((ex) => {
+    const prev = prefill?.exerciseLogs[ex.id];
+    if (prev) {
+      return {
+        exerciseId: ex.id,
+        weightKg: prev.weightKg != null ? String(prev.weightKg) : "",
+        repsCompleted:
+          prev.repsCompleted != null ? String(prev.repsCompleted) : String(ex.reps),
+        notes: prev.notes ?? "",
+      };
+    }
+
+    return {
+      exerciseId: ex.id,
+      weightKg: "",
+      repsCompleted: String(ex.reps),
+      notes: "",
+    };
+  });
+}
 
 type LogWorkoutFormProps = {
   programId: string;
@@ -37,15 +70,33 @@ export function LogWorkoutForm({
 }: LogWorkoutFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [prefillLoading, setPrefillLoading] = useState(true);
+  const [hasPreviousLog, setHasPreviousLog] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [logs, setLogs] = useState(
-    exercises.map((ex) => ({
-      exerciseId: ex.id,
-      weightKg: "",
-      repsCompleted: String(ex.reps),
-      notes: "",
-    })),
+  const [sessionNotes, setSessionNotes] = useState("");
+  const [logs, setLogs] = useState<ExerciseLogState[]>(() =>
+    buildLogsFromExercises(exercises, null),
   );
+
+  const exerciseKey = exercises.map((exercise) => exercise.id).join(",");
+
+  useEffect(() => {
+    let cancelled = false;
+    setPrefillLoading(true);
+
+    getLastWorkoutLogPrefillAction(programId, traineeId).then((prefill) => {
+      if (cancelled) return;
+
+      setLogs(buildLogsFromExercises(exercises, prefill));
+      setSessionNotes(prefill?.sessionNotes ?? "");
+      setHasPreviousLog(Boolean(prefill));
+      setPrefillLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [programId, traineeId, exerciseKey, exercises]);
 
   function updateLog(index: number, field: string, value: string) {
     setLogs((prev) => prev.map((log, i) => (i === index ? { ...log, [field]: value } : log)));
@@ -85,6 +136,14 @@ export function LogWorkoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {prefillLoading && (
+        <p className="text-muted-foreground text-sm">טוען נתונים מהדיווח האחרון...</p>
+      )}
+      {!prefillLoading && hasPreviousLog && (
+        <p className="text-muted-foreground text-sm">
+          השדות מולאו לפי הדיווח האחרון של תוכנית זו — ניתן לערוך לפני השמירה.
+        </p>
+      )}
       {exercises.map((ex, index) => (
         <div key={ex.id} className="space-y-3 rounded-lg border border-border p-4">
           <div>
@@ -128,12 +187,18 @@ export function LogWorkoutForm({
 
       <div className="space-y-2">
         <Label htmlFor="notes">הערות כלליות לאימון</Label>
-        <Textarea id="notes" name="notes" rows={2} />
+        <Textarea
+          id="notes"
+          name="notes"
+          rows={2}
+          value={sessionNotes}
+          onChange={(e) => setSessionNotes(e.target.value)}
+        />
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading || prefillLoading}>
         {loading ? "שומר..." : "שמירת אימון"}
       </Button>
     </form>

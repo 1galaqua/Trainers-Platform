@@ -154,6 +154,70 @@ export async function getTraineeProgramByIdAction(programId: string) {
   }
 }
 
+export type LastWorkoutLogPrefill = {
+  sessionNotes: string | null;
+  exerciseLogs: Record<
+    string,
+    {
+      weightKg: number | null;
+      repsCompleted: number | null;
+      notes: string | null;
+    }
+  >;
+};
+
+export async function getLastWorkoutLogPrefillAction(
+  programId: string,
+  traineeIdForCoach?: string,
+): Promise<LastWorkoutLogPrefill | null> {
+  if (!programId) return null;
+
+  try {
+    let resolvedTraineeId: string;
+    let programWhere: { id: string; traineeId: string; coachId?: string };
+
+    if (traineeIdForCoach) {
+      const coach = await requireCoach();
+      const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeIdForCoach);
+      if (!ownsTrainee) return null;
+
+      resolvedTraineeId = traineeIdForCoach;
+      programWhere = { id: programId, traineeId: traineeIdForCoach, coachId: coach.id };
+    } else {
+      const trainee = await requireTraineeOnboarded();
+      resolvedTraineeId = trainee.id;
+      programWhere = { id: programId, traineeId: trainee.id };
+    }
+
+    const program = await prisma.trainingProgram.findFirst({ where: programWhere });
+    if (!program) return null;
+
+    const lastSession = await prisma.workoutSession.findFirst({
+      where: { programId, traineeId: resolvedTraineeId },
+      orderBy: { completedAt: "desc" },
+      include: { logs: true },
+    });
+
+    if (!lastSession) return null;
+
+    const exerciseLogs: LastWorkoutLogPrefill["exerciseLogs"] = {};
+    for (const log of lastSession.logs) {
+      exerciseLogs[log.exerciseId] = {
+        weightKg: log.weightKg,
+        repsCompleted: log.repsCompleted,
+        notes: log.notes,
+      };
+    }
+
+    return {
+      sessionNotes: lastSession.notes,
+      exerciseLogs,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getActiveProgramAction() {
   const programs = await getTraineeProgramsAction();
   return programs[0] ?? null;
