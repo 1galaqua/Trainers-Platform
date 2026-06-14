@@ -82,9 +82,10 @@ export async function createTraineeInviteAction() {
     });
 
     const url = buildInviteUrl(invite.token);
+    const coachName = coach.displayName ?? coach.email ?? "המאמן/ית";
     revalidatePath("/dashboard/trainees");
 
-    return { success: true as const, url, token: invite.token };
+    return { success: true as const, url, token: invite.token, coachName };
   } catch (error) {
     if (isDbConnectionError(error)) {
       return { error: "מסד הנתונים לא זמין" };

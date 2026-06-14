@@ -14,10 +14,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { createTraineeInviteAction } from "@/server/actions/invites";
+import { buildTraineeInviteWhatsAppMessage } from "@/lib/trainee-invite";
 
 export function CreateTraineeInviteButton() {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
+  const [coachName, setCoachName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -37,6 +39,7 @@ export function CreateTraineeInviteButton() {
 
     if (result && "success" in result && result.success) {
       setUrl(result.url);
+      setCoachName(result.coachName);
     }
   }
 
@@ -48,8 +51,8 @@ export function CreateTraineeInviteButton() {
   }
 
   function handleWhatsAppShare() {
-    if (!url) return;
-    const text = `היי! הצטרף/י לאימון דרך הקישור הבא:\n${url}`;
+    if (!url || !coachName) return;
+    const text = buildTraineeInviteWhatsAppMessage(coachName, url);
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
@@ -57,6 +60,7 @@ export function CreateTraineeInviteButton() {
     setOpen(nextOpen);
     if (!nextOpen) {
       setUrl(null);
+      setCoachName(null);
       setError(null);
       setCopied(false);
     }
