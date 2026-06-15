@@ -171,6 +171,92 @@ export async function updateTrainingProgramAction(formData: FormData) {
   }
 }
 
+export async function deleteTrainingProgramAction(programId: string) {
+  const coach = await requireCoach();
+
+  if (!programId) {
+    return { error: "תוכנית לא נמצאה" };
+  }
+
+  try {
+    const program = await prisma.trainingProgram.findFirst({
+      where: { id: programId, coachId: coach.id },
+      select: { id: true },
+    });
+
+    if (!program) {
+      return { error: "תוכנית לא נמצאה" };
+    }
+
+    const [sessions, exercises] = await Promise.all([
+      prisma.workoutSession.findMany({
+        where: { programId },
+        select: { id: true },
+      }),
+      prisma.programExercise.findMany({
+        where: { programId },
+        select: { id: true },
+      }),
+    ]);
+
+    const sessionIds = sessions.map((session) => session.id);
+    const exerciseIds = exercises.map((exercise) => exercise.id);
+
+    const logOrConditions = [];
+    if (sessionIds.length > 0) {
+      logOrConditions.push({ sessionId: { in: sessionIds } });
+    }
+    if (exerciseIds.length > 0) {
+      logOrConditions.push({ exerciseId: { in: exerciseIds } });
+    }
+
+    const exerciseLogs =
+      logOrConditions.length > 0
+        ? await prisma.exerciseLog.findMany({
+            where: { OR: logOrConditions },
+            select: { id: true },
+          })
+        : [];
+
+    const exerciseLogIds = exerciseLogs.map((log) => log.id);
+
+    if (exerciseLogIds.length > 0) {
+      await prisma.exerciseSetLog.deleteMany({
+        where: { exerciseLogId: { in: exerciseLogIds } },
+      });
+      await prisma.exerciseLog.deleteMany({
+        where: { id: { in: exerciseLogIds } },
+      });
+    }
+
+    if (sessionIds.length > 0) {
+      await prisma.workoutSession.deleteMany({
+        where: { id: { in: sessionIds } },
+      });
+    }
+
+    if (exerciseIds.length > 0) {
+      await prisma.programExercise.deleteMany({
+        where: { id: { in: exerciseIds } },
+      });
+    }
+
+    await prisma.trainingProgram.delete({
+      where: { id: programId },
+    });
+
+    revalidatePath("/dashboard/workouts");
+    revalidatePath("/dashboard/trainees");
+    revalidatePath("/dashboard/my-program");
+    revalidatePath("/dashboard/progress");
+    revalidatePath("/dashboard");
+
+    return { success: true as const };
+  } catch {
+    return { error: "שגיאה במחיקת התוכנית" };
+  }
+}
+
 export async function getCoachTraineesAction() {
   const coach = await requireCoach();
 

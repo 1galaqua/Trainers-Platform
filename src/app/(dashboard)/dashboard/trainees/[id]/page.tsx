@@ -11,6 +11,7 @@ import { RequestAgreementRedoButton } from "@/features/trainees/components/reque
 import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
 import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
 import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
+import { DeleteWorkoutSessionButton } from "@/features/workouts/components/delete-workout-session-button";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { isAgreementRedoPending, isQuestionnaireRedoPending } from "@/lib/questionnaire-status";
@@ -179,12 +180,17 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         {sessions.length === 0 ? (
           <p className="text-muted-foreground text-sm">טרם דווחו אימונים</p>
         ) : (
-          sessions.map((session) => (
+          sessions.map((session) => {
+            const sessionLabel = `${new Date(session.completedAt).toLocaleDateString("he-IL")} — ${session.program.name}`;
+
+            return (
             <Card key={session.id}>
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  {new Date(session.completedAt).toLocaleDateString("he-IL")} — {session.program.name}
-                </CardTitle>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <CardTitle className="text-sm">{sessionLabel}</CardTitle>
+                <DeleteWorkoutSessionButton
+                  sessionId={session.id}
+                  sessionLabel={sessionLabel}
+                />
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {session.logs.map((log) => (
@@ -198,7 +204,8 @@ export default async function TraineeDetailPage({ params }: PageProps) {
                 ))}
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
     </div>

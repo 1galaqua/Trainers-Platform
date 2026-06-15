@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { siteConfig } from "@/config/site";
 import { requireCoach } from "@/lib/auth";
 import { ExerciseDetailText } from "@/features/programs/components/exercise-detail-text";
+import { DeleteProgramButton } from "@/features/programs/components/delete-program-button";
+import { DeleteWorkoutSessionButton } from "@/features/workouts/components/delete-workout-session-button";
 import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
 import { programTypeLabels } from "@/lib/program-labels";
 import { getProgramByIdAction } from "@/server/actions/programs";
@@ -45,10 +47,13 @@ export default async function ProgramDetailPage({ params }: PageProps) {
             </p>
           </div>
         </div>
-        <Button variant="outline" render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}>
-          <Pencil className="size-4" />
-          עריכה
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}>
+            <Pencil className="size-4" />
+            עריכה
+          </Button>
+          <DeleteProgramButton programId={program.id} programName={program.name} />
+        </div>
       </div>
 
       {program.description && (
@@ -91,16 +96,21 @@ export default async function ProgramDetailPage({ params }: PageProps) {
       {program.sessions.length > 0 && (
         <div className="space-y-4">
           <h2 className="font-medium text-base">אימונים אחרונים שבוצעו</h2>
-          {program.sessions.map((session) => (
+          {program.sessions.map((session) => {
+            const sessionLabel = new Date(session.completedAt).toLocaleDateString("he-IL", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            });
+
+            return (
             <Card key={session.id}>
-              <CardHeader>
-                <CardTitle className="text-sm">
-                  {new Date(session.completedAt).toLocaleDateString("he-IL", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </CardTitle>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <CardTitle className="text-sm">{sessionLabel}</CardTitle>
+                <DeleteWorkoutSessionButton
+                  sessionId={session.id}
+                  sessionLabel={sessionLabel}
+                />
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {session.logs.map((log) => (
@@ -114,7 +124,8 @@ export default async function ProgramDetailPage({ params }: PageProps) {
                 ))}
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -437,3 +437,72 @@ export async function getCoachTraineeProgressAction(traineeId: string) {
     return [];
   }
 }
+
+export async function deleteWorkoutSessionAction(sessionId: string) {
+  const coach = await requireCoach();
+
+  if (!sessionId) {
+    return { error: "דיווח אימון לא נמצא" };
+  }
+
+  try {
+    const session = await prisma.workoutSession.findFirst({
+      where: {
+        id: sessionId,
+        program: { coachId: coach.id },
+      },
+      select: { id: true, traineeId: true, programId: true },
+    });
+
+    if (!session) {
+      return { error: "דיווח אימון לא נמצא" };
+    }
+
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, session.traineeId);
+    if (!ownsTrainee) {
+      return { error: "אין הרשאה למחיקת דיווח זה" };
+    }
+
+    const exerciseLogs = await prisma.exerciseLog.findMany({
+      where: { sessionId },
+      select: { id: true },
+    });
+    const exerciseLogIds = exerciseLogs.map((log) => log.id);
+
+    if (exerciseLogIds.length > 0) {
+      await prisma.exerciseSetLog.deleteMany({
+        where: { exerciseLogId: { in: exerciseLogIds } },
+      });
+      await prisma.exerciseLog.deleteMany({
+        where: { id: { in: exerciseLogIds } },
+      });
+    }
+
+    await prisma.workoutSession.delete({
+      where: { id: sessionId },
+    });
+
+    const coachLink = await prisma.coachTrainee.findUnique({
+      where: { traineeId: session.traineeId },
+      select: { workoutsCompleted: true },
+    });
+
+    if (coachLink?.workoutsCompleted != null && coachLink.workoutsCompleted > 0) {
+      await prisma.coachTrainee.update({
+        where: { traineeId: session.traineeId },
+        data: { workoutsCompleted: coachLink.workoutsCompleted - 1 },
+      });
+    }
+
+    revalidatePath("/dashboard/workouts");
+    revalidatePath(`/dashboard/workouts/${session.programId}`);
+    revalidatePath(`/dashboard/trainees/${session.traineeId}`);
+    revalidatePath("/dashboard/trainees");
+    revalidatePath("/dashboard/progress");
+    revalidatePath("/dashboard");
+
+    return { success: true as const };
+  } catch {
+    return { error: "שגיאה במחיקת דיווח האימון" };
+  }
+}
