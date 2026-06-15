@@ -1,14 +1,34 @@
+import { isSetLogFilled } from "@/lib/workout-log-metrics";
+
 export const WORKOUT_DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
+export const WORKOUT_DRAFT_VERSION = 2;
 
 const STORAGE_KEY_PREFIX = "tp-workout-draft";
 
-export type ExerciseLogDraftFields = {
+export type SetLogState = {
+  setNumber: number;
+  weightKg: string;
+  repsCompleted: string;
+};
+
+export type ExerciseLogState = {
+  exerciseId: string;
+  setLogs: SetLogState[];
+  notes: string;
+};
+
+export type SetLogDraftFields = {
   weightKg?: string;
   repsCompleted?: string;
+};
+
+export type ExerciseLogDraftFields = {
   notes?: string;
+  sets?: Record<string, SetLogDraftFields>;
 };
 
 export type WorkoutLogDraft = {
+  version: number;
   programId: string;
   traineeKey: string;
   savedAt: number;
@@ -16,11 +36,19 @@ export type WorkoutLogDraft = {
   exerciseLogs: Record<string, ExerciseLogDraftFields>;
 };
 
-export type ExerciseLogState = {
-  exerciseId: string;
-  weightKg: string;
-  repsCompleted: string;
-  notes: string;
+type LegacyExerciseLogDraftFields = {
+  weightKg?: string;
+  repsCompleted?: string;
+  notes?: string;
+};
+
+type LegacyWorkoutLogDraft = {
+  version?: number;
+  programId: string;
+  traineeKey: string;
+  savedAt: number;
+  sessionNotes: string;
+  exerciseLogs: Record<string, LegacyExerciseLogDraftFields | ExerciseLogDraftFields>;
 };
 
 function draftStorageKey(programId: string, traineeKey: string): string {
@@ -31,16 +59,23 @@ export function getWorkoutDraftTraineeKey(traineeId?: string): string {
   return traineeId ?? "self";
 }
 
+export function buildEmptySetLogs(setsCount: number, defaultReps: number): SetLogState[] {
+  return Array.from({ length: setsCount }, (_, index) => ({
+    setNumber: index + 1,
+    weightKg: "",
+    repsCompleted: String(defaultReps),
+  }));
+}
+
 export function isExerciseLogFilled(
   log: ExerciseLogState,
   baseline: ExerciseLogState,
 ): boolean {
-  if (log.weightKg.trim() !== "") return true;
   if (log.notes.trim() !== "") return true;
-  if (log.repsCompleted.trim() !== "" && log.repsCompleted !== baseline.repsCompleted) {
-    return true;
-  }
-  return false;
+
+  return log.setLogs.some((set, index) =>
+    isSetLogFilled(set, baseline.setLogs[index]?.repsCompleted ?? ""),
+  );
 }
 
 export function hasWorkoutDraftContent(
@@ -63,19 +98,33 @@ export function buildWorkoutLogDraft(
   const exerciseLogs: WorkoutLogDraft["exerciseLogs"] = {};
 
   logs.forEach((log, index) => {
-    if (!isExerciseLogFilled(log, baselines[index])) return;
+    const baseline = baselines[index];
+    const sets: Record<string, SetLogDraftFields> = {};
+
+    log.setLogs.forEach((set, setIndex) => {
+      if (!isSetLogFilled(set, baseline.setLogs[setIndex]?.repsCompleted ?? "")) return;
+
+      const entry: SetLogDraftFields = {};
+      if (set.weightKg.trim() !== "") entry.weightKg = set.weightKg;
+      if (
+        set.repsCompleted.trim() !== "" &&
+        set.repsCompleted !== (baseline.setLogs[setIndex]?.repsCompleted ?? "")
+      ) {
+        entry.repsCompleted = set.repsCompleted;
+      }
+
+      if (Object.keys(entry).length > 0) {
+        sets[String(set.setNumber)] = entry;
+      }
+    });
 
     const entry: ExerciseLogDraftFields = {};
-    if (log.weightKg.trim() !== "") entry.weightKg = log.weightKg;
     if (log.notes.trim() !== "") entry.notes = log.notes;
-    if (
-      log.repsCompleted.trim() !== "" &&
-      log.repsCompleted !== baselines[index].repsCompleted
-    ) {
-      entry.repsCompleted = log.repsCompleted;
-    }
+    if (Object.keys(sets).length > 0) entry.sets = sets;
 
-    exerciseLogs[log.exerciseId] = entry;
+    if (Object.keys(entry).length > 0) {
+      exerciseLogs[log.exerciseId] = entry;
+    }
   });
 
   const trimmedSessionNotes = sessionNotes.trim();
@@ -84,10 +133,50 @@ export function buildWorkoutLogDraft(
   }
 
   return {
+    version: WORKOUT_DRAFT_VERSION,
     programId,
     traineeKey,
     savedAt: Date.now(),
     sessionNotes: trimmedSessionNotes,
+    exerciseLogs,
+  };
+}
+
+function normalizeDraft(raw: LegacyWorkoutLogDraft): WorkoutLogDraft | null {
+  if (raw.version === WORKOUT_DRAFT_VERSION) {
+    return raw as WorkoutLogDraft;
+  }
+
+  const exerciseLogs: WorkoutLogDraft["exerciseLogs"] = {};
+
+  for (const [exerciseId, value] of Object.entries(raw.exerciseLogs)) {
+    if ("sets" in value && value.sets) {
+      exerciseLogs[exerciseId] = value;
+      continue;
+    }
+
+    const legacy = value as LegacyExerciseLogDraftFields;
+    const entry: ExerciseLogDraftFields = {};
+    if (legacy.notes?.trim()) entry.notes = legacy.notes;
+
+    const legacySets: Record<string, SetLogDraftFields> = {};
+    if (legacy.weightKg?.trim() || legacy.repsCompleted?.trim()) {
+      legacySets["1"] = {
+        ...(legacy.weightKg?.trim() ? { weightKg: legacy.weightKg } : {}),
+        ...(legacy.repsCompleted?.trim() ? { repsCompleted: legacy.repsCompleted } : {}),
+      };
+    }
+
+    if (Object.keys(legacySets).length > 0) entry.sets = legacySets;
+    if (Object.keys(entry).length > 0) exerciseLogs[exerciseId] = entry;
+  }
+
+  return {
+    version: WORKOUT_DRAFT_VERSION,
+    programId: raw.programId,
+    traineeKey: raw.traineeKey,
+    savedAt: raw.savedAt,
+    sessionNotes: raw.sessionNotes,
     exerciseLogs,
   };
 }
@@ -101,11 +190,21 @@ export function applyWorkoutLogDraft(
     const saved = draft.exerciseLogs[baseline.exerciseId];
     if (!saved || !validExerciseIds.has(baseline.exerciseId)) return baseline;
 
+    const setLogs = baseline.setLogs.map((set) => {
+      const savedSet = saved.sets?.[String(set.setNumber)];
+      if (!savedSet) return set;
+
+      return {
+        ...set,
+        weightKg: savedSet.weightKg ?? set.weightKg,
+        repsCompleted: savedSet.repsCompleted ?? set.repsCompleted,
+      };
+    });
+
     return {
       ...baseline,
-      weightKg: saved.weightKg ?? baseline.weightKg,
-      repsCompleted: saved.repsCompleted ?? baseline.repsCompleted,
       notes: saved.notes ?? baseline.notes,
+      setLogs,
     };
   });
 
@@ -126,7 +225,10 @@ export function loadWorkoutLogDraft(
     const raw = localStorage.getItem(draftStorageKey(programId, traineeKey));
     if (!raw) return null;
 
-    const draft = JSON.parse(raw) as WorkoutLogDraft;
+    const parsed = JSON.parse(raw) as LegacyWorkoutLogDraft;
+    const draft = normalizeDraft(parsed);
+    if (!draft) return null;
+
     if (draft.programId !== programId || draft.traineeKey !== traineeKey) {
       clearWorkoutLogDraft(programId, traineeKey);
       return null;

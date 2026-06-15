@@ -4,14 +4,20 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import { computeExerciseLogMetrics } from "@/lib/workout-log-metrics";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
-export type ExerciseLogInput = {
-  exerciseId: string;
+export type ExerciseSetLogInput = {
+  setNumber: number;
   weightKg?: number;
   repsCompleted?: number;
+};
+
+export type ExerciseLogInput = {
+  exerciseId: string;
   notes?: string;
+  sets?: ExerciseSetLogInput[];
 };
 
 export type LogWorkoutActionResult = { success: true } | { error: string };
@@ -80,12 +86,29 @@ async function persistWorkoutSession(
       traineeId,
       notes: sessionNotes,
       logs: {
-        create: logs.map((log) => ({
-          exerciseId: log.exerciseId,
-          weightKg: log.weightKg ?? null,
-          repsCompleted: log.repsCompleted ?? null,
-          notes: log.notes || null,
-        })),
+        create: logs
+          .filter((log) => {
+            const hasFilledSet = (log.sets ?? []).some(
+              (set) => set.weightKg != null || set.repsCompleted != null,
+            );
+            const hasNotes = Boolean(log.notes?.trim());
+            return hasFilledSet || hasNotes;
+          })
+          .map((log) => ({
+            exerciseId: log.exerciseId,
+            notes: log.notes?.trim() || null,
+            weightKg: null,
+            repsCompleted: null,
+            setLogs: {
+              create: (log.sets ?? [])
+                .filter((set) => set.weightKg != null || set.repsCompleted != null)
+                .map((set) => ({
+                  setNumber: set.setNumber,
+                  weightKg: set.weightKg ?? null,
+                  repsCompleted: set.repsCompleted ?? null,
+                })),
+            },
+          })),
       },
     },
   });
@@ -154,16 +177,18 @@ export async function getTraineeProgramByIdAction(programId: string) {
   }
 }
 
+export type ExerciseLogPrefill = {
+  notes: string | null;
+  sets: Array<{
+    setNumber: number;
+    weightKg: number | null;
+    repsCompleted: number | null;
+  }>;
+};
+
 export type LastWorkoutLogPrefill = {
   sessionNotes: string | null;
-  exerciseLogs: Record<
-    string,
-    {
-      weightKg: number | null;
-      repsCompleted: number | null;
-      notes: string | null;
-    }
-  >;
+  exerciseLogs: Record<string, ExerciseLogPrefill>;
 };
 
 export async function getLastWorkoutLogPrefillAction(
@@ -195,17 +220,43 @@ export async function getLastWorkoutLogPrefillAction(
     const lastSession = await prisma.workoutSession.findFirst({
       where: { programId, traineeId: resolvedTraineeId },
       orderBy: { completedAt: "desc" },
-      include: { logs: true },
+      include: {
+        logs: {
+          include: {
+            setLogs: { orderBy: { setNumber: "asc" } },
+          },
+        },
+      },
     });
 
     if (!lastSession) return null;
 
     const exerciseLogs: LastWorkoutLogPrefill["exerciseLogs"] = {};
     for (const log of lastSession.logs) {
+      if (log.setLogs.length > 0) {
+        exerciseLogs[log.exerciseId] = {
+          notes: log.notes,
+          sets: log.setLogs.map((set) => ({
+            setNumber: set.setNumber,
+            weightKg: set.weightKg,
+            repsCompleted: set.repsCompleted,
+          })),
+        };
+        continue;
+      }
+
       exerciseLogs[log.exerciseId] = {
-        weightKg: log.weightKg,
-        repsCompleted: log.repsCompleted,
         notes: log.notes,
+        sets:
+          log.weightKg != null || log.repsCompleted != null
+            ? [
+                {
+                  setNumber: 1,
+                  weightKg: log.weightKg,
+                  repsCompleted: log.repsCompleted,
+                },
+              ]
+            : [],
       };
     }
 
@@ -308,7 +359,12 @@ export async function getWorkoutHistoryAction() {
       where: { traineeId: trainee.id },
       include: {
         program: true,
-        logs: { include: { exercise: true } },
+        logs: {
+          include: {
+            exercise: true,
+            setLogs: { orderBy: { setNumber: "asc" } },
+          },
+        },
       },
       orderBy: { completedAt: "desc" },
     });
@@ -329,18 +385,28 @@ export async function getExerciseProgressAction(exerciseId: string) {
       include: {
         session: true,
         exercise: true,
+        setLogs: { orderBy: { setNumber: "asc" } },
       },
       orderBy: { session: { completedAt: "asc" } },
     });
 
-    return logs.map((log) => ({
-      date: log.session.completedAt.toISOString(),
-      weight: log.weightKg ?? 0,
-      reps: log.repsCompleted ?? log.exercise.reps,
-      sets: log.exercise.sets,
-      volume:
-        (log.weightKg ?? 0) * (log.repsCompleted ?? log.exercise.reps) * log.exercise.sets,
-    }));
+    return logs.map((log) => {
+      const metrics = computeExerciseLogMetrics({
+        weightKg: log.weightKg,
+        repsCompleted: log.repsCompleted,
+        setLogs: log.setLogs,
+        defaultReps: log.exercise.reps,
+        plannedSets: log.exercise.sets,
+      });
+
+      return {
+        date: log.session.completedAt.toISOString(),
+        weight: metrics.averageWeight,
+        reps: log.repsCompleted ?? log.exercise.reps,
+        sets: log.exercise.sets,
+        volume: metrics.volume,
+      };
+    });
   } catch {
     return [];
   }
@@ -357,7 +423,12 @@ export async function getCoachTraineeProgressAction(traineeId: string) {
       where: { traineeId, program: { coachId: coach.id } },
       include: {
         program: true,
-        logs: { include: { exercise: true } },
+        logs: {
+          include: {
+            exercise: true,
+            setLogs: { orderBy: { setNumber: "asc" } },
+          },
+        },
       },
       orderBy: { completedAt: "desc" },
       take: 20,

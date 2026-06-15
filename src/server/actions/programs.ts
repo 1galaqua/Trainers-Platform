@@ -227,7 +227,14 @@ export async function getProgramByIdAction(programId: string) {
         exercises: { orderBy: { sortOrder: "asc" } },
         sessions: {
           orderBy: { completedAt: "desc" },
-          include: { logs: { include: { exercise: true } } },
+          include: {
+            logs: {
+              include: {
+                exercise: true,
+                setLogs: { orderBy: { setNumber: "asc" } },
+              },
+            },
+          },
           take: 10,
         },
       },

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { siteConfig } from "@/config/site";
 import { requireCoach } from "@/lib/auth";
 import { ExerciseDetailText } from "@/features/programs/components/exercise-detail-text";
+import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
 import { programTypeLabels } from "@/lib/program-labels";
 import { getProgramByIdAction } from "@/server/actions/programs";
 
@@ -103,9 +104,13 @@ export default async function ProgramDetailPage({ params }: PageProps) {
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {session.logs.map((log) => (
-                  <p key={log.id}>
-                    {log.exercise.name}: {log.weightKg ?? "—"} ק״ג × {log.repsCompleted ?? "—"} חזרות
-                  </p>
+                  <ExerciseLogLine
+                    key={log.id}
+                    exerciseName={log.exercise.name}
+                    weightKg={log.weightKg}
+                    repsCompleted={log.repsCompleted}
+                    setLogs={log.setLogs}
+                  />
                 ))}
               </CardContent>
             </Card>

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
 import {
   applyWorkoutLogDraft,
+  buildEmptySetLogs,
   buildWorkoutLogDraft,
   clearWorkoutLogDraft,
   getWorkoutDraftTraineeKey,
@@ -18,6 +19,7 @@ import {
   saveWorkoutLogDraft,
   type ExerciseLogState,
 } from "@/lib/workout-log-draft";
+import { isSetLogFilled } from "@/lib/workout-log-metrics";
 import {
   getLastWorkoutLogPrefillAction,
   logWorkoutAction,
@@ -36,23 +38,34 @@ function buildLogsFromExercises(
   exercises: Exercise[],
   prefill: Awaited<ReturnType<typeof getLastWorkoutLogPrefillAction>>,
 ): ExerciseLogState[] {
-  return exercises.map((ex) => {
-    const prev = prefill?.exerciseLogs[ex.id];
-    if (prev) {
+  return exercises.map((exercise) => {
+    const emptySetLogs = buildEmptySetLogs(exercise.sets, exercise.reps);
+    const prev = prefill?.exerciseLogs[exercise.id];
+
+    if (!prev) {
       return {
-        exerciseId: ex.id,
-        weightKg: prev.weightKg != null ? String(prev.weightKg) : "",
-        repsCompleted:
-          prev.repsCompleted != null ? String(prev.repsCompleted) : String(ex.reps),
-        notes: prev.notes ?? "",
+        exerciseId: exercise.id,
+        setLogs: emptySetLogs,
+        notes: "",
       };
     }
 
+    const setLogs = emptySetLogs.map((set) => {
+      const prevSet = prev.sets.find((item) => item.setNumber === set.setNumber);
+      if (!prevSet) return set;
+
+      return {
+        ...set,
+        weightKg: prevSet.weightKg != null ? String(prevSet.weightKg) : "",
+        repsCompleted:
+          prevSet.repsCompleted != null ? String(prevSet.repsCompleted) : set.repsCompleted,
+      };
+    });
+
     return {
-      exerciseId: ex.id,
-      weightKg: "",
-      repsCompleted: String(ex.reps),
-      notes: "",
+      exerciseId: exercise.id,
+      setLogs,
+      notes: prev.notes ?? "",
     };
   });
 }
@@ -161,8 +174,25 @@ export function LogWorkoutForm({
 
   useUnsavedChangesWarning(hasUnsavedChanges);
 
-  function updateLog(index: number, field: string, value: string) {
-    setLogs((prev) => prev.map((log, i) => (i === index ? { ...log, [field]: value } : log)));
+  function updateSetLog(exerciseIndex: number, setIndex: number, field: string, value: string) {
+    setLogs((prev) =>
+      prev.map((log, index) => {
+        if (index !== exerciseIndex) return log;
+
+        return {
+          ...log,
+          setLogs: log.setLogs.map((set, currentSetIndex) =>
+            currentSetIndex === setIndex ? { ...set, [field]: value } : set,
+          ),
+        };
+      }),
+    );
+  }
+
+  function updateExerciseNotes(exerciseIndex: number, value: string) {
+    setLogs((prev) =>
+      prev.map((log, index) => (index === exerciseIndex ? { ...log, notes: value } : log)),
+    );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -173,15 +203,30 @@ export function LogWorkoutForm({
     const formData = new FormData(e.currentTarget);
     formData.set("programId", programId);
     if (traineeId) formData.set("traineeId", traineeId);
+    const baseline = baselineRef.current;
     formData.set(
       "logs",
       JSON.stringify(
-        logs.map((log) => ({
-          exerciseId: log.exerciseId,
-          weightKg: log.weightKg ? Number(log.weightKg) : undefined,
-          repsCompleted: log.repsCompleted ? Number(log.repsCompleted) : undefined,
-          notes: log.notes || undefined,
-        })),
+        logs.map((log, exerciseIndex) => {
+          const baselineLog = baseline?.logs[exerciseIndex];
+
+          return {
+            exerciseId: log.exerciseId,
+            notes: log.notes || undefined,
+            sets: log.setLogs
+              .filter((set, setIndex) => {
+                const baselineReps =
+                  baselineLog?.setLogs[setIndex]?.repsCompleted ??
+                  String(exercises[exerciseIndex]?.reps ?? "");
+                return isSetLogFilled(set, baselineReps);
+              })
+              .map((set) => ({
+                setNumber: set.setNumber,
+                weightKg: set.weightKg ? Number(set.weightKg) : undefined,
+                repsCompleted: set.repsCompleted ? Number(set.repsCompleted) : undefined,
+              })),
+          };
+        }),
       ),
     );
 
@@ -219,43 +264,59 @@ export function LogWorkoutForm({
           הנתונים נשמרים אוטומטית בטיוטה עד לשמירת האימון.
         </p>
       )}
-      {exercises.map((ex, index) => (
-        <div key={ex.id} className="space-y-3 rounded-lg border border-border p-4">
+      {exercises.map((exercise, exerciseIndex) => (
+        <div key={exercise.id} className="space-y-3 rounded-lg border border-border p-4">
           <div>
-            <h3 className="font-medium">{ex.name}</h3>
+            <h3 className="font-medium">{exercise.name}</h3>
             <p className="text-muted-foreground text-xs">
-              {ex.sets} סטים × {ex.reps} חזרות · מנוחה {ex.restSeconds} שנ׳
+              {exercise.sets} סטים × {exercise.reps} חזרות · מנוחה {exercise.restSeconds} שנ׳
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>משקל (ק״ג)</Label>
-              <Input
-                type="number"
-                step="0.5"
-                min={0}
-                value={logs[index]?.weightKg ?? ""}
-                onChange={(e) => updateLog(index, "weightKg", e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>חזרות בפועל</Label>
-              <Input
-                type="number"
-                min={0}
-                value={logs[index]?.repsCompleted ?? ""}
-                onChange={(e) => updateLog(index, "repsCompleted", e.target.value)}
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <Label>הערות</Label>
-              <Textarea
-                value={logs[index]?.notes ?? ""}
-                onChange={(e) => updateLog(index, "notes", e.target.value)}
-                rows={2}
-              />
-            </div>
+
+          <div className="space-y-3">
+            {logs[exerciseIndex]?.setLogs.map((set, setIndex) => (
+              <div
+                key={`${exercise.id}-${set.setNumber}`}
+                className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3 sm:grid-cols-[auto_1fr_1fr]"
+              >
+                <div className="flex items-center">
+                  <span className="font-medium text-sm">סט {set.setNumber}</span>
+                </div>
+                <div className="space-y-1">
+                  <Label>משקל (ק״ג)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min={0}
+                    value={set.weightKg}
+                    onChange={(e) =>
+                      updateSetLog(exerciseIndex, setIndex, "weightKg", e.target.value)
+                    }
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>חזרות בפועל</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={set.repsCompleted}
+                    onChange={(e) =>
+                      updateSetLog(exerciseIndex, setIndex, "repsCompleted", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-1">
+            <Label>הערות לתרגיל</Label>
+            <Textarea
+              value={logs[exerciseIndex]?.notes ?? ""}
+              onChange={(e) => updateExerciseNotes(exerciseIndex, e.target.value)}
+              rows={2}
+            />
           </div>
         </div>
       ))}

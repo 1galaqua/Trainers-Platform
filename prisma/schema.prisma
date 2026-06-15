@@ -147,6 +147,18 @@ model ExerciseLog {
   notes         String?
   session       WorkoutSession  @relation(fields: [sessionId], references: [id])
   exercise      ProgramExercise @relation(fields: [exerciseId], references: [id])
+  setLogs       ExerciseSetLog[]
+}
+
+model ExerciseSetLog {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  exerciseLogId String      @db.ObjectId
+  setNumber     Int
+  weightKg      Float?
+  repsCompleted Int?
+  exerciseLog   ExerciseLog @relation(fields: [exerciseLogId], references: [id])
+
+  @@unique([exerciseLogId, setNumber])
 }
 
 model ProgressPhoto {

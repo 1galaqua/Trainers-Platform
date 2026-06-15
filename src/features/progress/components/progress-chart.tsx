@@ -37,7 +37,7 @@ export function ProgressChart({ data, mode }: ProgressChartProps) {
   }));
 
   const yKey = mode === "weight" ? "weight" : "volume";
-  const yLabel = mode === "weight" ? "משקל (ק״ג)" : "נפח אימון";
+  const yLabel = mode === "weight" ? "משקל ממוצע (ק״ג)" : "נפח אימון";
 
   return (
     <div className="h-64 w-full" dir="ltr">

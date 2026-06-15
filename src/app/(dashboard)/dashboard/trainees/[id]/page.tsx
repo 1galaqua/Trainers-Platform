@@ -10,6 +10,7 @@ import { CoachingPeriodForm } from "@/features/trainees/components/coaching-peri
 import { RequestAgreementRedoButton } from "@/features/trainees/components/request-agreement-redo-button";
 import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
 import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
+import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { isAgreementRedoPending, isQuestionnaireRedoPending } from "@/lib/questionnaire-status";
@@ -187,9 +188,13 @@ export default async function TraineeDetailPage({ params }: PageProps) {
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {session.logs.map((log) => (
-                  <p key={log.id}>
-                    {log.exercise.name}: {log.weightKg ?? "—"} ק״ג × {log.repsCompleted ?? "—"}
-                  </p>
+                  <ExerciseLogLine
+                    key={log.id}
+                    exerciseName={log.exercise.name}
+                    weightKg={log.weightKg}
+                    repsCompleted={log.repsCompleted}
+                    setLogs={log.setLogs}
+                  />
                 ))}
               </CardContent>
             </Card>
