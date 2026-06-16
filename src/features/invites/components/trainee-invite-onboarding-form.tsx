@@ -17,6 +17,11 @@ import {
   toFieldErrorMap,
 } from "@/lib/onboarding-form-validation";
 import type { QuestionField } from "@/lib/onboarding-template";
+import {
+  digitsOnly,
+  ISRAELI_MOBILE_PREFIXES,
+  PHONE_SUFFIX_INCOMPLETE_MESSAGE,
+} from "@/lib/user-identity";
 import { completeTraineeInviteAction } from "@/server/actions/invites";
 
 type TraineeInviteOnboardingFormProps = {
@@ -26,7 +31,7 @@ type TraineeInviteOnboardingFormProps = {
   agreementText: string;
 };
 
-const USER_FIELD_KEYS = ["displayName", "email", "age", "phoneNumber"] as const;
+const USER_FIELD_KEYS = ["displayName", "email"] as const;
 
 export function TraineeInviteOnboardingForm({
   token,
@@ -40,6 +45,8 @@ export function TraineeInviteOnboardingForm({
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState("");
+  const [phonePrefix, setPhonePrefix] = useState("050");
+  const [phoneSuffix, setPhoneSuffix] = useState("");
 
   const numberFields = questionnaireFields.filter((f) => f.type === "number");
   const otherFields = questionnaireFields.filter((f) => f.type !== "number");
@@ -61,6 +68,17 @@ export function TraineeInviteOnboardingForm({
       if (isEmptyFormValue(formData.get(key))) {
         errors[key] = true;
       }
+    }
+
+    const prefixDigits = digitsOnly(phonePrefix);
+    const suffixDigits = digitsOnly(phoneSuffix);
+
+    if (prefixDigits.length !== 3) {
+      errors.phonePrefix = true;
+    }
+
+    if (suffixDigits.length !== 7) {
+      errors.phoneSuffix = true;
     }
 
     Object.assign(errors, toFieldErrorMap(getMissingQuestionnaireFieldKeys(formData, questionnaireFields)));
@@ -87,6 +105,8 @@ export function TraineeInviteOnboardingForm({
 
     const formData = new FormData(e.currentTarget);
     formData.set("token", token);
+    formData.set("phonePrefix", digitsOnly(phonePrefix));
+    formData.set("phoneSuffix", digitsOnly(phoneSuffix));
     if (agreed) formData.set("agreed", "on");
     formData.set("signature", signature);
 
@@ -169,34 +189,54 @@ export function TraineeInviteOnboardingForm({
             />
             <RequiredFieldError show={Boolean(fieldErrors.email)} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="age">גיל</Label>
+          <div className="space-y-2">
+            <Label htmlFor="phoneSuffix">טלפון</Label>
+            <div className="flex items-center gap-2" dir="ltr">
               <Input
-                id="age"
-                name="age"
-                type="number"
-                min={1}
-                max={120}
-                autoComplete="off"
-                dir="ltr"
-                onChange={() => clearFieldError("age")}
+                id="phonePrefix"
+                name="phonePrefix"
+                list="phone-prefix-options"
+                inputMode="numeric"
+                autoComplete="tel-area-code"
+                maxLength={3}
+                value={phonePrefix}
+                onChange={(e) => {
+                  setPhonePrefix(digitsOnly(e.target.value).slice(0, 3));
+                  clearFieldError("phonePrefix");
+                }}
+                className="w-[4.5rem] text-center"
+                placeholder="050"
+                aria-label="קידומת טלפון"
               />
-              <RequiredFieldError show={Boolean(fieldErrors.age)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">טלפון</Label>
+              <datalist id="phone-prefix-options">
+                {ISRAELI_MOBILE_PREFIXES.map((prefix) => (
+                  <option key={prefix} value={prefix} />
+                ))}
+              </datalist>
+              <span className="text-muted-foreground" aria-hidden>
+                -
+              </span>
               <Input
-                id="phoneNumber"
-                name="phoneNumber"
+                id="phoneSuffix"
+                name="phoneSuffix"
                 type="tel"
-                autoComplete="tel"
-                dir="ltr"
-                placeholder="050-1234567"
-                onChange={() => clearFieldError("phoneNumber")}
+                inputMode="numeric"
+                autoComplete="tel-local"
+                maxLength={7}
+                value={phoneSuffix}
+                onChange={(e) => {
+                  setPhoneSuffix(digitsOnly(e.target.value).slice(0, 7));
+                  clearFieldError("phoneSuffix");
+                }}
+                className="flex-1"
+                placeholder="1234567"
+                aria-label="מספר טלפון"
               />
-              <RequiredFieldError show={Boolean(fieldErrors.phoneNumber)} />
             </div>
+            {fieldErrors.phonePrefix && <RequiredFieldError show />}
+            {fieldErrors.phoneSuffix && (
+              <p className="text-destructive text-sm">{PHONE_SUFFIX_INCOMPLETE_MESSAGE}</p>
+            )}
           </div>
         </CardContent>
       </Card>

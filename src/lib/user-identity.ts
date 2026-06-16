@@ -39,3 +39,30 @@ export function validatePhone(phone: string): string | null {
   }
   return null;
 }
+
+export const ISRAELI_MOBILE_PREFIXES = ["050", "052", "054"] as const;
+
+export const PHONE_SUFFIX_INCOMPLETE_MESSAGE = "חסרות ספרות";
+
+export function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+export function combinePhoneParts(prefix: string, suffix: string): string {
+  return `${digitsOnly(prefix)}${digitsOnly(suffix)}`;
+}
+
+export function validateInvitePhoneParts(prefix: string, suffix: string): string | null {
+  const prefixDigits = digitsOnly(prefix);
+  const suffixDigits = digitsOnly(suffix);
+
+  if (prefixDigits.length !== 3) {
+    return "קידומת טלפון לא תקינה";
+  }
+
+  if (suffixDigits.length !== 7) {
+    return PHONE_SUFFIX_INCOMPLETE_MESSAGE;
+  }
+
+  return validatePhone(combinePhoneParts(prefixDigits, suffixDigits));
+}

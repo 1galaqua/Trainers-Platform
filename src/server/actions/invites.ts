@@ -23,7 +23,7 @@ import {
   DEFAULT_TRAINEE_PASSWORD,
   getInviteExpiryDate,
 } from "@/lib/trainee-invite";
-import { normalizePhone, parseAge, validatePhone } from "@/lib/user-identity";
+import { normalizePhone, validateInvitePhoneParts } from "@/lib/user-identity";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -146,20 +146,17 @@ export async function completeTraineeInviteAction(formData: FormData) {
 
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const displayName = String(formData.get("displayName") ?? "").trim();
-  const phoneRaw = String(formData.get("phoneNumber") ?? "").trim();
-  const ageRaw = String(formData.get("age") ?? "").trim();
+  const phonePrefix = String(formData.get("phonePrefix") ?? "").trim();
+  const phoneSuffix = String(formData.get("phoneSuffix") ?? "").trim();
   const agreed = formData.get("agreed") === "on";
   const signatureDataUrl = String(formData.get("signature") ?? "");
 
-  if (!email || !displayName || !phoneRaw || !ageRaw) {
+  if (!email || !displayName || !phonePrefix || !phoneSuffix) {
     return { error: "יש למלא את כל פרטי המשתמש" };
   }
 
-  const phoneError = validatePhone(phoneRaw);
+  const phoneError = validateInvitePhoneParts(phonePrefix, phoneSuffix);
   if (phoneError) return { error: phoneError };
-
-  const age = parseAge(ageRaw);
-  if (age == null) return { error: "גיל לא תקין (1–120)" };
 
   if (!agreed) return { error: "יש לאשר שקראת את ההסכם" };
   if (!signatureDataUrl.startsWith("data:image")) {
@@ -172,7 +169,7 @@ export async function completeTraineeInviteAction(formData: FormData) {
     return { error: parsed.error };
   }
 
-  const phoneNumber = normalizePhone(phoneRaw);
+  const phoneNumber = normalizePhone(`${phonePrefix}${phoneSuffix}`);
 
   try {
     const existing = await prisma.user.findFirst({ where: { email } });
@@ -196,7 +193,7 @@ export async function completeTraineeInviteAction(formData: FormData) {
         passwordHash,
         displayName,
         phoneNumber,
-        age,
+        age: parsed.legacy.age,
         role: "TRAINEE",
       },
     });
