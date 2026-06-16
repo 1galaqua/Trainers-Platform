@@ -14,6 +14,7 @@ import { DEFAULT_TRAINEE_PASSWORD } from "@/lib/trainee-invite";
 import {
   getMissingQuestionnaireFieldKeys,
   isEmptyFormValue,
+  isMissingSignature,
   toFieldErrorMap,
 } from "@/lib/onboarding-form-validation";
 import type { QuestionField } from "@/lib/onboarding-template";
@@ -66,7 +67,7 @@ export function TraineeInviteOnboardingForm({
     Object.assign(errors, toFieldErrorMap(getMissingQuestionnaireFieldKeys(formData, questionnaireFields)));
 
     if (!agreed) errors.agreed = true;
-    if (!signature.startsWith("data:image")) errors.signature = true;
+    if (isMissingSignature(signature)) errors.signature = true;
 
     return errors;
   }
@@ -267,9 +268,10 @@ export function TraineeInviteOnboardingForm({
           <div className="space-y-2">
             <Label>חתימה דיגיטלית</Label>
             <SignaturePad
+              invalid={Boolean(fieldErrors.signature)}
               onChange={(value) => {
                 setSignature(value);
-                if (value.startsWith("data:image")) clearFieldError("signature");
+                if (!isMissingSignature(value)) clearFieldError("signature");
               }}
             />
             <RequiredFieldError show={Boolean(fieldErrors.signature)} />

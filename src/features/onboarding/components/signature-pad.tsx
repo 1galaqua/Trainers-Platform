@@ -3,13 +3,16 @@
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type SignaturePadProps = {
   onChange: (dataUrl: string) => void;
+  invalid?: boolean;
 };
 
-export function SignaturePad({ onChange }: SignaturePadProps) {
+export function SignaturePad({ onChange, invalid }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hasInkRef = useRef(false);
   const [isDrawing, setIsDrawing] = useState(false);
 
   function getPoint(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -19,6 +22,15 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     };
+  }
+
+  function emitSignature() {
+    const canvas = canvasRef.current;
+    if (!canvas || !hasInkRef.current) {
+      onChange("");
+      return;
+    }
+    onChange(canvas.toDataURL("image/png"));
   }
 
   function startDrawing(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -41,6 +53,7 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    hasInkRef.current = true;
     const { x, y } = getPoint(e);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
@@ -51,8 +64,7 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
 
   function stopDrawing() {
     setIsDrawing(false);
-    const canvas = canvasRef.current;
-    if (canvas) onChange(canvas.toDataURL("image/png"));
+    emitSignature();
   }
 
   function clear() {
@@ -61,6 +73,7 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasInkRef.current = false;
     onChange("");
   }
 
@@ -70,12 +83,16 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
         ref={canvasRef}
         width={400}
         height={160}
-        className="w-full touch-none rounded-lg border border-border bg-white"
+        className={cn(
+          "w-full touch-none rounded-lg border bg-white",
+          invalid ? "border-destructive" : "border-border",
+        )}
         onPointerDown={startDrawing}
         onPointerMove={draw}
         onPointerUp={stopDrawing}
         onPointerLeave={stopDrawing}
         aria-label="אזור חתימה דיגיטלית"
+        aria-invalid={invalid}
       />
       <Button type="button" variant="outline" size="sm" onClick={clear}>
         נקה חתימה

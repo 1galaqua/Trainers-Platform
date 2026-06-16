@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RequiredFieldError } from "@/features/onboarding/components/required-field-error";
 import { SignaturePad } from "@/features/onboarding/components/signature-pad";
+import { isMissingSignature } from "@/lib/onboarding-form-validation";
 import { submitAgreementAction } from "@/server/actions/onboarding";
 
 type AgreementFormProps = {
@@ -36,7 +37,7 @@ export function AgreementForm({ content, isRedo }: AgreementFormProps) {
 
     const errors: Record<string, true> = {};
     if (!agreed) errors.agreed = true;
-    if (!signature.startsWith("data:image")) errors.signature = true;
+    if (isMissingSignature(signature)) errors.signature = true;
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -89,9 +90,10 @@ export function AgreementForm({ content, isRedo }: AgreementFormProps) {
       <div className="space-y-2">
         <Label>חתימה דיגיטלית</Label>
         <SignaturePad
+          invalid={Boolean(fieldErrors.signature)}
           onChange={(value) => {
             setSignature(value);
-            if (value.startsWith("data:image")) clearFieldError("signature");
+            if (!isMissingSignature(value)) clearFieldError("signature");
           }}
         />
         <RequiredFieldError show={Boolean(fieldErrors.signature)} />

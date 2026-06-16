@@ -34,3 +34,7 @@ export function getMissingQuestionnaireFieldKeys(
 export function toFieldErrorMap(keys: string[]): Record<string, true> {
   return Object.fromEntries(keys.map((key) => [key, true as const]));
 }
+
+export function isMissingSignature(signature: string): boolean {
+  return !signature.startsWith("data:image");
+}
