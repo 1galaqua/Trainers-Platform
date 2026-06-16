@@ -33,9 +33,11 @@ export default async function InvitePage({ params }: InvitePageProps) {
           <p className="text-muted-foreground text-sm">
             בקש/י מהמאמן/ית לשלוח קישור הזמנה חדש.
           </p>
-          <Button render={<Link href="/sign-in" />} variant="outline">
-            התחברות
-          </Button>
+          {data.reason !== "used" && (
+            <Button render={<Link href="/sign-in" />} variant="outline">
+              התחברות
+            </Button>
+          )}
         </div>
       </div>
     );
