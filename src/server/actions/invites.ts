@@ -109,7 +109,7 @@ function parseQuestionnaireAnswers(
       answers[field.key] = raw == null ? null : String(raw).trim() || null;
     }
 
-    if (field.required && (answers[field.key] == null || answers[field.key] === "")) {
+    if (answers[field.key] == null || answers[field.key] === "") {
       return { error: `יש למלא את השדה: ${field.label}` };
     }
   }

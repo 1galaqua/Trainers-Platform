@@ -8,8 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RequiredFieldError } from "@/features/onboarding/components/required-field-error";
 import { SignaturePad } from "@/features/onboarding/components/signature-pad";
 import { DEFAULT_TRAINEE_PASSWORD } from "@/lib/trainee-invite";
+import {
+  getMissingQuestionnaireFieldKeys,
+  isEmptyFormValue,
+  toFieldErrorMap,
+} from "@/lib/onboarding-form-validation";
 import type { QuestionField } from "@/lib/onboarding-template";
 import { completeTraineeInviteAction } from "@/server/actions/invites";
 
@@ -20,6 +26,8 @@ type TraineeInviteOnboardingFormProps = {
   agreementText: string;
 };
 
+const USER_FIELD_KEYS = ["displayName", "email", "age", "phoneNumber"] as const;
+
 export function TraineeInviteOnboardingForm({
   token,
   coachName,
@@ -27,6 +35,7 @@ export function TraineeInviteOnboardingForm({
   agreementText,
 }: TraineeInviteOnboardingFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, true>>({});
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState("");
@@ -35,8 +44,44 @@ export function TraineeInviteOnboardingForm({
   const numberFields = questionnaireFields.filter((f) => f.type === "number");
   const otherFields = questionnaireFields.filter((f) => f.type !== "number");
 
+  function clearFieldError(key: string) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function validateForm(form: HTMLFormElement) {
+    const formData = new FormData(form);
+    const errors: Record<string, true> = {};
+
+    for (const key of USER_FIELD_KEYS) {
+      if (isEmptyFormValue(formData.get(key))) {
+        errors[key] = true;
+      }
+    }
+
+    Object.assign(errors, toFieldErrorMap(getMissingQuestionnaireFieldKeys(formData, questionnaireFields)));
+
+    if (!agreed) errors.agreed = true;
+    if (!signature.startsWith("data:image")) errors.signature = true;
+
+    return errors;
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    const errors = validateForm(e.currentTarget);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError(null);
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
     setError(null);
 
@@ -66,10 +111,11 @@ export function TraineeInviteOnboardingForm({
           <Textarea
             id={field.key}
             name={field.key}
-            required={field.required}
             rows={2}
             placeholder={field.placeholder}
+            onChange={() => clearFieldError(field.key)}
           />
+          <RequiredFieldError show={Boolean(fieldErrors[field.key])} />
         </div>
       );
     }
@@ -81,12 +127,13 @@ export function TraineeInviteOnboardingForm({
           id={field.key}
           name={field.key}
           type={field.type === "number" ? "number" : "text"}
-          required={field.required}
           min={field.min}
           max={field.max}
           step={field.step}
           placeholder={field.placeholder}
+          onChange={() => clearFieldError(field.key)}
         />
+        <RequiredFieldError show={Boolean(fieldErrors[field.key])} />
       </div>
     );
   }
@@ -120,7 +167,7 @@ export function TraineeInviteOnboardingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-lg space-y-6">
+    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-lg space-y-6" noValidate>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">פרטי משתמש</CardTitle>
@@ -128,7 +175,13 @@ export function TraineeInviteOnboardingForm({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="displayName">שם מלא</Label>
-            <Input id="displayName" name="displayName" required autoComplete="name" />
+            <Input
+              id="displayName"
+              name="displayName"
+              autoComplete="name"
+              onChange={() => clearFieldError("displayName")}
+            />
+            <RequiredFieldError show={Boolean(fieldErrors.displayName)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">אימייל</Label>
@@ -136,10 +189,11 @@ export function TraineeInviteOnboardingForm({
               id="email"
               name="email"
               type="email"
-              required
               autoComplete="email"
               dir="ltr"
+              onChange={() => clearFieldError("email")}
             />
+            <RequiredFieldError show={Boolean(fieldErrors.email)} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -148,12 +202,13 @@ export function TraineeInviteOnboardingForm({
                 id="age"
                 name="age"
                 type="number"
-                required
                 min={1}
                 max={120}
                 autoComplete="off"
                 dir="ltr"
+                onChange={() => clearFieldError("age")}
               />
+              <RequiredFieldError show={Boolean(fieldErrors.age)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">טלפון</Label>
@@ -161,11 +216,12 @@ export function TraineeInviteOnboardingForm({
                 id="phoneNumber"
                 name="phoneNumber"
                 type="tel"
-                required
                 autoComplete="tel"
                 dir="ltr"
                 placeholder="050-1234567"
+                onChange={() => clearFieldError("phoneNumber")}
               />
+              <RequiredFieldError show={Boolean(fieldErrors.phoneNumber)} />
             </div>
           </div>
         </CardContent>
@@ -192,30 +248,38 @@ export function TraineeInviteOnboardingForm({
             {agreementText}
           </div>
 
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-1"
-            />
-            קראתי ואני מסכים/ה לתנאי ההסכם
-          </label>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => {
+                  setAgreed(e.target.checked);
+                  if (e.target.checked) clearFieldError("agreed");
+                }}
+                className="mt-1"
+              />
+              קראתי ואני מסכים/ה לתנאי ההסכם
+            </label>
+            <RequiredFieldError show={Boolean(fieldErrors.agreed)} />
+          </div>
 
           <div className="space-y-2">
             <Label>חתימה דיגיטלית</Label>
-            <SignaturePad onChange={setSignature} />
+            <SignaturePad
+              onChange={(value) => {
+                setSignature(value);
+                if (value.startsWith("data:image")) clearFieldError("signature");
+              }}
+            />
+            <RequiredFieldError show={Boolean(fieldErrors.signature)} />
           </div>
         </CardContent>
       </Card>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={loading || !agreed || !signature}
-      >
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "יוצר חשבון..." : "יצירת חשבון וסיום"}
       </Button>
     </form>

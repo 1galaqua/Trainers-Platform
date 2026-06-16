@@ -46,7 +46,7 @@ export const DEFAULT_QUESTIONNAIRE_FIELDS: QuestionField[] = [
     key: "injuries",
     label: "פציעות / מגבלות",
     type: "textarea",
-    required: false,
+    required: true,
     placeholder: "אין / פרט...",
   },
   {
