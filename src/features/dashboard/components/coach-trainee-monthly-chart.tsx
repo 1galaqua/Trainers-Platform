@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -16,12 +17,20 @@ import type { CoachDashboardChartData } from "@/lib/coach-dashboard-stats";
 
 const CHART_GREEN = "#22c55e";
 const CHART_RED = "#ef4444";
+const MONTH_SLOT_WIDTH = 56;
 
 type CoachTraineeMonthlyChartProps = {
   data: CoachDashboardChartData;
 };
 
 export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps) {
+  const monthLabelByKey = useMemo(
+    () => new Map(data.months.map((month) => [month.monthKey, month.monthLabel])),
+    [data.months],
+  );
+
+  const chartWidth = data.months.length * MONTH_SLOT_WIDTH;
+
   if (data.months.every((month) => month.active === 0 && month.inactive === 0)) {
     return (
       <div className="rounded-xl border border-border bg-card p-6">
@@ -43,15 +52,23 @@ export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps
         <p className="text-muted-foreground text-sm">{data.rangeLabel}</p>
       </div>
 
-      <div className="h-72 w-full" dir="ltr">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.months} margin={{ top: 24, right: 8, left: 0, bottom: 0 }} barGap={4}>
+      <div className="w-full overflow-x-auto overscroll-x-contain" dir="ltr">
+        <div className="h-72 w-full" style={{ minWidth: chartWidth }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={chartWidth}>
+            <BarChart
+              data={data.months}
+              margin={{ top: 24, right: 8, left: 0, bottom: 0 }}
+              barGap={4}
+            >
             <CartesianGrid vertical={false} stroke="#e5e7eb" strokeDasharray="3 3" />
             <XAxis
-              dataKey="monthLabel"
+              dataKey="monthKey"
+              type="category"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: "currentColor" }}
+              interval={0}
+              tick={{ fontSize: 11, fill: "currentColor" }}
+              tickFormatter={(key) => monthLabelByKey.get(String(key)) ?? String(key)}
             />
             <YAxis
               axisLine={false}
@@ -64,19 +81,33 @@ export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps
                 value ?? 0,
                 name === "active" ? "פעילים" : "לא פעילים",
               ]}
-              labelFormatter={(label) => `חודש: ${label}`}
+              labelFormatter={(key) => {
+                const label = monthLabelByKey.get(String(key));
+                return label ? `חודש: ${label}` : `חודש: ${key}`;
+              }}
             />
-            <Legend
-              formatter={(value) => (value === "active" ? "פעילים" : "לא פעילים")}
-            />
-            <Bar dataKey="active" name="active" fill={CHART_GREEN} radius={[6, 6, 0, 0]} maxBarSize={28}>
+            <Legend formatter={(value) => (value === "active" ? "פעילים" : "לא פעילים")} />
+            <Bar
+              dataKey="active"
+              name="active"
+              fill={CHART_GREEN}
+              radius={[6, 6, 0, 0]}
+              maxBarSize={28}
+            >
               <LabelList dataKey="active" position="top" fontSize={12} fill="currentColor" />
             </Bar>
-            <Bar dataKey="inactive" name="inactive" fill={CHART_RED} radius={[6, 6, 0, 0]} maxBarSize={28}>
+            <Bar
+              dataKey="inactive"
+              name="inactive"
+              fill={CHART_RED}
+              radius={[6, 6, 0, 0]}
+              maxBarSize={28}
+            >
               <LabelList dataKey="inactive" position="top" fontSize={12} fill="currentColor" />
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <p className="mt-4 text-right text-muted-foreground text-xs">

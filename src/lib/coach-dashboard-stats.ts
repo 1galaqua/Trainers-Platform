@@ -79,7 +79,7 @@ export function buildLast12MonthKeys(now = new Date()) {
     const monthIndex = date.getMonth();
     months.push({
       monthKey: `${year}-${String(monthIndex + 1).padStart(2, "0")}`,
-      monthLabel: HEBREW_MONTHS_SHORT[monthIndex],
+      monthLabel: `${HEBREW_MONTHS_SHORT[monthIndex]} ${year}`,
       end: endOfMonth(year, monthIndex),
     });
   }
