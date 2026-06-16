@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RequiredFieldError } from "@/features/onboarding/components/required-field-error";
 import { SignaturePad } from "@/features/onboarding/components/signature-pad";
-import { DEFAULT_TRAINEE_PASSWORD } from "@/lib/trainee-invite";
 import {
   getMissingQuestionnaireFieldKeys,
   isEmptyFormValue,
@@ -35,12 +34,12 @@ export function TraineeInviteOnboardingForm({
   questionnaireFields,
   agreementText,
 }: TraineeInviteOnboardingFormProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, true>>({});
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState("");
-  const [completedEmail, setCompletedEmail] = useState<string | null>(null);
 
   const numberFields = questionnaireFields.filter((f) => f.type === "number");
   const otherFields = questionnaireFields.filter((f) => f.type !== "number");
@@ -100,7 +99,9 @@ export function TraineeInviteOnboardingForm({
     }
 
     if (result && "success" in result && result.success) {
-      setCompletedEmail(result.email);
+      router.push(result.redirectTo ?? "/dashboard");
+      router.refresh();
+      return;
     }
   }
 
@@ -136,34 +137,6 @@ export function TraineeInviteOnboardingForm({
         />
         <RequiredFieldError show={Boolean(fieldErrors[field.key])} />
       </div>
-    );
-  }
-
-  if (completedEmail) {
-    return (
-      <Card className="mx-auto w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>החשבון נוצר בהצלחה</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <p>
-            החשבון שלך נוצר ושויך למאמן/ית <strong>{coachName}</strong>.
-          </p>
-          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-            <p>
-              <span className="text-muted-foreground">אימייל: </span>
-              <span dir="ltr">{completedEmail}</span>
-            </p>
-            <p>
-              <span className="text-muted-foreground">סיסמה: </span>
-              <span dir="ltr">{DEFAULT_TRAINEE_PASSWORD}</span>
-            </p>
-          </div>
-          <Button render={<Link href="/sign-in" />} className="w-full">
-            התחברות למערכת
-          </Button>
-        </CardContent>
-      </Card>
     );
   }
 

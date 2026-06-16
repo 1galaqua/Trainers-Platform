@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ export default async function EditProgramPage({ params }: PageProps) {
           size="icon-sm"
           render={<Link href={`/dashboard/workouts/${id}`} aria-label="חזרה" />}
         >
-          <ArrowLeft className="size-4" />
+          <ArrowRight className="size-4" />
         </Button>
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">עריכת תוכנית</h1>

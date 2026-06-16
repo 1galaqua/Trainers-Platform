@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import type { CoachTraineeListItem } from "@/server/actions/trainees";
 type TraineesListProps = {
   trainees: CoachTraineeListItem[];
   questionnaireFields: QuestionField[];
+  initialFilter?: TraineeFilter;
 };
 
 const filterOptions: { value: TraineeFilter; label: string }[] = [
@@ -26,8 +27,16 @@ const filterOptions: { value: TraineeFilter; label: string }[] = [
   { value: "questionnaire_done", label: "שאלון הושלם" },
 ];
 
-export function TraineesList({ trainees, questionnaireFields }: TraineesListProps) {
-  const [filter, setFilter] = useState<TraineeFilter>("all");
+export function TraineesList({
+  trainees,
+  questionnaireFields,
+  initialFilter = "all",
+}: TraineesListProps) {
+  const [filter, setFilter] = useState<TraineeFilter>(initialFilter);
+
+  useEffect(() => {
+    setFilter(initialFilter);
+  }, [initialFilter]);
 
   const filtered = useMemo(
     () => trainees.filter((trainee) => matchesTraineeFilter(filter, trainee)),

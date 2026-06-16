@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +113,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon-sm" render={<Link href="/dashboard/trainees" aria-label="חזרה" />}>
-            <ArrowLeft className="size-4" />
+            <ArrowRight className="size-4" />
           </Button>
           <div>
             <div className="flex items-center gap-2">
@@ -152,6 +152,20 @@ export default async function TraineeDetailPage({ params }: PageProps) {
             agreementRedoPending={agreementRedoPending}
           />
           <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="#workout-history" />}
+          >
+            צפייה בהתקדמות
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href={`/dashboard/workouts/new?traineeId=${id}`} />}
+          >
+            תוכנית חדשה
+          </Button>
+          <Button
             variant="default"
             size="sm"
             render={<Link href={`/dashboard/trainees/${id}/log`} />}
@@ -181,7 +195,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         <DeleteTraineeButton traineeId={id} traineeName={name} />
       </div>
 
-      <div className="space-y-4">
+      <div id="workout-history" className="scroll-mt-6 space-y-4">
         <h2 className="font-medium text-base">אימונים שבוצעו</h2>
         {sessions.length === 0 ? (
           <p className="text-muted-foreground text-sm">טרם דווחו אימונים</p>

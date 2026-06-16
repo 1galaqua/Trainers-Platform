@@ -76,7 +76,10 @@ export function CreateTraineeInviteButton() {
           </Button>
         }
       />
-      <SheetContent side="left" className="w-full sm:max-w-md">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md [&>button]:top-3 [&>button]:right-auto [&>button]:left-3"
+      >
         <SheetHeader>
           <SheetTitle>הזמנת מתאמן חדש</SheetTitle>
           <SheetDescription>

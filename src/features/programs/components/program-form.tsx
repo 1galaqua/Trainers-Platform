@@ -63,7 +63,14 @@ export type ProgramFormInitial = {
 };
 
 type ProgramFormProps =
-  | { mode: "create"; trainees: Trainee[]; initial?: undefined }
+  | {
+      mode: "create";
+      trainees: Trainee[];
+      initialTraineeId?: string;
+      selectedTraineeId?: string;
+      onTraineeIdChange?: (traineeId: string) => void;
+      initial?: undefined;
+    }
   | { mode: "edit"; trainees?: undefined; initial: ProgramFormInitial };
 
 export function ProgramForm(props: ProgramFormProps) {
@@ -71,6 +78,12 @@ export function ProgramForm(props: ProgramFormProps) {
   const isEdit = props.mode === "edit";
   const initial = isEdit ? props.initial : undefined;
   const editInitial = isEdit ? props.initial : null;
+  const defaultTraineeId =
+    props.mode === "create" &&
+    props.initialTraineeId &&
+    props.trainees.some((trainee) => trainee.id === props.initialTraineeId)
+      ? props.initialTraineeId
+      : "";
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,7 +176,18 @@ export function ProgramForm(props: ProgramFormProps) {
         ) : props.mode === "create" ? (
           <div className="space-y-2">
             <Label htmlFor="traineeId">מתאמן</Label>
-            <Select id="traineeId" name="traineeId" required defaultValue="">
+            <Select
+              id="traineeId"
+              name="traineeId"
+              required
+              value={props.onTraineeIdChange ? props.selectedTraineeId ?? "" : undefined}
+              defaultValue={props.onTraineeIdChange ? undefined : defaultTraineeId}
+              onChange={
+                props.onTraineeIdChange
+                  ? (e) => props.onTraineeIdChange?.(e.target.value)
+                  : undefined
+              }
+            >
               <option value="" disabled>
                 בחר מתאמן
               </option>

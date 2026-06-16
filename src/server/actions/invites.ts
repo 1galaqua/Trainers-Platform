@@ -14,6 +14,11 @@ import {
 } from "@/lib/onboarding-template";
 import { prisma } from "@/lib/prisma";
 import {
+  getServerConfigIssue,
+  serverConfigErrorMessage,
+} from "@/lib/server-env";
+import { createUserSession } from "@/lib/session";
+import {
   buildInviteUrl,
   DEFAULT_TRAINEE_PASSWORD,
   getInviteExpiryDate,
@@ -223,9 +228,23 @@ export async function completeTraineeInviteAction(formData: FormData) {
       data: { usedAt: completedAt },
     });
 
+    const configIssue = getServerConfigIssue();
+    if (configIssue === "missing_session_secret") {
+      return { error: serverConfigErrorMessage(configIssue) };
+    }
+
+    await createUserSession({
+      userId: user.id,
+      clerkId: user.clerkId,
+      email: user.email ?? email,
+      displayName: user.displayName ?? displayName,
+      role: user.role,
+    });
+
+    revalidatePath("/dashboard");
     revalidatePath("/dashboard/trainees");
 
-    return { success: true as const, email };
+    return { success: true as const, redirectTo: "/dashboard" };
   } catch (error) {
     if (isDbConnectionError(error)) {
       return { error: "מסד הנתונים לא זמין" };

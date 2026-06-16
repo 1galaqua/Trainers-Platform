@@ -139,7 +139,7 @@ export function TraineeOnboardingSheet({
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
+        className="flex h-full max-h-[100dvh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md [&>button]:top-3 [&>button]:right-auto [&>button]:left-3"
       >
         <SheetHeader className="shrink-0 border-border border-b">
           <SheetTitle>שאלון והסכם — {traineeName}</SheetTitle>

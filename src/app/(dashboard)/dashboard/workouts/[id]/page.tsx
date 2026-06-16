@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
+import { ArrowRight, ExternalLink, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon-sm" render={<Link href="/dashboard/workouts" aria-label="חזרה" />}>
-            <ArrowLeft className="size-4" />
+            <ArrowRight className="size-4" />
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">

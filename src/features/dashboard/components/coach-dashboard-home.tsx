@@ -26,30 +26,36 @@ export async function CoachDashboardHome({ coachName }: CoachDashboardHomeProps)
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">מתאמנים פעילים</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-3xl text-green-600">{chartData.currentActive}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">מתאמנים לא פעילים</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-3xl text-red-500">{chartData.currentInactive}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">סה״כ מתאמנים</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-semibold text-3xl">{chartData.currentTotal}</p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/trainees?filter=active" className="block">
+          <Card className="h-full cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
+            <CardHeader>
+              <CardTitle className="text-base">מתאמנים פעילים</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-3xl text-green-600">{chartData.currentActive}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/trainees?filter=inactive" className="block">
+          <Card className="h-full cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
+            <CardHeader>
+              <CardTitle className="text-base">מתאמנים לא פעילים</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-3xl text-red-500">{chartData.currentInactive}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/dashboard/trainees" className="block">
+          <Card className="h-full cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/20">
+            <CardHeader>
+              <CardTitle className="text-base">סה״כ מתאמנים</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="font-semibold text-3xl">{chartData.currentTotal}</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <CoachTraineeMonthlyChart data={chartData} />

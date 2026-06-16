@@ -100,6 +100,25 @@ export type TraineeFilter =
   | "has_workouts_remaining"
   | "no_workouts_remaining";
 
+const TRAINEE_FILTER_VALUES = new Set<TraineeFilter>([
+  "all",
+  "active",
+  "inactive",
+  "in_coaching_period",
+  "coaching_expired",
+  "no_questionnaire",
+  "questionnaire_done",
+  "has_workouts_remaining",
+  "no_workouts_remaining",
+]);
+
+export function parseTraineeFilter(value: string | undefined | null): TraineeFilter {
+  if (value && TRAINEE_FILTER_VALUES.has(value as TraineeFilter)) {
+    return value as TraineeFilter;
+  }
+  return "all";
+}
+
 export function matchesTraineeFilter(
   filter: TraineeFilter,
   trainee: {

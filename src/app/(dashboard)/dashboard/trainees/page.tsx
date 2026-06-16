@@ -3,6 +3,7 @@ import { siteConfig } from "@/config/site";
 import { CreateTraineeInviteButton } from "@/features/invites/components/create-trainee-invite-button";
 import { TraineesList } from "@/features/trainees/components/trainees-list";
 import { requireCoach } from "@/lib/auth";
+import { parseTraineeFilter } from "@/lib/trainee-status";
 import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { getCoachTraineeListAction } from "@/server/actions/trainees";
 
@@ -10,8 +11,14 @@ export const metadata = {
   title: `מתאמנים | ${siteConfig.shortName}`,
 };
 
-export default async function TraineesPage() {
+type PageProps = {
+  searchParams: Promise<{ filter?: string }>;
+};
+
+export default async function TraineesPage({ searchParams }: PageProps) {
   await requireCoach();
+  const { filter: filterParam } = await searchParams;
+  const initialFilter = parseTraineeFilter(filterParam);
   const [trainees, template] = await Promise.all([
     getCoachTraineeListAction(),
     getCoachOnboardingTemplateAction(),
@@ -35,7 +42,11 @@ export default async function TraineesPage() {
           </CardContent>
         </Card>
       ) : (
-        <TraineesList trainees={trainees} questionnaireFields={template.questionnaireFields} />
+        <TraineesList
+          trainees={trainees}
+          questionnaireFields={template.questionnaireFields}
+          initialFilter={initialFilter}
+        />
       )}
     </div>
   );

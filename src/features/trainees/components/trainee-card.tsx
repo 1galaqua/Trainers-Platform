@@ -117,7 +117,7 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             variant="outline"
             size="sm"
             className="w-full"
-            render={<Link href="/dashboard/workouts/new" />}
+            render={<Link href={`/dashboard/workouts/new?traineeId=${trainee.id}`} />}
           >
             תוכנית חדשה
           </Button>
