@@ -1,7 +1,7 @@
 import type { UserRole } from "@/lib/prisma-client";
 
 export const coachNavigation = [
-  { title: "סקירה", href: "/dashboard", description: "סיכום ופעילות" },
+  { title: "לוח בקרה", href: "/dashboard", description: "סיכום ופעילות" },
   { title: "מתאמנים", href: "/dashboard/trainees", description: "רשימה והתקדמות" },
   { title: "תוכניות אימון", href: "/dashboard/workouts", description: "יצירה וניהול" },
   { title: "שאלון והסכם", href: "/dashboard/onboarding-template", description: "תבנית לעלייה" },

@@ -202,6 +202,45 @@ export async function updateCoachingPeriodAction(formData: FormData) {
   }
 }
 
+export async function updateTraineeDisplayNameAction(formData: FormData) {
+  const coach = await requireCoach();
+
+  const traineeId = String(formData.get("traineeId") ?? "");
+  const displayName = String(formData.get("displayName") ?? "").trim();
+
+  if (!traineeId) return { error: "מתאמן לא נמצא" };
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return { error: "אין הרשאה לעדכן מתאמן זה" };
+
+  if (!displayName) return { error: "יש להזין שם" };
+  if (displayName.length > 120) return { error: "השם ארוך מדי" };
+
+  try {
+    const trainee = await prisma.user.findFirst({
+      where: { id: traineeId, role: "TRAINEE" },
+      select: { id: true },
+    });
+
+    if (!trainee) return { error: "מתאמן לא נמצא" };
+
+    await prisma.user.update({
+      where: { id: traineeId },
+      data: { displayName },
+    });
+
+    revalidatePath("/dashboard/trainees");
+    revalidatePath(`/dashboard/trainees/${traineeId}`);
+    revalidatePath(`/dashboard/trainees/${traineeId}/log`);
+    revalidatePath("/dashboard/workouts");
+    revalidatePath("/dashboard");
+
+    return { success: true as const };
+  } catch {
+    return { error: "שגיאה בשמירת השם" };
+  }
+}
+
 export async function getTraineeCoachingPeriodAction(traineeId: string) {
   const coach = await requireCoach();
 

@@ -56,6 +56,22 @@ export function getEffectiveWorkoutsCompleted(
   return loggedSessionsCount;
 }
 
+export function getSessionsCountAtDate(input: {
+  workoutsCompleted: number | null;
+  sessionDates: Date[];
+  asOf: Date;
+}): number {
+  const totalLogged = input.sessionDates.length;
+  const loggedUpTo = input.sessionDates.filter((date) => date <= input.asOf).length;
+
+  if (input.workoutsCompleted == null) {
+    return loggedUpTo;
+  }
+
+  const baseline = Math.max(0, input.workoutsCompleted - totalLogged);
+  return baseline + loggedUpTo;
+}
+
 export function getWorkoutsRemaining(workoutQuota: number | null, completedCount: number): number {
   if (workoutQuota == null || workoutQuota <= 0) return 0;
   return Math.max(0, workoutQuota - completedCount);

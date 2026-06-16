@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
+import { DeleteTraineeButton } from "@/features/trainees/components/delete-trainee-button";
+import { EditTraineeName } from "@/features/trainees/components/edit-trainee-name";
 import { RequestAgreementRedoButton } from "@/features/trainees/components/request-agreement-redo-button";
 import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
 import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
@@ -116,7 +118,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
           <div>
             <div className="flex items-center gap-2">
               <TraineeStatusIndicator status={status} />
-              <h1 className="font-semibold text-2xl tracking-tight">{name}</h1>
+              <EditTraineeName traineeId={id} displayName={trainee.displayName} />
             </div>
             <p className="mt-1 text-muted-foreground text-sm">
               היסטוריית אימונים
@@ -174,6 +176,10 @@ export default async function TraineeDetailPage({ params }: PageProps) {
           />
         </CardContent>
       </Card>
+
+      <div className="flex justify-end">
+        <DeleteTraineeButton traineeId={id} traineeName={name} />
+      </div>
 
       <div className="space-y-4">
         <h2 className="font-medium text-base">אימונים שבוצעו</h2>
