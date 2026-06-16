@@ -26,7 +26,10 @@ import {
   type OnboardingAgreementVersion,
   type OnboardingQuestionnaireVersion,
 } from "@/lib/onboarding-versions";
-import { getTraineeOnboardingVersionsAction } from "@/server/actions/trainees";
+import {
+  getTraineeOnboardingVersionsAction,
+  type TraineeOnboardingVersions,
+} from "@/server/actions/trainees";
 
 type TraineeOnboardingSheetProps = {
   traineeId: string;
@@ -51,6 +54,30 @@ function formatLegacyAnswers(version: OnboardingQuestionnaireVersion) {
   );
 }
 
+function formatPhoneDisplay(phone: string | null) {
+  if (!phone) return "—";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+  return phone;
+}
+
+function UserDetailsSection({ details }: { details: TraineeOnboardingVersions["userDetails"] }) {
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+      <p className="font-medium text-sm">פרטי משתמש</p>
+      <Field label="שם מלא" value={details.displayName?.trim() || "—"} />
+      <Field label="אימייל" value={details.email?.trim() || "—"} />
+      <Field label="טלפון" value={formatPhoneDisplay(details.phoneNumber)} />
+      <Field
+        label="גיל"
+        value={details.age != null ? String(details.age) : "—"}
+      />
+    </div>
+  );
+}
+
 export function TraineeOnboardingSheet({
   traineeId,
   traineeName,
@@ -59,10 +86,7 @@ export function TraineeOnboardingSheet({
 }: TraineeOnboardingSheetProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [versions, setVersions] = useState<{
-    questionnaires: OnboardingQuestionnaireVersion[];
-    agreements: OnboardingAgreementVersion[];
-  } | null>(null);
+  const [versions, setVersions] = useState<TraineeOnboardingVersions | null>(null);
 
   const [questionnaireId, setQuestionnaireId] = useState(CURRENT_ONBOARDING_VERSION_ID);
   const [agreementId, setAgreementId] = useState(CURRENT_ONBOARDING_VERSION_ID);
@@ -147,6 +171,8 @@ export function TraineeOnboardingSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           <div className="grid gap-4 px-4 py-4 pb-6 text-sm">
           {loading && <p className="text-muted-foreground text-xs">טוען גרסאות...</p>}
+
+          {versions && <UserDetailsSection details={versions.userDetails} />}
 
           {versions && versions.questionnaires.length > 0 && (
             <div className="space-y-2">

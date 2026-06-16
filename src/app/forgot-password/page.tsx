@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
       <div className="space-y-1 text-center">
         <h1 className="font-semibold text-xl">איפוס סיסמה</h1>
         <p className="text-muted-foreground text-sm">
-          אימות לפי אימייל, גיל וטלפון — ולאחר מכן סיסמה חדשה
+          אימות לפי שם מלא, אימייל וטלפון — ולאחר מכן סיסמה חדשה
         </p>
       </div>
       <ForgotPasswordForm />

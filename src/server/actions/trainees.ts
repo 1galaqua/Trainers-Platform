@@ -343,7 +343,15 @@ export async function requestAgreementRedoAction(traineeId: string) {
   }
 }
 
+export type TraineeUserDetails = {
+  displayName: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  age: number | null;
+};
+
 export type TraineeOnboardingVersions = {
+  userDetails: TraineeUserDetails;
   questionnaires: OnboardingQuestionnaireVersion[];
   agreements: OnboardingAgreementVersion[];
 };
@@ -357,7 +365,16 @@ export async function getTraineeOnboardingVersionsAction(
   if (!ownsTrainee) return null;
 
   try {
-    const [currentQ, historyQ, currentA, historyA, template] = await Promise.all([
+    const [trainee, currentQ, historyQ, currentA, historyA, template] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: traineeId },
+        select: {
+          displayName: true,
+          email: true,
+          phoneNumber: true,
+          age: true,
+        },
+      }),
       prisma.questionnaireResponse.findUnique({ where: { traineeId } }),
       prisma.questionnaireSubmission.findMany({
         where: { traineeId },
@@ -406,7 +423,16 @@ export async function getTraineeOnboardingVersionsAction(
       ),
     ].sort((a, b) => new Date(b.agreedAt).getTime() - new Date(a.agreedAt).getTime());
 
-    return { questionnaires, agreements };
+    return {
+      userDetails: {
+        displayName: trainee?.displayName ?? null,
+        email: trainee?.email ?? null,
+        phoneNumber: trainee?.phoneNumber ?? null,
+        age: trainee?.age ?? null,
+      },
+      questionnaires,
+      agreements,
+    };
   } catch {
     return null;
   }

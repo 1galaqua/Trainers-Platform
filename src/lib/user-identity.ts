@@ -32,6 +32,15 @@ export function agesMatch(
   return Number(stored) === entered;
 }
 
+export function displayNamesMatch(
+  stored: string | null | undefined,
+  entered: string,
+): boolean {
+  const normalizedStored = (stored ?? "").trim().toLowerCase();
+  const normalizedEntered = entered.trim().toLowerCase();
+  return normalizedStored.length > 0 && normalizedStored === normalizedEntered;
+}
+
 export function validatePhone(phone: string): string | null {
   const digits = normalizePhone(phone);
   if (digits.length < 9 || digits.length > 15) {
