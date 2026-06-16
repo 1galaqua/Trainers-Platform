@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RequiredFieldError } from "@/features/onboarding/components/required-field-error";
 import { SignaturePad } from "@/features/onboarding/components/signature-pad";
+import { PhonePrefixField } from "@/features/invites/components/phone-prefix-field";
 import {
   getMissingQuestionnaireFieldKeys,
   isEmptyFormValue,
@@ -19,7 +20,6 @@ import {
 import type { QuestionField } from "@/lib/onboarding-template";
 import {
   digitsOnly,
-  ISRAELI_MOBILE_PREFIXES,
   PHONE_SUFFIX_INCOMPLETE_MESSAGE,
 } from "@/lib/user-identity";
 import { completeTraineeInviteAction } from "@/server/actions/invites";
@@ -192,27 +192,16 @@ export function TraineeInviteOnboardingForm({
           <div className="space-y-2">
             <Label htmlFor="phoneSuffix">טלפון</Label>
             <div className="flex items-center gap-2" dir="ltr">
-              <Input
+              <PhonePrefixField
                 id="phonePrefix"
                 name="phonePrefix"
-                list="phone-prefix-options"
-                inputMode="numeric"
-                autoComplete="tel-area-code"
-                maxLength={3}
                 value={phonePrefix}
-                onChange={(e) => {
-                  setPhonePrefix(digitsOnly(e.target.value).slice(0, 3));
+                invalid={Boolean(fieldErrors.phonePrefix)}
+                onChange={(value) => {
+                  setPhonePrefix(value);
                   clearFieldError("phonePrefix");
                 }}
-                className="w-[4.5rem] text-center"
-                placeholder="050"
-                aria-label="קידומת טלפון"
               />
-              <datalist id="phone-prefix-options">
-                {ISRAELI_MOBILE_PREFIXES.map((prefix) => (
-                  <option key={prefix} value={prefix} />
-                ))}
-              </datalist>
               <span className="text-muted-foreground" aria-hidden>
                 -
               </span>
