@@ -2,7 +2,7 @@
   "name": "פלטפורמת מאמני כושר",
   "short_name": "מאמנים",
   "description": "פלטפורמת SaaS למאמני כושר: ניהול מתאמנים, תוכניות אימון ותוכן והתקדמות.",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",

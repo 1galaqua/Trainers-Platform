@@ -77,6 +77,17 @@ export function getWorkoutsRemaining(workoutQuota: number | null, completedCount
   return Math.max(0, workoutQuota - completedCount);
 }
 
+export function getQuotaBlockMessage(
+  workoutQuota: number | null,
+  workoutsRemaining: number,
+): string | null {
+  if (workoutQuota == null) return null;
+  if (workoutsRemaining <= 0) {
+    return "אין אימונים נותרים במכסה — פנה למאמן/ית";
+  }
+  return null;
+}
+
 export function getTraineeStatus(input: TraineeStatusInput): TraineeStatus {
   const remaining = getWorkoutsRemaining(input.workoutQuota, input.sessionsCount);
   const inPeriod = isCoachingPeriodActive(

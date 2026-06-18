@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,22 +11,28 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { siteConfig } from "@/config/site";
 import { AuthUserButton } from "@/features/dashboard/components/auth-user-button";
+import { getUnreadNotificationCountAction } from "@/server/actions/notifications";
 import { cn } from "@/lib/utils";
 
 import type { UserRole } from "@/lib/prisma-client";
 
 import { getNavigationForRole } from "../config/navigation";
 
+const UPDATES_HREF = "/dashboard/updates";
+
 type DashboardShellProps = {
   children: React.ReactNode;
   userRole: UserRole;
+  unreadNotificationCount?: number;
 };
 
 function NavLinks({
   userRole,
+  unreadNotificationCount = 0,
   onNavigate,
 }: {
   userRole: UserRole;
+  unreadNotificationCount?: number;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -38,6 +44,8 @@ function NavLinks({
         const active =
           pathname === item.href ||
           (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        const showUnreadBadge =
+          item.href === UPDATES_HREF && unreadNotificationCount > 0;
 
         return (
           <Link
@@ -45,13 +53,22 @@ function NavLinks({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               active
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            {item.title}
+            <span>{item.title}</span>
+            {showUnreadBadge && (
+              <span
+                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground"
+                aria-label={`${unreadNotificationCount} עדכונים חדשים`}
+                title={`${unreadNotificationCount} עדכונים חדשים`}
+              >
+                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -59,8 +76,48 @@ function NavLinks({
   );
 }
 
-export function DashboardShell({ children, userRole }: DashboardShellProps) {
+export function DashboardShell({
+  children,
+  userRole,
+  unreadNotificationCount = 0,
+}: DashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [liveUnreadCount, setLiveUnreadCount] = useState(unreadNotificationCount);
+
+  useEffect(() => {
+    setLiveUnreadCount(unreadNotificationCount);
+  }, [unreadNotificationCount]);
+
+  useEffect(() => {
+    if (userRole === "ADMIN") return;
+
+    let cancelled = false;
+
+    async function refreshUnreadCount() {
+      try {
+        const count = await getUnreadNotificationCountAction();
+        if (!cancelled) setLiveUnreadCount(count);
+      } catch {
+        // ignore polling errors
+      }
+    }
+
+    const intervalId = window.setInterval(refreshUnreadCount, 30_000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void refreshUnreadCount();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [userRole]);
 
   return (
     <div className="flex min-h-[100dvh] w-full flex-col bg-background md:flex-row">
@@ -78,7 +135,7 @@ export function DashboardShell({ children, userRole }: DashboardShellProps) {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-3">
-            <NavLinks userRole={userRole} />
+            <NavLinks userRole={userRole} unreadNotificationCount={liveUnreadCount} />
           </div>
         </ScrollArea>
         <Separator />
@@ -112,7 +169,11 @@ export function DashboardShell({ children, userRole }: DashboardShellProps) {
                 </div>
                 <ScrollArea className="h-[calc(100dvh-3.5rem)]">
                   <div className="p-3">
-                    <NavLinks userRole={userRole} onNavigate={() => setMobileNavOpen(false)} />
+                    <NavLinks
+                      userRole={userRole}
+                      unreadNotificationCount={liveUnreadCount}
+                      onNavigate={() => setMobileNavOpen(false)}
+                    />
                   </div>
                 </ScrollArea>
               </SheetContent>

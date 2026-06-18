@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   "/reset-password",
   "/invite(.*)",
   "/api/auth/forgot-password",
+  "/api/cron/calendar-reminders",
 ]);
 
 async function localAuthMiddleware(req: NextRequest) {

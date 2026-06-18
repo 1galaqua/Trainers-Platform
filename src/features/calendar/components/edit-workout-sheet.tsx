@@ -1,0 +1,267 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { getIsraelDateAndTimeFromInstant } from "@/lib/calendar-datetime";
+import { WORKOUT_DURATION_OPTIONS } from "@/lib/calendar-validation";
+import { programTypeLabels } from "@/lib/program-labels";
+import { cn } from "@/lib/utils";
+import type { ProgramType } from "@/lib/prisma-client";
+import {
+  updateScheduledWorkoutAction,
+  type CalendarTraineeOption,
+  type CalendarWorkoutItem,
+} from "@/server/actions/calendar";
+
+import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
+import { useCalendarFeedback } from "./calendar-feedback-context";
+
+type EditWorkoutSheetProps = {
+  workout: CalendarWorkoutItem;
+  trainees: CalendarTraineeOption[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function EditWorkoutSheet({
+  workout,
+  trainees,
+  open,
+  onOpenChange,
+}: EditWorkoutSheetProps) {
+  const router = useRouter();
+  const { showSuccess } = useCalendarFeedback();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedTraineeIds, setSelectedTraineeIds] = useState<string[]>([]);
+  const [maxParticipants, setMaxParticipants] = useState(workout.maxParticipants ?? 8);
+  const { date, time } = getIsraelDateAndTimeFromInstant(new Date(workout.startsAt));
+  const isPersonal = workout.type === "PERSONAL";
+
+  useEffect(() => {
+    if (!open) return;
+
+    setSelectedTraineeIds(workout.registeredTrainees.map((trainee) => trainee.id));
+    setMaxParticipants(workout.maxParticipants ?? 8);
+    setError(null);
+  }, [open, workout]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      formData.set("type", workout.type);
+      selectedTraineeIds.forEach((traineeId) => {
+        formData.append("groupTraineeIds", traineeId);
+      });
+
+      const result = await updateScheduledWorkoutAction(workout.id, formData);
+
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+
+      handleOpenChange(false);
+      showSuccess("שינויים בוצעו");
+      router.refresh();
+    } catch {
+      setError("שגיאה בשמירת השינויים. נסה שוב.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    onOpenChange(nextOpen);
+    if (!nextOpen) setError(null);
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="right"
+        className="gap-0 overflow-y-auto p-0 sm:max-w-md [&>button]:top-3 [&>button]:right-auto [&>button]:left-3"
+      >
+        <SheetHeader className="border-border border-b px-4 py-4">
+          <SheetTitle>עריכת אימון</SheetTitle>
+          <SheetDescription>
+            {isPersonal ? "אימון אישי" : "אימון קבוצתי"}
+          </SheetDescription>
+        </SheetHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
+          {isPersonal ? (
+            <div className="space-y-2">
+              <Label htmlFor={`traineeId-${workout.id}`}>מתאמן</Label>
+              <Select
+                id={`traineeId-${workout.id}`}
+                name="traineeId"
+                required
+                defaultValue={workout.traineeId ?? ""}
+              >
+                {trainees.map((trainee) => (
+                  <option key={trainee.id} value={trainee.id}>
+                    {trainee.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor={`workoutKind-${workout.id}`}>סוג אימון</Label>
+                <Select
+                  id={`workoutKind-${workout.id}`}
+                  name="workoutKind"
+                  defaultValue={workout.workoutKind}
+                  required
+                >
+                  {(Object.keys(programTypeLabels) as ProgramType[]).map((type) => (
+                    <option key={type} value={type}>
+                      {programTypeLabels[type]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`maxParticipants-${workout.id}`}>מקסימום משתתפים</Label>
+                <Input
+                  id={`maxParticipants-${workout.id}`}
+                  name="maxParticipants"
+                  type="number"
+                  min={Math.max(2, selectedTraineeIds.length)}
+                  max={50}
+                  value={maxParticipants}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    setMaxParticipants(next);
+                    if (Number.isInteger(next) && next > 0) {
+                      setSelectedTraineeIds((current) =>
+                        current.length > next ? current.slice(0, next) : current,
+                      );
+                    }
+                  }}
+                  required
+                />
+              </div>
+              <GroupWorkoutTraineeManager
+                trainees={trainees}
+                selectedIds={selectedTraineeIds}
+                onSelectedIdsChange={setSelectedTraineeIds}
+                maxParticipants={maxParticipants}
+                registeredTrainees={workout.registeredTrainees}
+              />
+            </>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor={`date-${workout.id}`}>תאריך</Label>
+              <Input
+                id={`date-${workout.id}`}
+                name="date"
+                type="date"
+                required
+                defaultValue={date}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`time-${workout.id}`}>שעה</Label>
+              <Input
+                id={`time-${workout.id}`}
+                name="time"
+                type="time"
+                required
+                defaultValue={time}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`durationMinutes-${workout.id}`}>משך (דקות)</Label>
+            <Select
+              id={`durationMinutes-${workout.id}`}
+              name="durationMinutes"
+              defaultValue={String(workout.durationMinutes)}
+              required
+            >
+              {WORKOUT_DURATION_OPTIONS.map((minutes) => (
+                <option key={minutes} value={minutes}>
+                  {minutes} דק׳
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`notes-${workout.id}`}>הערות (אופציונלי)</Label>
+            <Textarea
+              id={`notes-${workout.id}`}
+              name="notes"
+              rows={3}
+              defaultValue={workout.notes ?? ""}
+              placeholder="הערות לאימון"
+            />
+          </div>
+
+          {error && <p className="text-destructive text-sm">{error}</p>}
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "שומר..." : "שמירת שינויים"}
+          </Button>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+type EditWorkoutButtonProps = {
+  workout: CalendarWorkoutItem;
+  trainees: CalendarTraineeOption[];
+  compact?: boolean;
+};
+
+export function EditWorkoutButton({ workout, trainees, compact = false }: EditWorkoutButtonProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size={compact ? "sm" : "default"}
+        className={cn(
+          compact ? "h-7 w-full min-w-0 shrink px-1.5 text-xs" : "min-w-0 flex-1 shrink",
+        )}
+        onClick={() => setOpen(true)}
+      >
+        <Pencil className="size-3.5" aria-hidden />
+        עריכה
+      </Button>
+      <EditWorkoutSheet
+        workout={workout}
+        trainees={trainees}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}

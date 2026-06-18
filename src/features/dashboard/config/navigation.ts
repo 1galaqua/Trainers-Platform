@@ -5,6 +5,8 @@ export const coachNavigation = [
   { title: "מתאמנים", href: "/dashboard/trainees", description: "רשימה והתקדמות" },
   { title: "תוכניות אימון", href: "/dashboard/workouts", description: "יצירה וניהול" },
   { title: "שאלון והסכם", href: "/dashboard/onboarding-template", description: "תבנית לעלייה" },
+  { title: "יומן", href: "/dashboard/calendar", description: "אימונים מתוכננים" },
+  { title: "עדכונים", href: "/dashboard/updates", description: "הודעות ועדכונים" },
 ] as const;
 
 export const traineeNavigation = [
@@ -12,6 +14,8 @@ export const traineeNavigation = [
   { title: "התוכניות שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
   { title: "דיווח אימון", href: "/dashboard/workouts/log", description: "משקלים וחזרות" },
   { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
+  { title: "יומן", href: "/dashboard/calendar", description: "אימונים מתוכננים" },
+  { title: "עדכונים", href: "/dashboard/updates", description: "הודעות ועדכונים" },
 ] as const;
 
 export const adminNavigation = [

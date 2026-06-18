@@ -31,6 +31,28 @@ enum PhotoCategory {
   BACK
 }
 
+enum ScheduledWorkoutType {
+  PERSONAL
+  GROUP
+}
+
+enum AppNotificationType {
+  PERSONAL_SCHEDULED
+  PERSONAL_CANCELLED
+  PERSONAL_UPDATED
+  GROUP_SPOTS_AVAILABLE
+  GROUP_CANCELLED
+  GROUP_UPDATED
+  GROUP_REGISTRATION
+  GROUP_ENROLLED
+  GROUP_UNENROLLED
+  GROUP_CANCELLATION_BY_TRAINEE
+}
+
+enum ScheduledReminderType {
+  ONE_HOUR_BEFORE_SPOTS
+}
+
 model User {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   clerkId      String   @unique
@@ -55,6 +77,11 @@ model User {
   agreement                Agreement?
   agreementSubmissions     AgreementSubmission[]
   onboardingTemplate       CoachOnboardingTemplate?
+  scheduledWorkoutsAsCoach   ScheduledWorkout[]         @relation("CoachScheduledWorkouts")
+  scheduledWorkoutsAsTrainee ScheduledWorkout[]         @relation("TraineeScheduledWorkouts")
+  groupWorkoutRegistrations  GroupWorkoutRegistration[]
+  appNotifications           AppNotification[]
+  pushSubscriptions          PushSubscription[]
 }
 
 model TraineeInvite {
@@ -231,4 +258,79 @@ model AgreementSubmission {
   trainee               User     @relation(fields: [traineeId], references: [id])
 
   @@index([traineeId, agreedAt])
+}
+
+model ScheduledWorkout {
+  id              String               @id @default(auto()) @map("_id") @db.ObjectId
+  coachId         String               @db.ObjectId
+  type            ScheduledWorkoutType
+  workoutKind     ProgramType
+  startsAt        DateTime
+  durationMinutes Int
+  traineeId       String?              @db.ObjectId
+  maxParticipants Int?
+  notes           String?
+  cancelledAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  coach           User                 @relation("CoachScheduledWorkouts", fields: [coachId], references: [id])
+  trainee         User?                @relation("TraineeScheduledWorkouts", fields: [traineeId], references: [id])
+  registrations   GroupWorkoutRegistration[]
+  reminderJobs    ScheduledReminderJob[]
+
+  @@index([coachId, startsAt])
+  @@index([traineeId, startsAt])
+  @@index([startsAt, cancelledAt])
+}
+
+model GroupWorkoutRegistration {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  workoutId    String           @db.ObjectId
+  traineeId    String           @db.ObjectId
+  registeredAt DateTime         @default(now())
+  cancelledAt  DateTime?
+  workout      ScheduledWorkout @relation(fields: [workoutId], references: [id])
+  trainee      User             @relation(fields: [traineeId], references: [id])
+
+  @@unique([workoutId, traineeId])
+  @@index([traineeId, cancelledAt])
+}
+
+model AppNotification {
+  id        String              @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String              @db.ObjectId
+  type      AppNotificationType
+  title     String
+  body      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+  user      User                @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+}
+
+model ScheduledReminderJob {
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
+  workoutId    String                @db.ObjectId
+  reminderType ScheduledReminderType
+  scheduledFor DateTime
+  sentAt       DateTime?
+  workout      ScheduledWorkout      @relation(fields: [workoutId], references: [id])
+
+  @@unique([workoutId, reminderType])
 }
