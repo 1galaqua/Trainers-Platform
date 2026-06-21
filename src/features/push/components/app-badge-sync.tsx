@@ -3,10 +3,13 @@
 import { useEffect } from "react";
 
 import { syncAppBadge } from "@/lib/app-badge";
+import { getUnreadNotificationCountAction } from "@/server/actions/notifications";
 
 type AppBadgeSyncProps = {
   unreadCount: number;
 };
+
+const BADGE_POLL_MS = 15_000;
 
 export function AppBadgeSync({ unreadCount }: AppBadgeSyncProps) {
   useEffect(() => {
@@ -26,6 +29,43 @@ export function AppBadgeSync({ unreadCount }: AppBadgeSyncProps) {
 
     navigator.serviceWorker.addEventListener("message", handleMessage);
     return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshBadgeFromServer() {
+      try {
+        const count = await getUnreadNotificationCountAction();
+        if (!cancelled) await syncAppBadge(count);
+      } catch {
+        // ignore badge refresh errors
+      }
+    }
+
+    void refreshBadgeFromServer();
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshBadgeFromServer();
+      }
+    }, BADGE_POLL_MS);
+
+    function handleAppResume() {
+      void refreshBadgeFromServer();
+    }
+
+    document.addEventListener("visibilitychange", handleAppResume);
+    window.addEventListener("focus", handleAppResume);
+    window.addEventListener("pageshow", handleAppResume);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleAppResume);
+      window.removeEventListener("focus", handleAppResume);
+      window.removeEventListener("pageshow", handleAppResume);
+    };
   }, []);
 
   return null;
