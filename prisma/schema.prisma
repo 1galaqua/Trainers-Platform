@@ -47,10 +47,17 @@ enum AppNotificationType {
   GROUP_ENROLLED
   GROUP_UNENROLLED
   GROUP_CANCELLATION_BY_TRAINEE
+  WORKOUT_REMINDER
 }
 
 enum ScheduledReminderType {
   ONE_HOUR_BEFORE_SPOTS
+}
+
+enum UserWorkoutReminderKind {
+  THIRTY_MINUTES
+  ONE_HOUR
+  CUSTOM
 }
 
 enum WorkoutLogKind {
@@ -88,6 +95,7 @@ model User {
   groupWorkoutRegistrations  GroupWorkoutRegistration[]
   appNotifications           AppNotification[]
   pushSubscriptions          PushSubscription[]
+  workoutReminders           UserWorkoutReminder[]
 }
 
 model TraineeInvite {
@@ -288,6 +296,7 @@ model ScheduledWorkout {
   program         TrainingProgram?     @relation(fields: [programId], references: [id])
   registrations   GroupWorkoutRegistration[]
   reminderJobs    ScheduledReminderJob[]
+  userReminders   UserWorkoutReminder[]
 
   @@index([coachId, startsAt])
   @@index([traineeId, startsAt])
@@ -344,4 +353,21 @@ model ScheduledReminderJob {
   workout      ScheduledWorkout      @relation(fields: [workoutId], references: [id])
 
   @@unique([workoutId, reminderType])
+}
+
+model UserWorkoutReminder {
+  id           String                  @id @default(auto()) @map("_id") @db.ObjectId
+  workoutId    String                  @db.ObjectId
+  userId       String                  @db.ObjectId
+  kind         UserWorkoutReminderKind
+  scheduledFor DateTime
+  sentAt       DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  workout      ScheduledWorkout        @relation(fields: [workoutId], references: [id])
+  user         User                    @relation(fields: [userId], references: [id])
+
+  @@unique([workoutId, userId])
+  @@index([scheduledFor, sentAt])
+  @@index([userId])
 }

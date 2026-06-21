@@ -58,7 +58,7 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">עדכונים</h1>
           <p className="mt-1 text-muted-foreground text-sm">
-            הודעות על אימונים שנקבעו, בוטלו או עודכנו
+            הודעות על אימונים, תזכורות והתראות מהמאמן. עדכונים נמחקים אוטומטית לאחר 7 ימים.
           </p>
         </div>
         {unreadCount > 0 && (

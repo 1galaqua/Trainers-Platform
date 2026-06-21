@@ -32,6 +32,12 @@ import {
   cancelGroupWorkoutReminder,
   scheduleGroupWorkoutReminder,
 } from "@/lib/calendar-reminders";
+import {
+  cancelAllUserWorkoutReminders,
+  cancelUserWorkoutReminder,
+  createDefaultUserWorkoutReminder,
+  rescheduleWorkoutUserReminders,
+} from "@/lib/user-workout-reminders";
 import { detectSignificantWorkoutChanges } from "@/lib/calendar-workout-changes";
 import {
   getEffectiveWorkoutsCompleted,
@@ -56,6 +62,12 @@ export type CalendarWorkoutItem = {
   isRegistered: boolean;
   registeredTrainees: CalendarRegisteredTrainee[];
   notes: string | null;
+  userReminder: CalendarUserReminder | null;
+};
+
+export type CalendarUserReminder = {
+  kind: "THIRTY_MINUTES" | "ONE_HOUR" | "CUSTOM";
+  scheduledFor: string;
 };
 
 export type CalendarTraineeOption = {
@@ -356,6 +368,9 @@ export async function createScheduledWorkoutAction(formData: FormData) {
       workout,
       traineeId: input.traineeId,
     });
+
+    await createDefaultUserWorkoutReminder(workout.id, input.traineeId, startsAt);
+    await createDefaultUserWorkoutReminder(workout.id, coach.id, startsAt);
   } else {
     const groupTraineeValidation = await validateActiveGroupTraineeIds(
       coach.id,
@@ -391,7 +406,13 @@ export async function createScheduledWorkoutAction(formData: FormData) {
         workout,
         traineeIds: groupTraineeIds,
       });
+
+      for (const traineeId of groupTraineeIds) {
+        await createDefaultUserWorkoutReminder(workout.id, traineeId, startsAt);
+      }
     }
+
+    await createDefaultUserWorkoutReminder(workout.id, coach.id, startsAt);
 
     await scheduleGroupWorkoutReminder(workout.id, startsAt);
 
@@ -629,6 +650,10 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
     await scheduleGroupWorkoutReminder(updated.id, startsAt);
   }
 
+  if (existing.startsAt.getTime() !== startsAt.getTime()) {
+    await rescheduleWorkoutUserReminders(updated.id, startsAt);
+  }
+
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/updates");
   return { success: true as const };
@@ -652,6 +677,7 @@ export async function cancelScheduledWorkoutAction(workoutId: string) {
   });
 
   await cancelGroupWorkoutReminder(existing.id);
+  await cancelAllUserWorkoutReminders(existing.id);
 
   if (existing.type === "PERSONAL" && existing.traineeId) {
     await notifyTraineeAboutPersonalCancellation({
@@ -772,6 +798,8 @@ export async function registerForGroupWorkoutAction(workoutId: string) {
     traineeIds: [user.id],
   });
 
+  await createDefaultUserWorkoutReminder(workoutId, user.id, workout.startsAt);
+
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/updates");
   return { success: true as const };
@@ -818,6 +846,8 @@ export async function cancelGroupWorkoutRegistrationAction(workoutId: string) {
     workout,
     traineeName,
   });
+
+  await cancelUserWorkoutReminder(workoutId, user.id);
 
   if (workout.maxParticipants != null) {
     const registeredCount = await prisma.groupWorkoutRegistration.count({
@@ -890,7 +920,28 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
     },
   });
 
-  return workouts.map((workout) => ({
+  const workoutIds = workouts.map((workout) => workout.id);
+  const userReminders = await prisma.userWorkoutReminder.findMany({
+    where: {
+      userId: user.id,
+      workoutId: { in: workoutIds },
+      sentAt: null,
+    },
+    select: {
+      workoutId: true,
+      kind: true,
+      scheduledFor: true,
+    },
+  });
+
+  const reminderByWorkoutId = new Map(
+    userReminders.map((reminder) => [reminder.workoutId, reminder]),
+  );
+
+  return workouts.map((workout) => {
+    const reminder = reminderByWorkoutId.get(workout.id);
+
+    return {
     id: workout.id,
     type: workout.type,
     workoutKind: workout.workoutKind,
@@ -917,5 +968,12 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
           }))
         : [],
     notes: workout.notes,
-  }));
+    userReminder: reminder
+      ? {
+          kind: reminder.kind,
+          scheduledFor: reminder.scheduledFor.toISOString(),
+        }
+      : null,
+  };
+  });
 }

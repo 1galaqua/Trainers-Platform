@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { GroupWorkoutActions } from "./group-workout-actions";
 import { GroupWorkoutRegistrants } from "./group-workout-registrants";
 import { CoachWorkoutActions } from "./coach-workout-actions";
+import { WorkoutCalendarTools } from "./workout-calendar-tools";
 
 type CalendarWorkoutCardProps = {
   workout: CalendarWorkoutItem;
@@ -135,6 +136,12 @@ export function CalendarWorkoutCard({
           <GroupWorkoutActions workout={workout} compact={compact || inTimeGrid} />
         </div>
       )}
+
+      <WorkoutCalendarTools
+        workout={workout}
+        userRole={userRole}
+        compact={compact || inTimeGrid}
+      />
     </article>
   );
 }
