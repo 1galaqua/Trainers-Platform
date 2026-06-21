@@ -1,10 +1,10 @@
 import { PrismaClient } from "../src/generated/prisma";
 
-const URL =
+const databaseUrl =
   process.env.DATABASE_URL ??
   "mongodb://galaqua:123456%3F%21@ac-gmpwnil-shard-00-00.iwqknwa.mongodb.net:27017,ac-gmpwnil-shard-00-01.iwqknwa.mongodb.net:27017,ac-gmpwnil-shard-00-02.iwqknwa.mongodb.net:27017/trainers_platform?ssl=true&replicaSet=atlas-gcas9s-shard-0&authSource=admin&retryWrites=true&w=majority";
 
-const prisma = new PrismaClient({ datasourceUrl: URL });
+const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
 
 const reminderNotSentWhere = {
   OR: [{ sentAt: null }, { sentAt: { isSet: false } }],
