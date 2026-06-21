@@ -49,6 +49,8 @@ export type CalendarWorkoutItem = {
   durationMinutes: number;
   traineeId: string | null;
   traineeName: string | null;
+  programId: string | null;
+  programName: string | null;
   maxParticipants: number | null;
   registeredCount: number;
   isRegistered: boolean;
@@ -66,6 +68,46 @@ export type CalendarRegisteredTrainee = {
   id: string;
   name: string;
 };
+
+async function resolvePersonalWorkoutProgram(
+  coachId: string,
+  traineeId: string,
+  programId: string,
+): Promise<{ error?: string; programId?: string | null; workoutKind?: ProgramType }> {
+  if (!programId) {
+    return { programId: null, workoutKind: "CUSTOM" };
+  }
+
+  const program = await prisma.trainingProgram.findFirst({
+    where: { id: programId, coachId, traineeId, isActive: true },
+    select: { id: true, type: true },
+  });
+
+  if (!program) {
+    return { error: "התוכנית שנבחרה אינה תקינה" };
+  }
+
+  return { programId: program.id, workoutKind: program.type };
+}
+
+export async function getCoachTraineeProgramsForCalendarAction(traineeId: string) {
+  const coach = await requireCoach();
+
+  if (!traineeId) return [];
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return [];
+
+  try {
+    return await prisma.trainingProgram.findMany({
+      where: { coachId: coach.id, traineeId, isActive: true },
+      select: { id: true, name: true, type: true },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch {
+    return [];
+  }
+}
 
 async function getCoachIdForUser(userId: string, role: UserRole) {
   if (role === "COACH") return userId;
@@ -288,14 +330,24 @@ export async function createScheduledWorkoutAction(formData: FormData) {
       return { error: "המתאמן שנבחר אינו משויך אליך" };
     }
 
+    const programResult = await resolvePersonalWorkoutProgram(
+      coach.id,
+      input.traineeId,
+      input.programId,
+    );
+    if (programResult.error) {
+      return { error: programResult.error };
+    }
+
     const workout = await prisma.scheduledWorkout.create({
       data: {
         coachId: coach.id,
         type: "PERSONAL",
-        workoutKind: "CUSTOM" satisfies ProgramType,
+        workoutKind: programResult.workoutKind ?? "CUSTOM",
         startsAt,
         durationMinutes: input.durationMinutes,
         traineeId: input.traineeId,
+        programId: programResult.programId ?? null,
         notes: input.notes || null,
       },
     });
@@ -418,29 +470,28 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
     return { error: SCHEDULE_OVERLAP_ERROR };
   }
 
-  const updateData =
-    existing.type === "PERSONAL"
-      ? {
-          startsAt,
-          durationMinutes: input.durationMinutes,
-          traineeId: input.traineeId,
-          notes: input.notes || null,
-        }
-      : {
-          startsAt,
-          durationMinutes: input.durationMinutes,
-          workoutKind: input.workoutKind,
-          maxParticipants: input.maxParticipants,
-          notes: input.notes || null,
-        };
-
   let nextGroupTraineeIds: string[] = [];
+  let personalProgramUpdate: { programId: string | null; workoutKind: ProgramType } | null = null;
 
   if (existing.type === "PERSONAL") {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, input.traineeId);
     if (!ownsTrainee) {
       return { error: "המתאמן שנבחר אינו משויך אליך" };
     }
+
+    const programResult = await resolvePersonalWorkoutProgram(
+      coach.id,
+      input.traineeId,
+      input.programId,
+    );
+    if (programResult.error) {
+      return { error: programResult.error };
+    }
+
+    personalProgramUpdate = {
+      programId: programResult.programId ?? null,
+      workoutKind: programResult.workoutKind ?? "CUSTOM",
+    };
   } else {
     const groupTraineeValidation = await validateGroupTraineeIdsForUpdate(
       coach.id,
@@ -452,6 +503,24 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
     }
     nextGroupTraineeIds = groupTraineeValidation.traineeIds ?? [];
   }
+
+  const updateData =
+    existing.type === "PERSONAL"
+      ? {
+          startsAt,
+          durationMinutes: input.durationMinutes,
+          traineeId: input.traineeId,
+          programId: personalProgramUpdate?.programId ?? null,
+          workoutKind: personalProgramUpdate?.workoutKind ?? existing.workoutKind,
+          notes: input.notes || null,
+        }
+      : {
+          startsAt,
+          durationMinutes: input.durationMinutes,
+          workoutKind: input.workoutKind,
+          maxParticipants: input.maxParticipants,
+          notes: input.notes || null,
+        };
 
   const changeResult = detectSignificantWorkoutChanges(
     {
@@ -808,6 +877,7 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
     orderBy: { startsAt: "asc" },
     include: {
       trainee: { select: { displayName: true } },
+      program: { select: { name: true } },
       registrations: {
         where: notCancelledWhere,
         select: {
@@ -828,6 +898,8 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
     durationMinutes: workout.durationMinutes,
     traineeId: workout.traineeId,
     traineeName: workout.trainee?.displayName ?? null,
+    programId: workout.programId,
+    programName: workout.program?.name ?? null,
     maxParticipants: workout.maxParticipants,
     registeredCount: workout.registrations.length,
     isRegistered:

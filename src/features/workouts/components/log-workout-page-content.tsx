@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { LogWorkoutForm } from "@/features/workouts/components/log-workout-form";
+import { LogWorkoutForm, type WorkoutQuotaInfo } from "@/features/workouts/components/log-workout-form";
 import { logCoachTraineeWorkoutAction } from "@/server/actions/workouts";
 import {
   TraineeProgramPicker,
@@ -34,6 +34,7 @@ type LogWorkoutPageContentProps = {
   emptyBackLabel?: string;
   coachTraineeId?: string;
   redirectTo?: string;
+  quotaInfo?: WorkoutQuotaInfo | null;
 };
 
 function resolveSelectedId(programs: ProgramOption[], preferredId?: string) {
@@ -49,6 +50,7 @@ export function LogWorkoutPageContent({
   emptyBackLabel = "חזרה לתוכניות",
   coachTraineeId,
   redirectTo,
+  quotaInfo = null,
 }: LogWorkoutPageContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -131,6 +133,7 @@ export function LogWorkoutPageContent({
             traineeId={coachTraineeId}
             submitAction={coachTraineeId ? logCoachTraineeWorkoutAction : undefined}
             redirectTo={redirectTo}
+            quotaInfo={quotaInfo}
           />
         </CardContent>
       </Card>

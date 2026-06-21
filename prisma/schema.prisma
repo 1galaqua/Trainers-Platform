@@ -53,6 +53,11 @@ enum ScheduledReminderType {
   ONE_HOUR_BEFORE_SPOTS
 }
 
+enum WorkoutLogKind {
+  REPORT
+  SAVE
+}
+
 model User {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   clerkId      String   @unique
@@ -134,6 +139,7 @@ model TrainingProgram {
   trainee     User        @relation("ProgramTrainee", fields: [traineeId], references: [id])
   exercises   ProgramExercise[]
   sessions    WorkoutSession[]
+  scheduledWorkouts ScheduledWorkout[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -155,14 +161,16 @@ model ProgramExercise {
 }
 
 model WorkoutSession {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  programId   String          @db.ObjectId
-  traineeId   String          @db.ObjectId
-  notes       String?
-  completedAt DateTime        @default(now())
-  program     TrainingProgram @relation(fields: [programId], references: [id])
-  trainee     User            @relation(fields: [traineeId], references: [id])
-  logs        ExerciseLog[]
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  programId     String           @db.ObjectId
+  traineeId     String           @db.ObjectId
+  notes         String?
+  completedAt   DateTime         @default(now())
+  loggedByRole  UserRole?
+  logKind       WorkoutLogKind?
+  program       TrainingProgram  @relation(fields: [programId], references: [id])
+  trainee       User             @relation(fields: [traineeId], references: [id])
+  logs          ExerciseLog[]
 }
 
 model ExerciseLog {
@@ -268,6 +276,7 @@ model ScheduledWorkout {
   startsAt        DateTime
   durationMinutes Int
   traineeId       String?              @db.ObjectId
+  programId       String?              @db.ObjectId
   maxParticipants Int?
   notes           String?
   cancelledAt     DateTime?
@@ -275,6 +284,7 @@ model ScheduledWorkout {
   updatedAt       DateTime             @updatedAt
   coach           User                 @relation("CoachScheduledWorkouts", fields: [coachId], references: [id])
   trainee         User?                @relation("TraineeScheduledWorkouts", fields: [traineeId], references: [id])
+  program         TrainingProgram?     @relation(fields: [programId], references: [id])
   registrations   GroupWorkoutRegistration[]
   reminderJobs    ScheduledReminderJob[]
 

@@ -146,7 +146,12 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                           variant="link"
                           size="sm"
                           className="h-auto p-0 text-xs"
-                          onClick={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (unread && !isPending) {
+                              void handleMarkRead(notification.id);
+                            }
+                          }}
                         >
                           מעבר ליומן
                         </Button>

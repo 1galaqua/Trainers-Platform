@@ -97,6 +97,11 @@ export function CalendarWorkoutCard({
       <p className={cn("text-muted-foreground", inTimeGrid ? "mt-0.5" : "mt-1")}>
         {formatIsraelTime(workout.startsAt)} · {workout.durationMinutes} דק׳
       </p>
+      {isPersonal && workout.programName && (
+        <p className={cn("text-muted-foreground", inTimeGrid ? "mt-0.5" : "mt-1")}>
+          {workout.programName}
+        </p>
+      )}
       {isGroup && (
         <p className={cn("text-muted-foreground", inTimeGrid ? "mt-0.5" : "mt-1")}>
           נרשמו {workout.registeredCount} מתוך {workout.maxParticipants}

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { LogWorkoutPageContent } from "@/features/workouts/components/log-workout-page-content";
 import { requireTraineeOnboarded } from "@/lib/auth";
-import { getTraineeProgramsAction } from "@/server/actions/workouts";
+import { getTraineeProgramsAction, getTraineeLogQuotaAction } from "@/server/actions/workouts";
 
 export const metadata = {
   title: `דיווח אימון | ${siteConfig.shortName}`,
@@ -22,7 +22,10 @@ function LogWorkoutFallback() {
 export default async function LogWorkoutPage({ searchParams }: PageProps) {
   await requireTraineeOnboarded();
   const { program: programParam } = await searchParams;
-  const programs = await getTraineeProgramsAction();
+  const [programs, quotaInfo] = await Promise.all([
+    getTraineeProgramsAction(),
+    getTraineeLogQuotaAction(),
+  ]);
 
   if (programs.length === 0) {
     return (
@@ -62,6 +65,7 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
         <LogWorkoutPageContent
           programs={programOptions}
           initialProgramId={programParam}
+          quotaInfo={quotaInfo}
         />
       </Suspense>
     </div>

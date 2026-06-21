@@ -10,7 +10,10 @@ import { LogWorkoutPageContent } from "@/features/workouts/components/log-workou
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
-import { getCoachTraineeProgramsAction } from "@/server/actions/workouts";
+import {
+  getCoachTraineeProgramsAction,
+  getCoachTraineeLogQuotaAction,
+} from "@/server/actions/workouts";
 
 export const metadata = {
   title: `דיווח אימון למתאמן | ${siteConfig.shortName}`,
@@ -45,7 +48,10 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const programs = await getCoachTraineeProgramsAction(traineeId);
+  const [programs, quotaInfo] = await Promise.all([
+    getCoachTraineeProgramsAction(traineeId),
+    getCoachTraineeLogQuotaAction(traineeId),
+  ]);
   const name = trainee.displayName ?? "מתאמן";
   const logBasePath = `/dashboard/trainees/${traineeId}/log`;
 
@@ -110,6 +116,7 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
           emptyBackLabel="חזרה למתאמן"
           coachTraineeId={traineeId}
           redirectTo={`/dashboard/trainees/${traineeId}`}
+          quotaInfo={quotaInfo}
         />
       </Suspense>
     </div>

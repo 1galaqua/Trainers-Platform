@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput, TimeInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -28,6 +29,8 @@ import {
 } from "@/server/actions/calendar";
 
 import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
+import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
+import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
 import { useCalendarFeedback } from "./calendar-feedback-context";
 
 type EditWorkoutSheetProps = {
@@ -48,6 +51,12 @@ export function EditWorkoutSheet({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedTraineeIds, setSelectedTraineeIds] = useState<string[]>([]);
+  const [selectedPersonalTraineeId, setSelectedPersonalTraineeId] = useState<string | null>(
+    workout.traineeId,
+  );
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(
+    workout.programId,
+  );
   const [maxParticipants, setMaxParticipants] = useState(workout.maxParticipants ?? 8);
   const { date, time } = getIsraelDateAndTimeFromInstant(new Date(workout.startsAt));
   const isPersonal = workout.type === "PERSONAL";
@@ -56,9 +65,18 @@ export function EditWorkoutSheet({
     if (!open) return;
 
     setSelectedTraineeIds(workout.registeredTrainees.map((trainee) => trainee.id));
+    setSelectedPersonalTraineeId(workout.traineeId);
+    setSelectedProgramId(workout.programId);
     setMaxParticipants(workout.maxParticipants ?? 8);
     setError(null);
   }, [open, workout]);
+
+  function handlePersonalTraineeSelect(traineeId: string | null) {
+    setSelectedPersonalTraineeId(traineeId);
+    if (traineeId !== workout.traineeId) {
+      setSelectedProgramId(null);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,21 +127,19 @@ export function EditWorkoutSheet({
 
         <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
           {isPersonal ? (
-            <div className="space-y-2">
-              <Label htmlFor={`traineeId-${workout.id}`}>מתאמן</Label>
-              <Select
-                id={`traineeId-${workout.id}`}
-                name="traineeId"
-                required
-                defaultValue={workout.traineeId ?? ""}
-              >
-                {trainees.map((trainee) => (
-                  <option key={trainee.id} value={trainee.id}>
-                    {trainee.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            <>
+              <PersonalWorkoutTraineePicker
+                trainees={trainees}
+                selectedTraineeId={selectedPersonalTraineeId}
+                onSelect={handlePersonalTraineeSelect}
+              />
+              <PersonalWorkoutProgramSelect
+                traineeId={selectedPersonalTraineeId}
+                selectedProgramId={selectedProgramId}
+                onSelect={setSelectedProgramId}
+                disabled={!selectedPersonalTraineeId}
+              />
+            </>
           ) : (
             <>
               <div className="space-y-2">
@@ -172,23 +188,21 @@ export function EditWorkoutSheet({
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor={`date-${workout.id}`}>תאריך</Label>
-              <Input
+              <DateInput
                 id={`date-${workout.id}`}
                 name="date"
-                type="date"
                 required
                 defaultValue={date}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`time-${workout.id}`}>שעה</Label>
-              <Input
+              <TimeInput
                 id={`time-${workout.id}`}
                 name="time"
-                type="time"
                 required
                 defaultValue={time}
               />
@@ -224,7 +238,11 @@ export function EditWorkoutSheet({
 
           {error && <p className="text-destructive text-sm">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || (isPersonal && !selectedPersonalTraineeId)}
+          >
             {loading ? "שומר..." : "שמירת שינויים"}
           </Button>
         </form>

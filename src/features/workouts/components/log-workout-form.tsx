@@ -26,6 +26,11 @@ import {
   type LogWorkoutActionResult,
 } from "@/server/actions/workouts";
 
+export type WorkoutQuotaInfo = {
+  workoutQuota: number | null;
+  workoutsRemaining: number;
+};
+
 type Exercise = {
   id: string;
   name: string;
@@ -76,6 +81,7 @@ type LogWorkoutFormProps = {
   traineeId?: string;
   submitAction?: (formData: FormData) => Promise<LogWorkoutActionResult>;
   redirectTo?: string;
+  quotaInfo?: WorkoutQuotaInfo | null;
 };
 
 export function LogWorkoutForm({
@@ -83,9 +89,11 @@ export function LogWorkoutForm({
   exercises,
   traineeId,
   submitAction = logWorkoutAction,
-  redirectTo = "/dashboard/progress",
+  redirectTo = "/dashboard",
+  quotaInfo = null,
 }: LogWorkoutFormProps) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const traineeKey = getWorkoutDraftTraineeKey(traineeId);
   const baselineRef = useRef<{ logs: ExerciseLogState[]; sessionNotes: string } | null>(null);
 
@@ -195,13 +203,16 @@ export function LogWorkoutForm({
     );
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSubmit(consumeQuota: boolean) {
+    const form = formRef.current;
+    if (!form) return;
+
     setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     formData.set("programId", programId);
+    formData.set("consumeQuota", consumeQuota ? "true" : "false");
     if (traineeId) formData.set("traineeId", traineeId);
     const baseline = baselineRef.current;
     formData.set(
@@ -243,8 +254,16 @@ export function LogWorkoutForm({
     router.refresh();
   }
 
+  const hasQuota = quotaInfo?.workoutQuota != null;
+  const canReport = !hasQuota || (quotaInfo?.workoutsRemaining ?? 0) > 0;
+  const buttonsDisabled = loading || prefillLoading;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      ref={formRef}
+      onSubmit={(event) => event.preventDefault()}
+      className="space-y-6"
+    >
       {prefillLoading && (
         <p className="text-muted-foreground text-sm">טוען נתונים מהדיווח האחרון...</p>
       )}
@@ -334,9 +353,34 @@ export function LogWorkoutForm({
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
-      <Button type="submit" disabled={loading || prefillLoading}>
-        {loading ? "שומר..." : "שמירת אימון"}
-      </Button>
+      {hasQuota && (
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
+          <p>
+            נותרו{" "}
+            <span className="font-medium text-foreground">{quotaInfo.workoutsRemaining}</span>{" "}
+            מתוך {quotaInfo.workoutQuota} אימונים במכסה.
+          </p>
+          <p className="mt-1">«דיווח אימון» מוריד אימון אחד ממכסת האימונים.</p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={buttonsDisabled}
+          onClick={() => void handleSubmit(false)}
+        >
+          {loading ? "שומר..." : "שמירת אימון"}
+        </Button>
+        <Button
+          type="button"
+          disabled={buttonsDisabled || !canReport}
+          onClick={() => void handleSubmit(true)}
+        >
+          {loading ? "שומר..." : "דיווח אימון"}
+        </Button>
+      </div>
     </form>
   );
 }

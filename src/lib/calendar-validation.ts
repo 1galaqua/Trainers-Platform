@@ -18,6 +18,7 @@ export type CreateWorkoutInput = {
   durationMinutes: number;
   workoutKind: ProgramType;
   traineeId: string;
+  programId: string;
   maxParticipants: number;
   groupTraineeIds: string[];
   notes: string;
@@ -68,6 +69,7 @@ export function createWorkoutInputFromFormData(formData: FormData): CreateWorkou
     durationMinutes: Number(formData.get("durationMinutes") ?? 0),
     workoutKind: String(formData.get("workoutKind") ?? "CUSTOM") as ProgramType,
     traineeId: String(formData.get("traineeId") ?? ""),
+    programId: String(formData.get("programId") ?? "").trim(),
     maxParticipants: Number(formData.get("maxParticipants") ?? 0),
     groupTraineeIds: formData
       .getAll("groupTraineeIds")

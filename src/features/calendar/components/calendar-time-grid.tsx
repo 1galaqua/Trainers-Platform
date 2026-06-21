@@ -70,16 +70,31 @@ export function CalendarTimeGrid({
 
   const gridHeight = getCalendarGridHeightPx(globalHourHeights);
   const hourLineOffsets = getHourLineOffsets(globalHourHeights);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!scrollToWorkoutId) return;
     if (contentHeights[scrollToWorkoutId] == null) return;
 
     const frame = window.requestAnimationFrame(() => {
-      const element = document.querySelector(
+      const container = scrollContainerRef.current;
+      const element = container?.querySelector(
         `[data-workout-id="${CSS.escape(scrollToWorkoutId)}"]`,
-      );
-      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ) as HTMLElement | null;
+      if (!element || !container) return;
+
+      const containerTop = container.getBoundingClientRect().top;
+      const elementTop = element.getBoundingClientRect().top;
+      const targetScrollTop =
+        container.scrollTop +
+        (elementTop - containerTop) -
+        container.clientHeight / 2 +
+        element.offsetHeight / 2;
+
+      container.scrollTo({
+        top: Math.max(0, targetScrollTop),
+        behavior: "smooth",
+      });
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -91,13 +106,16 @@ export function CalendarTimeGrid({
       : `3.25rem repeat(${dates.length}, minmax(0, 1fr))`;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div
+      ref={scrollContainerRef}
+      className="max-h-[min(70dvh,52rem)] overflow-auto overscroll-contain rounded-xl border border-border"
+    >
       <div
         className="min-w-full"
         style={{ minWidth: dates.length === 1 ? "20rem" : "56rem" }}
       >
         <div
-          className="grid border-b border-border bg-muted/40"
+          className="sticky top-0 z-20 grid border-b border-border bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80"
           style={{ gridTemplateColumns: columnTemplate }}
         >
           <div className="border-l border-border/60" />

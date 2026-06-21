@@ -1,4 +1,31 @@
+import type { LucideIcon } from "lucide-react";
+import { BarChart3, Calendar, ClipboardList, Dumbbell } from "lucide-react";
+
 import type { UserRole } from "@/lib/prisma-client";
+
+export type HeaderShortcut = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+export const traineeHeaderShortcuts: HeaderShortcut[] = [
+  { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
+  { href: "/dashboard/my-program", label: "התוכניות שלי", icon: ClipboardList },
+  { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
+];
+
+export const coachHeaderShortcuts: HeaderShortcut[] = [
+  { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
+  { href: "/dashboard/workouts", label: "תוכניות אימון", icon: Dumbbell },
+  { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
+];
+
+export function getHeaderShortcutsForRole(role: UserRole): HeaderShortcut[] {
+  if (role === "COACH") return coachHeaderShortcuts;
+  if (role === "TRAINEE") return traineeHeaderShortcuts;
+  return [];
+}
 
 export const coachNavigation = [
   { title: "לוח בקרה", href: "/dashboard", description: "סיכום ופעילות" },
@@ -10,10 +37,9 @@ export const coachNavigation = [
 ] as const;
 
 export const traineeNavigation = [
-  { title: "סקירה", href: "/dashboard", description: "סיכום" },
+  { title: "לוח בקרה", href: "/dashboard", description: "אימונים וגרפים" },
   { title: "התוכניות שלי", href: "/dashboard/my-program", description: "תרגילים וסרטונים" },
   { title: "דיווח אימון", href: "/dashboard/workouts/log", description: "משקלים וחזרות" },
-  { title: "התקדמות", href: "/dashboard/progress", description: "גרפים" },
   { title: "יומן", href: "/dashboard/calendar", description: "אימונים מתוכננים" },
   { title: "עדכונים", href: "/dashboard/updates", description: "הודעות ועדכונים" },
 ] as const;

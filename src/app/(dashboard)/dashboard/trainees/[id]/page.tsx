@@ -12,8 +12,7 @@ import { EditTraineeName } from "@/features/trainees/components/edit-trainee-nam
 import { RequestAgreementRedoButton } from "@/features/trainees/components/request-agreement-redo-button";
 import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
 import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
-import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
-import { DeleteWorkoutSessionButton } from "@/features/workouts/components/delete-workout-session-button";
+import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { isAgreementRedoPending, isQuestionnaireRedoPending } from "@/lib/questionnaire-status";
@@ -197,36 +196,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
       <div id="workout-history" className="scroll-mt-6 space-y-4">
         <h2 className="font-medium text-base">אימונים שבוצעו</h2>
-        {sessions.length === 0 ? (
-          <p className="text-muted-foreground text-sm">טרם דווחו אימונים</p>
-        ) : (
-          sessions.map((session) => {
-            const sessionLabel = `${new Date(session.completedAt).toLocaleDateString("he-IL")} — ${session.program.name}`;
-
-            return (
-            <Card key={session.id}>
-              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <CardTitle className="text-sm">{sessionLabel}</CardTitle>
-                <DeleteWorkoutSessionButton
-                  sessionId={session.id}
-                  sessionLabel={sessionLabel}
-                />
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm">
-                {session.logs.map((log) => (
-                  <ExerciseLogLine
-                    key={log.id}
-                    exerciseName={log.exercise.name}
-                    weightKg={log.weightKg}
-                    repsCompleted={log.repsCompleted}
-                    setLogs={log.setLogs}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-            );
-          })
-        )}
+        <WorkoutSessionHistoryList sessions={sessions} showDeleteButtons />
       </div>
     </div>
   );

@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import { safeRevalidatePaths } from "@/lib/safe-revalidate";
+import { getTraineeQuotaSnapshot, type TraineeQuotaSnapshot } from "@/lib/trainee-quota";
 import { computeExerciseLogMetrics } from "@/lib/workout-log-metrics";
+import {
+  buildWorkoutSessionCreateData,
+  getNextWorkoutsCompletedValue,
+} from "@/lib/workout-session-create";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
@@ -25,6 +31,7 @@ export type LogWorkoutActionResult = { success: true } | { error: string };
 type PersistWorkoutOptions = {
   coachId?: string;
   forCoach?: boolean;
+  consumeQuota?: boolean;
 };
 
 async function persistWorkoutSession(
@@ -57,6 +64,10 @@ async function persistWorkoutSession(
 
   if (!coachLink) return { error: "לא נמצא קשר מאמן-מתאמן" };
 
+  if (options.coachId && coachLink.coachId !== options.coachId) {
+    return { error: "אין הרשאה למתאמן זה" };
+  }
+
   const loggedSessionsCount = coachLink.trainee.workoutSessions.length;
   const completedCount = getEffectiveWorkoutsCompleted(
     coachLink.workoutsCompleted,
@@ -72,7 +83,11 @@ async function persistWorkoutSession(
     };
   }
 
-  if (remaining <= 0) {
+  if (
+    options.consumeQuota &&
+    coachLink.workoutQuota != null &&
+    remaining <= 0
+  ) {
     return {
       error: options.forCoach
         ? "מכסת האימונים של המתאמן הסתיימה"
@@ -80,44 +95,32 @@ async function persistWorkoutSession(
     };
   }
 
-  await prisma.workoutSession.create({
-    data: {
-      programId,
-      traineeId,
-      notes: sessionNotes,
-      logs: {
-        create: logs
-          .filter((log) => {
-            const hasFilledSet = (log.sets ?? []).some(
-              (set) => set.weightKg != null || set.repsCompleted != null,
-            );
-            const hasNotes = Boolean(log.notes?.trim());
-            return hasFilledSet || hasNotes;
-          })
-          .map((log) => ({
-            exerciseId: log.exerciseId,
-            notes: log.notes?.trim() || null,
-            weightKg: null,
-            repsCompleted: null,
-            setLogs: {
-              create: (log.sets ?? [])
-                .filter((set) => set.weightKg != null || set.repsCompleted != null)
-                .map((set) => ({
-                  setNumber: set.setNumber,
-                  weightKg: set.weightKg ?? null,
-                  repsCompleted: set.repsCompleted ?? null,
-                })),
-            },
-          })),
-      },
-    },
-  });
-
-  if (coachLink.workoutsCompleted != null) {
-    await prisma.coachTrainee.update({
-      where: { traineeId },
-      data: { workoutsCompleted: coachLink.workoutsCompleted + 1 },
+  try {
+    await prisma.workoutSession.create({
+      data: buildWorkoutSessionCreateData({
+        programId,
+        traineeId,
+        sessionNotes,
+        logs,
+        loggedByRole: options.forCoach ? "COACH" : "TRAINEE",
+        logKind: options.consumeQuota ? "REPORT" : "SAVE",
+      }),
     });
+
+    if (options.consumeQuota && coachLink.workoutQuota != null) {
+      const nextCompleted = getNextWorkoutsCompletedValue({
+        workoutsCompleted: coachLink.workoutsCompleted,
+        completedCount,
+      });
+
+      await prisma.coachTrainee.update({
+        where: { traineeId },
+        data: { workoutsCompleted: nextCompleted },
+      });
+    }
+  } catch (error) {
+    console.error("persistWorkoutSession failed", error);
+    return { error: "שגיאה בשמירת האימון" };
   }
 
   return { success: true };
@@ -125,12 +128,18 @@ async function persistWorkoutSession(
 
 type ParsedWorkoutLogFormData =
   | { error: string }
-  | { programId: string; sessionNotes: string | null; logs: ExerciseLogInput[] };
+  | {
+      programId: string;
+      sessionNotes: string | null;
+      logs: ExerciseLogInput[];
+      consumeQuota: boolean;
+    };
 
 function parseWorkoutLogFormData(formData: FormData): ParsedWorkoutLogFormData {
   const programId = String(formData.get("programId") ?? "");
   const sessionNotes = String(formData.get("notes") ?? "").trim() || null;
   const logsJson = String(formData.get("logs") ?? "[]");
+  const consumeQuota = String(formData.get("consumeQuota") ?? "false") === "true";
 
   let logs: ExerciseLogInput[] = [];
   try {
@@ -141,7 +150,7 @@ function parseWorkoutLogFormData(formData: FormData): ParsedWorkoutLogFormData {
 
   if (!programId) return { error: "תוכנית לא נמצאה" };
 
-  return { programId, sessionNotes, logs };
+  return { programId, sessionNotes, logs, consumeQuota };
 }
 
 export async function getTraineeProgramsAction() {
@@ -279,22 +288,53 @@ export async function logWorkoutAction(formData: FormData): Promise<LogWorkoutAc
   const parsed = parseWorkoutLogFormData(formData);
   if ("error" in parsed) return parsed;
 
-  try {
-    const result = await persistWorkoutSession(
-      trainee.id,
-      parsed.programId,
-      parsed.sessionNotes,
-      parsed.logs,
-    );
-    if ("error" in result) return result;
+  const result = await persistWorkoutSession(
+    trainee.id,
+    parsed.programId,
+    parsed.sessionNotes,
+    parsed.logs,
+    { consumeQuota: parsed.consumeQuota },
+  );
+  if ("error" in result) return result;
 
-    revalidatePath("/dashboard/workouts/log");
-    revalidatePath("/dashboard/progress");
-    revalidatePath("/dashboard/my-program");
-    revalidatePath("/dashboard/trainees");
-    return { success: true };
+  safeRevalidatePaths([
+    "/dashboard",
+    "/dashboard/workouts/log",
+    "/dashboard/progress",
+    "/dashboard/my-program",
+    "/dashboard/trainees",
+  ]);
+  return { success: true };
+}
+
+export type { TraineeQuotaSnapshot };
+
+export async function getTraineeLogQuotaAction(): Promise<TraineeQuotaSnapshot | null> {
+  const trainee = await requireTraineeOnboarded();
+
+  try {
+    const link = await prisma.coachTrainee.findUnique({
+      where: { traineeId: trainee.id },
+      select: { coachId: true },
+    });
+    if (!link) return null;
+    return getTraineeQuotaSnapshot(trainee.id, link.coachId);
   } catch {
-    return { error: "שגיאה בשמירת האימון" };
+    return null;
+  }
+}
+
+export async function getCoachTraineeLogQuotaAction(
+  traineeId: string,
+): Promise<TraineeQuotaSnapshot | null> {
+  const coach = await requireCoach();
+
+  try {
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) return null;
+    return getTraineeQuotaSnapshot(traineeId, coach.id);
+  } catch {
+    return null;
   }
 }
 
@@ -331,24 +371,23 @@ export async function logCoachTraineeWorkoutAction(
   const parsed = parseWorkoutLogFormData(formData);
   if ("error" in parsed) return parsed;
 
-  try {
-    const result = await persistWorkoutSession(
-      traineeId,
-      parsed.programId,
-      parsed.sessionNotes,
-      parsed.logs,
-      { coachId: coach.id, forCoach: true },
-    );
-    if ("error" in result) return result;
+  const result = await persistWorkoutSession(
+    traineeId,
+    parsed.programId,
+    parsed.sessionNotes,
+    parsed.logs,
+    { coachId: coach.id, forCoach: true, consumeQuota: parsed.consumeQuota },
+  );
+  if ("error" in result) return result;
 
-    revalidatePath(`/dashboard/trainees/${traineeId}`);
-    revalidatePath(`/dashboard/trainees/${traineeId}/log`);
-    revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/progress");
-    return { success: true };
-  } catch {
-    return { error: "שגיאה בשמירת האימון" };
-  }
+  safeRevalidatePaths([
+    `/dashboard/trainees/${traineeId}`,
+    `/dashboard/trainees/${traineeId}/log`,
+    "/dashboard/trainees",
+    "/dashboard/progress",
+    "/dashboard",
+  ]);
+  return { success: true };
 }
 
 export async function getWorkoutHistoryAction() {
@@ -371,6 +410,29 @@ export async function getWorkoutHistoryAction() {
   } catch {
     return [];
   }
+}
+
+export async function getTraineeProgressExercisesAction() {
+  const programs = await getTraineeProgramsAction();
+
+  return Promise.all(
+    programs.flatMap((program) =>
+      program.exercises.map(async (ex) => {
+        const data = await getExerciseProgressAction(ex.id);
+        const label = programs.length > 1 ? `${ex.name} (${program.name})` : ex.name;
+
+        return {
+          id: ex.id,
+          name: label,
+          data: data.map((d) => ({
+            date: d.date,
+            weight: d.weight,
+            volume: d.volume,
+          })),
+        };
+      }),
+    ),
+  );
 }
 
 export async function getExerciseProgressAction(exerciseId: string) {

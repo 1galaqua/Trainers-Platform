@@ -1,9 +1,8 @@
-import { redirect } from "next/navigation";
-
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { CoachDashboardHome } from "@/features/dashboard/components/coach-dashboard-home";
+import { TraineeDashboardHome } from "@/features/dashboard/components/trainee-dashboard-home";
 import { getAdminCoachStats } from "@/lib/admin-stats";
-import { getCurrentUser, requireAdmin } from "@/lib/auth";
+import { getCurrentUser, requireAdmin, requireTraineeOnboarded } from "@/lib/auth";
 
 export default async function DashboardHomePage() {
   const user = await getCurrentUser();
@@ -15,7 +14,8 @@ export default async function DashboardHomePage() {
   }
 
   if (user?.role === "TRAINEE") {
-    redirect("/dashboard/my-program");
+    await requireTraineeOnboarded();
+    return <TraineeDashboardHome traineeName={user.displayName} />;
   }
 
   return <CoachDashboardHome coachName={user?.displayName} />;

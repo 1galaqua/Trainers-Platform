@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput, TimeInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -27,6 +28,9 @@ import {
   type CalendarTraineeOption,
 } from "@/server/actions/calendar";
 
+import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
+import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
+
 type WorkoutFormType = "PERSONAL" | "GROUP";
 
 type CreateWorkoutSheetProps = {
@@ -37,6 +41,8 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [workoutType, setWorkoutType] = useState<WorkoutFormType>("PERSONAL");
+  const [selectedPersonalTraineeId, setSelectedPersonalTraineeId] = useState<string | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [selectedGroupTraineeIds, setSelectedGroupTraineeIds] = useState<string[]>([]);
   const [maxParticipants, setMaxParticipants] = useState(8);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +56,15 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
   function resetFormState() {
     setError(null);
     setWorkoutType("PERSONAL");
+    setSelectedPersonalTraineeId(null);
+    setSelectedProgramId(null);
     setSelectedGroupTraineeIds([]);
     setMaxParticipants(8);
+  }
+
+  function handlePersonalTraineeSelect(traineeId: string | null) {
+    setSelectedPersonalTraineeId(traineeId);
+    setSelectedProgramId(null);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -136,25 +149,20 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
           </div>
 
           {workoutType === "PERSONAL" ? (
-            <div className="space-y-2">
-              <Label htmlFor="traineeId">מתאמן</Label>
-              <Select
-                id="traineeId"
-                name="traineeId"
-                required
-                defaultValue=""
+            <>
+              <PersonalWorkoutTraineePicker
+                trainees={trainees}
+                selectedTraineeId={selectedPersonalTraineeId}
+                onSelect={handlePersonalTraineeSelect}
                 disabled={trainees.length === 0}
-              >
-                <option value="" disabled>
-                  {trainees.length === 0 ? "אין מתאמנים משויכים" : "בחר/י מתאמן"}
-                </option>
-                {trainees.map((trainee) => (
-                  <option key={trainee.id} value={trainee.id}>
-                    {trainee.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
+              />
+              <PersonalWorkoutProgramSelect
+                traineeId={selectedPersonalTraineeId}
+                selectedProgramId={selectedProgramId}
+                onSelect={setSelectedProgramId}
+                disabled={!selectedPersonalTraineeId}
+              />
+            </>
           ) : (
             <>
               <div className="space-y-2">
@@ -236,13 +244,12 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="date">תאריך</Label>
-              <Input
+              <DateInput
                 id="date"
                 name="date"
-                type="date"
                 required
                 min={getIsraelDateString()}
                 defaultValue={getIsraelDateString()}
@@ -250,7 +257,7 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">שעה</Label>
-              <Input id="time" name="time" type="time" required defaultValue="09:00" />
+              <TimeInput id="time" name="time" required defaultValue="09:00" />
             </div>
           </div>
 
@@ -275,7 +282,11 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
           <Button
             type="submit"
             className="w-full"
-            disabled={loading || (workoutType === "PERSONAL" && trainees.length === 0)}
+            disabled={
+              loading ||
+              (workoutType === "PERSONAL" &&
+                (trainees.length === 0 || !selectedPersonalTraineeId))
+            }
           >
             {loading ? "שומר..." : "שמירת אימון"}
           </Button>
