@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isSameOriginRequest } from "@/lib/csrf";
 import { dbActionErrorMessage } from "@/lib/db-errors";
 import {
   resetPasswordByIdentity,
@@ -10,6 +11,10 @@ import { getDatabaseUrl, getServerConfigIssue, serverConfigErrorMessage } from "
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "בקשה לא מורשית" }, { status: 403 });
+  }
+
   const configIssue = getServerConfigIssue();
   if (configIssue === "missing_database_url") {
     return NextResponse.json(

@@ -236,6 +236,7 @@ export async function completeTraineeInviteAction(formData: FormData) {
       email: user.email ?? email,
       displayName: user.displayName ?? displayName,
       role: user.role,
+      sessionVersion: user.sessionVersion ?? 0,
     });
 
     revalidatePath("/dashboard");

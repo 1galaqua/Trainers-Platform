@@ -10,7 +10,7 @@ import {
   isQuestionnaireRedoPending,
   isQuestionnaireSatisfied,
 } from "@/lib/questionnaire-status";
-import { getSession, type SessionData } from "@/lib/session";
+import { getSession, clearSession, refreshUserSession, type SessionData } from "@/lib/session";
 
 export type SessionUser = User;
 
@@ -24,9 +24,36 @@ function userFromSession(session: SessionData): SessionUser {
     phoneNumber: null,
     age: null,
     role: session.role,
+    sessionVersion: session.sessionVersion,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+}
+
+async function resolveLocalSessionUser(session: SessionData): Promise<SessionUser | null> {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: session.userId } });
+    if (!user) return null;
+
+    if ((user.sessionVersion ?? 0) !== session.sessionVersion) {
+      await clearSession();
+      return null;
+    }
+
+    await refreshUserSession({
+      userId: user.id,
+      clerkId: user.clerkId,
+      email: user.email ?? session.email,
+      displayName: user.displayName ?? session.displayName,
+      role: user.role,
+      sessionVersion: user.sessionVersion ?? 0,
+    });
+
+    return user;
+  } catch {
+    if (session.email) return userFromSession(session);
+    return null;
+  }
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -63,14 +90,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const session = await getSession();
   if (!session) return null;
 
-  try {
-    const user = await prisma.user.findUnique({ where: { id: session.userId } });
-    if (user) return user;
-  } catch {
-    if (session.email) return userFromSession(session);
-  }
-
-  return null;
+  return resolveLocalSessionUser(session);
 }
 
 export async function requireUser(): Promise<SessionUser> {

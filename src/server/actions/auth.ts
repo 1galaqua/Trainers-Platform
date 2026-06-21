@@ -146,6 +146,7 @@ export async function loginAction(formData: FormData) {
       email: user.email ?? email,
       displayName: user.displayName ?? "",
       role: user.role,
+      sessionVersion: user.sessionVersion ?? 0,
     });
     revalidatePath("/dashboard");
     return { success: true };

@@ -72,7 +72,10 @@ export async function resetPasswordByIdentity(
       email,
       id: user.id,
     },
-    data: { passwordHash },
+    data: {
+      passwordHash,
+      sessionVersion: { increment: 1 },
+    },
   });
 
   if (updated.count !== 1) {

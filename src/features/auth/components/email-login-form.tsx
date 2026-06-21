@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { getSafeRedirectPath } from "@/lib/auth-redirect";
 import { loginAction } from "@/server/actions/auth";
 
 export function EmailLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = getSafeRedirectPath(searchParams.get("redirect"));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +33,7 @@ export function EmailLoginForm() {
     }
 
     if (result && "success" in result && result.success) {
-      router.push("/dashboard");
+      router.push(redirectTo);
       router.refresh();
     }
   }

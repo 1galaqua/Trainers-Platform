@@ -1,27 +1,25 @@
-import { jwtVerify } from "jose";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 
-import { getSessionSecret } from "@/lib/server-env";
+import { getSessionCookieOptions } from "@/lib/session-config";
+import {
+  SESSION_COOKIE,
+  signSessionToken,
+  verifySessionToken,
+  type SessionData,
+} from "@/lib/session-token";
 
-export const SESSION_COOKIE = "tp_session";
+export { SESSION_COOKIE, type SessionData } from "@/lib/session-token";
 
-export type SessionPayload = {
-  userId: string;
-};
-
-export async function getSessionFromRequest(req: NextRequest): Promise<SessionPayload | null> {
-  const secret = getSessionSecret();
-  if (!secret) return null;
-
+export async function getSessionFromRequest(req: NextRequest): Promise<SessionData | null> {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
+  return verifySessionToken(token);
+}
 
-  try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
-    const userId = payload.userId;
-    if (typeof userId !== "string") return null;
-    return { userId };
-  } catch {
-    return null;
-  }
+export async function applySlidingSessionRefresh(
+  response: NextResponse,
+  session: SessionData,
+) {
+  const token = await signSessionToken(session);
+  response.cookies.set(SESSION_COOKIE, token, getSessionCookieOptions());
 }

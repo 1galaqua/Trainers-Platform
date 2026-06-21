@@ -1,8 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isAuthEntryPath } from "@/lib/auth-redirect";
 import { isClerkConfigured } from "@/config/clerk";
-import { getSessionFromRequest } from "@/lib/session-edge";
+import {
+  applySlidingSessionRefresh,
+  getSessionFromRequest,
+} from "@/lib/session-edge";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -16,32 +20,40 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 async function localAuthMiddleware(req: NextRequest) {
+  const session = await getSessionFromRequest(req);
+
   if (isPublicRoute(req)) {
+    if (session && isAuthEntryPath(req.nextUrl.pathname)) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
     return NextResponse.next();
   }
 
-  const session = await getSessionFromRequest(req);
   if (!session) {
     const signIn = new URL("/sign-in", req.url);
     signIn.searchParams.set("redirect", req.nextUrl.pathname);
     return NextResponse.redirect(signIn);
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  await applySlidingSessionRefresh(response, session);
+  return response;
 }
 
 export default isClerkConfigured()
   ? clerkMiddleware(async (auth, req) => {
-      if (!isPublicRoute(req)) {
-        await auth.protect();
+      if (isPublicRoute(req)) {
+        const { userId } = await auth();
+        if (userId && isAuthEntryPath(req.nextUrl.pathname)) {
+          return NextResponse.redirect(new URL("/dashboard", req.url));
+        }
+        return;
       }
+
+      await auth.protect();
     })
   : localAuthMiddleware;
 
 export const config = {
-  matcher: [
-    "/((?!.+\\.[\\w]+$|_next).*)",
-    "/",
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 };

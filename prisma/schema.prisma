@@ -66,8 +66,9 @@ model User {
   phoneNumber  String?
   age          Int?
   passwordHash String?
-  role         UserRole @default(COACH)
-  createdAt    DateTime @default(now())
+  role           UserRole @default(COACH)
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   traineeInvites           TraineeInvite[]           @relation("CoachInvites")

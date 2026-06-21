@@ -1,9 +1,11 @@
 import { SignIn } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { siteConfig } from "@/config/site";
 import { isClerkConfigured } from "@/config/clerk";
+import { getCurrentUser } from "@/lib/auth";
 import { EmailLoginForm } from "@/features/auth/components/email-login-form";
 import { SignInResetNotice } from "@/features/auth/components/sign-in-reset-notice";
 
@@ -11,7 +13,12 @@ export const metadata: Metadata = {
   title: "התחברות",
 };
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const user = await getCurrentUser();
+  if (user) {
+    redirect("/dashboard");
+  }
+
   if (isClerkConfigured()) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-background px-4 py-12">
@@ -29,8 +36,8 @@ export default function SignInPage() {
       </div>
       <Suspense fallback={null}>
         <SignInResetNotice />
+        <EmailLoginForm />
       </Suspense>
-      <EmailLoginForm />
     </div>
   );
 }
