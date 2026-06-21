@@ -1,4 +1,5 @@
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
+import { filterUsersWithoutRecentDuplicateNotification } from "@/lib/notification-dedupe";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
 import { programTypeLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +23,14 @@ export async function notifyUserAboutWorkoutReminder(params: {
   userId: string;
   workout: WorkoutReminderContext;
 }) {
+  const recipients = await filterUsersWithoutRecentDuplicateNotification(
+    [params.userId],
+    "WORKOUT_REMINDER",
+    params.workout.id,
+  );
+
+  if (recipients.length === 0) return;
+
   const body = buildWorkoutReminderBody(params.workout);
 
   await prisma.appNotification.create({

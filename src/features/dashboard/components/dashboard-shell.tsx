@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { siteConfig } from "@/config/site";
 import { DashboardHeaderActions } from "@/features/dashboard/components/dashboard-header-actions";
-import { WorkoutReminderSync } from "@/features/calendar/components/workout-reminder-sync";
 import { AppBadgeSync } from "@/features/push/components/app-badge-sync";
 import { SidebarLogoutButton } from "@/features/dashboard/components/sidebar-logout-button";
 import { getUnreadNotificationCountAction } from "@/server/actions/notifications";
@@ -125,12 +124,7 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-[100dvh] w-full flex-col bg-background md:flex-row">
-      {showHeaderActions && (
-        <>
-          <AppBadgeSync unreadCount={liveUnreadCount} />
-          <WorkoutReminderSync />
-        </>
-      )}
+      {showHeaderActions && <AppBadgeSync unreadCount={liveUnreadCount} />}
       <aside
         className="hidden w-full max-w-64 shrink-0 flex-col border-border border-e bg-sidebar text-sidebar-foreground md:flex"
         aria-label="סרגל צד"

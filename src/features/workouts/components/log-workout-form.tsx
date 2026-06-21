@@ -12,8 +12,10 @@ import {
   applyWorkoutLogDraft,
   buildEmptySetLogs,
   buildWorkoutLogDraft,
+  buildWorkoutLogPrefillKey,
   clearWorkoutLogDraft,
   getWorkoutDraftTraineeKey,
+  getWorkoutLogFormStatus,
   hasWorkoutDraftContent,
   loadWorkoutLogDraft,
   saveWorkoutLogDraft,
@@ -96,6 +98,12 @@ export function LogWorkoutForm({
   const formRef = useRef<HTMLFormElement>(null);
   const traineeKey = getWorkoutDraftTraineeKey(traineeId);
   const baselineRef = useRef<{ logs: ExerciseLogState[]; sessionNotes: string } | null>(null);
+  const exercisesRef = useRef(exercises);
+  exercisesRef.current = exercises;
+
+  const exerciseIds = exercises.map((exercise) => exercise.id);
+  const prefillKey = buildWorkoutLogPrefillKey(programId, traineeKey, exerciseIds);
+  const loadedPrefillKeyRef = useRef<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [prefillLoading, setPrefillLoading] = useState(true);
@@ -107,9 +115,9 @@ export function LogWorkoutForm({
     buildLogsFromExercises(exercises, null),
   );
 
-  const exerciseKey = exercises.map((exercise) => exercise.id).join(",");
-
   useEffect(() => {
+    if (loadedPrefillKeyRef.current === prefillKey) return;
+
     let cancelled = false;
     setPrefillLoading(true);
     setDraftRestored(false);
@@ -117,11 +125,12 @@ export function LogWorkoutForm({
     getLastWorkoutLogPrefillAction(programId, traineeId).then((prefill) => {
       if (cancelled) return;
 
-      const baselineLogs = buildLogsFromExercises(exercises, prefill);
+      const currentExercises = exercisesRef.current;
+      const baselineLogs = buildLogsFromExercises(currentExercises, prefill);
       const baselineSessionNotes = prefill?.sessionNotes ?? "";
       baselineRef.current = { logs: baselineLogs, sessionNotes: baselineSessionNotes };
 
-      const validExerciseIds = new Set(exercises.map((exercise) => exercise.id));
+      const validExerciseIds = new Set(currentExercises.map((exercise) => exercise.id));
       const draft = loadWorkoutLogDraft(programId, traineeKey, validExerciseIds);
 
       if (draft) {
@@ -134,15 +143,17 @@ export function LogWorkoutForm({
         setLogs(baselineLogs);
         setSessionNotes(baselineSessionNotes);
         setHasPreviousLog(Boolean(prefill));
+        setDraftRestored(false);
       }
 
+      loadedPrefillKeyRef.current = prefillKey;
       setPrefillLoading(false);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [programId, traineeId, traineeKey, exerciseKey, exercises]);
+  }, [prefillKey, programId, traineeId, traineeKey]);
 
   useEffect(() => {
     if (prefillLoading || !baselineRef.current) return;
@@ -250,6 +261,7 @@ export function LogWorkoutForm({
     }
 
     clearWorkoutLogDraft(programId, traineeKey);
+    loadedPrefillKeyRef.current = null;
     router.push(redirectTo);
     router.refresh();
   }
@@ -257,6 +269,7 @@ export function LogWorkoutForm({
   const hasQuota = quotaInfo?.workoutQuota != null;
   const canReport = !hasQuota || (quotaInfo?.workoutsRemaining ?? 0) > 0;
   const buttonsDisabled = loading || prefillLoading;
+  const status = getWorkoutLogFormStatus({ prefillLoading, draftRestored, hasPreviousLog });
 
   return (
     <form
@@ -264,20 +277,23 @@ export function LogWorkoutForm({
       onSubmit={(event) => event.preventDefault()}
       className="space-y-6"
     >
-      {prefillLoading && (
-        <p className="text-muted-foreground text-sm">טוען נתונים מהדיווח האחרון...</p>
-      )}
-      {!prefillLoading && draftRestored && (
-        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-sm">
-          טיוטת הדיווח שוחזרה — ניתן להמשיך מהמקום שבו הפסקת. הטיוטה נשמרת אוטומטית למשך 12
-          שעות.
-        </p>
-      )}
-      {!prefillLoading && !draftRestored && hasPreviousLog && (
-        <p className="text-muted-foreground text-sm">
-          השדות מולאו לפי הדיווח האחרון של תוכנית זו — ניתן לערוך לפני השמירה.
-        </p>
-      )}
+      <div className="min-h-[4.5rem]">
+        {status === "loading" && (
+          <p className="text-muted-foreground text-sm">טוען נתונים מהדיווח האחרון...</p>
+        )}
+        {status === "draft" && (
+          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-sm">
+            טיוטת הדיווח שוחזרה — ניתן להמשיך מהמקום שבו הפסקת. הטיוטה נשמרת אוטומטית למשך 12
+            שעות.
+          </p>
+        )}
+        {status === "prefill" && (
+          <p className="text-muted-foreground text-sm">
+            השדות מולאו לפי הדיווח האחרון של תוכנית זו — ניתן לערוך לפני השמירה.
+          </p>
+        )}
+      </div>
+
       {!prefillLoading && hasUnsavedChanges && (
         <p className="text-muted-foreground text-xs">
           הנתונים נשמרים אוטומטית בטיוטה עד לשמירת האימון.
@@ -312,6 +328,7 @@ export function LogWorkoutForm({
                       updateSetLog(exerciseIndex, setIndex, "weightKg", e.target.value)
                     }
                     placeholder="0"
+                    disabled={prefillLoading}
                   />
                 </div>
                 <div className="space-y-1">
@@ -323,6 +340,7 @@ export function LogWorkoutForm({
                     onChange={(e) =>
                       updateSetLog(exerciseIndex, setIndex, "repsCompleted", e.target.value)
                     }
+                    disabled={prefillLoading}
                   />
                 </div>
               </div>
@@ -335,6 +353,7 @@ export function LogWorkoutForm({
               value={logs[exerciseIndex]?.notes ?? ""}
               onChange={(e) => updateExerciseNotes(exerciseIndex, e.target.value)}
               rows={2}
+              disabled={prefillLoading}
             />
           </div>
         </div>
@@ -348,6 +367,7 @@ export function LogWorkoutForm({
           rows={2}
           value={sessionNotes}
           onChange={(e) => setSessionNotes(e.target.value)}
+          disabled={prefillLoading}
         />
       </div>
 

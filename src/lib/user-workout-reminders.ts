@@ -111,6 +111,18 @@ export async function createDefaultUserWorkoutReminder(
   return { success: true as const };
 }
 
+export async function claimUserWorkoutReminder(reminderId: string, now = new Date()) {
+  const result = await prisma.userWorkoutReminder.updateMany({
+    where: {
+      id: reminderId,
+      ...reminderNotSentWhere,
+    },
+    data: { sentAt: now },
+  });
+
+  return result.count > 0;
+}
+
 export async function cancelUserWorkoutReminder(workoutId: string, userId: string) {
   await prisma.userWorkoutReminder.deleteMany({
     where: {

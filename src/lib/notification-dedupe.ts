@@ -5,6 +5,7 @@ const DEFAULT_DEDUPE_MINUTES = 3;
 
 const DEDUPE_WINDOWS_MINUTES: Partial<Record<AppNotificationType, number>> = {
   GROUP_SPOTS_AVAILABLE: 45,
+  WORKOUT_REMINDER: 3,
 };
 
 function extractWorkoutId(payload: unknown): string | null {

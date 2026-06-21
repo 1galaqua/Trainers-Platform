@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
-import { processDueUserWorkoutReminders } from "@/lib/process-user-workout-reminders";
 import {
   canUserManageWorkoutReminder,
   cancelUserWorkoutReminder,
@@ -67,15 +66,6 @@ export async function setWorkoutReminderAction(
 
   revalidatePath("/dashboard/calendar");
   return { success: true as const };
-}
-
-export async function processMyDueWorkoutRemindersAction() {
-  const user = await requireUser();
-  if (user.role === "ADMIN") {
-    return { processed: 0, sent: 0, skipped: 0 };
-  }
-
-  return processDueUserWorkoutReminders({ userId: user.id });
 }
 
 export async function cancelWorkoutReminderAction(workoutId: string) {

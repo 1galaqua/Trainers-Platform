@@ -3,7 +3,6 @@ import { PushServiceWorkerRegister } from "@/features/push/components/push-servi
 import { DashboardShell } from "@/features/dashboard/components/dashboard-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
-import { processDueUserWorkoutReminders } from "@/lib/process-user-workout-reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,6 @@ export default async function DashboardGroupLayout({
 
   if (user && user.role !== "ADMIN") {
     try {
-      await processDueUserWorkoutReminders({ userId: user.id });
       unreadNotificationCount = await getUnreadNotificationCountForUser(user.id);
     } catch {
       unreadNotificationCount = 0;

@@ -59,6 +59,27 @@ export function getWorkoutDraftTraineeKey(traineeId?: string): string {
   return traineeId ?? "self";
 }
 
+export function buildWorkoutLogPrefillKey(
+  programId: string,
+  traineeKey: string,
+  exerciseIds: readonly string[],
+): string {
+  return `${programId}:${traineeKey}:${exerciseIds.join(",")}`;
+}
+
+export type WorkoutLogFormStatus = "loading" | "draft" | "prefill" | null;
+
+export function getWorkoutLogFormStatus(input: {
+  prefillLoading: boolean;
+  draftRestored: boolean;
+  hasPreviousLog: boolean;
+}): WorkoutLogFormStatus {
+  if (input.prefillLoading) return "loading";
+  if (input.draftRestored) return "draft";
+  if (input.hasPreviousLog) return "prefill";
+  return null;
+}
+
 export function buildEmptySetLogs(setsCount: number, defaultReps: number): SetLogState[] {
   return Array.from({ length: setsCount }, (_, index) => ({
     setNumber: index + 1,

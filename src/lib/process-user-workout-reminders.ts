@@ -1,29 +1,22 @@
 import { notifyUserAboutWorkoutReminder } from "@/lib/workout-reminder-notifications";
 import { shouldDeliverWorkoutReminder } from "@/lib/workout-reminder-delivery";
-import { reminderNotSentWhere } from "@/lib/user-workout-reminders";
+import { claimUserWorkoutReminder, reminderNotSentWhere } from "@/lib/user-workout-reminders";
 import { prisma } from "@/lib/prisma";
 
-type ProcessDueUserWorkoutRemindersOptions = {
-  userId?: string;
-};
-
-function buildDueRemindersWhere(now: Date, userId?: string) {
+function buildDueRemindersWhere(now: Date) {
   return {
     ...reminderNotSentWhere,
     scheduledFor: { lte: now },
-    ...(userId ? { userId } : {}),
   };
 }
 
-export async function processDueUserWorkoutReminders(
-  options: ProcessDueUserWorkoutRemindersOptions = {},
-) {
+export async function processDueUserWorkoutReminders() {
   const now = new Date();
-  const where = buildDueRemindersWhere(now, options.userId);
+  const where = buildDueRemindersWhere(now);
 
   const dueCount = await prisma.userWorkoutReminder.count({ where });
   if (dueCount === 0) {
-    return { processed: 0, sent: 0, skipped: 0, skipReasons: {} };
+    return { processed: 0, sent: 0, skipped: 0, claimed: 0, skipReasons: {} };
   }
 
   const reminders = await prisma.userWorkoutReminder.findMany({
@@ -43,11 +36,12 @@ export async function processDueUserWorkoutReminders(
         },
       },
     },
-    take: options.userId ? 10 : 50,
+    take: 50,
   });
 
   let sent = 0;
   let skipped = 0;
+  let claimed = 0;
   const skipReasons: Record<string, number> = {};
 
   for (const reminder of reminders) {
@@ -58,28 +52,27 @@ export async function processDueUserWorkoutReminders(
       now,
     });
 
+    const didClaim = await claimUserWorkoutReminder(reminder.id, now);
+    if (!didClaim) continue;
+
+    claimed += 1;
+
     if (!decision.deliver) {
       skipped += 1;
       skipReasons[decision.reason] = (skipReasons[decision.reason] ?? 0) + 1;
-      await prisma.userWorkoutReminder.update({
-        where: { id: reminder.id },
-        data: { sentAt: now },
-      });
       continue;
     }
 
-    await notifyUserAboutWorkoutReminder({
-      userId: reminder.userId,
-      workout,
-    });
-
-    await prisma.userWorkoutReminder.update({
-      where: { id: reminder.id },
-      data: { sentAt: now },
-    });
-
-    sent += 1;
+    try {
+      await notifyUserAboutWorkoutReminder({
+        userId: reminder.userId,
+        workout,
+      });
+      sent += 1;
+    } catch (error) {
+      console.error("[workout-reminder] delivery failed after claim:", reminder.id, error);
+    }
   }
 
-  return { processed: reminders.length, sent, skipped, skipReasons };
+  return { processed: reminders.length, claimed, sent, skipped, skipReasons };
 }

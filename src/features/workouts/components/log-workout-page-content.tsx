@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,10 +58,16 @@ export function LogWorkoutPageContent({
     resolveSelectedId(programs, initialProgramId),
   );
 
+  const programFromUrl = searchParams.get("program") ?? "";
+  const programIdsKey = programs.map((program) => program.id).join(",");
+  const programsRef = useRef(programs);
+  programsRef.current = programs;
+
   useEffect(() => {
-    const fromUrl = searchParams.get("program") ?? undefined;
-    setSelectedId(resolveSelectedId(programs, fromUrl ?? initialProgramId));
-  }, [searchParams, programs, initialProgramId]);
+    setSelectedId(
+      resolveSelectedId(programsRef.current, programFromUrl || initialProgramId),
+    );
+  }, [programFromUrl, initialProgramId, programIdsKey]);
 
   const selectProgram = useCallback(
     (programId: string) => {
