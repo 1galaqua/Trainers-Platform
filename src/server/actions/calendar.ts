@@ -36,6 +36,7 @@ import {
   cancelAllUserWorkoutReminders,
   cancelUserWorkoutReminder,
   createDefaultUserWorkoutReminder,
+  reminderNotSentWhere,
   rescheduleWorkoutUserReminders,
 } from "@/lib/user-workout-reminders";
 import { detectSignificantWorkoutChanges } from "@/lib/calendar-workout-changes";
@@ -925,7 +926,7 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
     where: {
       userId: user.id,
       workoutId: { in: workoutIds },
-      sentAt: null,
+      ...reminderNotSentWhere,
     },
     select: {
       workoutId: true,

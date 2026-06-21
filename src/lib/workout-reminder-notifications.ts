@@ -37,20 +37,26 @@ export async function notifyUserAboutWorkoutReminder(params: {
   try {
     const unreadCount = await getUnreadNotificationCountForUser(params.userId);
 
-    await sendPushNotificationsToUsers(
-      [params.userId],
-      {
-        title: "תזכורת: אימון בקרוב",
-        body,
-        url: "/dashboard/updates",
-        tag: `workout-reminder-${params.workout.id}`,
-        unreadCount,
-      },
-    );
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[push] workout reminder delivery failed:", error);
+    const subscriptions = await prisma.pushSubscription.count({
+      where: { userId: params.userId },
+    });
+
+    if (subscriptions === 0) {
+      console.warn("[push] workout reminder skipped — no subscription for user:", params.userId);
+    } else {
+      await sendPushNotificationsToUsers(
+        [params.userId],
+        {
+          title: "תזכורת: אימון בקרוב",
+          body,
+          url: "/dashboard/updates",
+          tag: `workout-reminder-${params.workout.id}`,
+          unreadCount,
+        },
+      );
     }
+  } catch (error) {
+    console.error("[push] workout reminder delivery failed:", error);
   }
 
   safeRevalidatePaths(["/dashboard", "/dashboard/updates"]);

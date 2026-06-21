@@ -116,7 +116,7 @@ export async function cancelUserWorkoutReminder(workoutId: string, userId: strin
     where: {
       workoutId,
       userId,
-      sentAt: null,
+      ...reminderNotSentWhere,
     },
   });
 
