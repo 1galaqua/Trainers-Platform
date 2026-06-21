@@ -1,8 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/cron/calendar-reminders",
+      "path": "/api/cron/workout-reminders",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/group-spots-reminders",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-notifications",
+      "schedule": "0 3 * * *"
     }
   ]
 }

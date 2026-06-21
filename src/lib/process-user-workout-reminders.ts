@@ -7,19 +7,41 @@ type ProcessDueUserWorkoutRemindersOptions = {
   userId?: string;
 };
 
+function buildDueRemindersWhere(now: Date, userId?: string) {
+  return {
+    ...reminderNotSentWhere,
+    scheduledFor: { lte: now },
+    ...(userId ? { userId } : {}),
+  };
+}
+
 export async function processDueUserWorkoutReminders(
   options: ProcessDueUserWorkoutRemindersOptions = {},
 ) {
   const now = new Date();
+  const where = buildDueRemindersWhere(now, options.userId);
+
+  const dueCount = await prisma.userWorkoutReminder.count({ where });
+  if (dueCount === 0) {
+    return { processed: 0, sent: 0, skipped: 0, skipReasons: {} };
+  }
 
   const reminders = await prisma.userWorkoutReminder.findMany({
-    where: {
-      ...reminderNotSentWhere,
-      scheduledFor: { lte: now },
-      ...(options.userId ? { userId: options.userId } : {}),
-    },
-    include: {
-      workout: true,
+    where,
+    select: {
+      id: true,
+      userId: true,
+      scheduledFor: true,
+      workout: {
+        select: {
+          id: true,
+          type: true,
+          workoutKind: true,
+          startsAt: true,
+          durationMinutes: true,
+          cancelledAt: true,
+        },
+      },
     },
     take: options.userId ? 10 : 50,
   });

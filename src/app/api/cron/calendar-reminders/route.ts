@@ -1,28 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { cleanupOldNotifications } from "@/lib/cleanup-old-notifications";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { processDueCalendarReminders } from "@/lib/process-calendar-reminders";
 import { processDueUserWorkoutReminders } from "@/lib/process-user-workout-reminders";
 
 export const runtime = "nodejs";
 
-function isAuthorized(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  const authorization = request.headers.get("authorization");
-
-  if (secret && authorization === `Bearer ${secret}`) {
-    return true;
-  }
-
-  if (process.env.VERCEL === "1" && request.headers.get("x-vercel-cron") === "1") {
-    return true;
-  }
-
-  return false;
-}
-
+/** Manual / legacy trigger — runs all cron tasks in one request. */
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

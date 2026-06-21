@@ -1,4 +1,4 @@
-import { notCancelledWhere } from "@/lib/calendar-prisma-filters";
+import { jobNotSentWhere, notCancelledWhere } from "@/lib/calendar-prisma-filters";
 import {
   getCoachTraineeIdsNotRegistered,
   notifyUnregisteredTraineesAboutGroupSpots,
@@ -8,12 +8,19 @@ import { prisma } from "@/lib/prisma";
 export async function processDueCalendarReminders() {
   const now = new Date();
 
+  const jobWhere = {
+    ...jobNotSentWhere,
+    scheduledFor: { lte: now },
+    reminderType: "ONE_HOUR_BEFORE_SPOTS" as const,
+  };
+
+  const dueCount = await prisma.scheduledReminderJob.count({ where: jobWhere });
+  if (dueCount === 0) {
+    return { processed: 0 };
+  }
+
   const jobs = await prisma.scheduledReminderJob.findMany({
-    where: {
-      sentAt: null,
-      scheduledFor: { lte: now },
-      reminderType: "ONE_HOUR_BEFORE_SPOTS",
-    },
+    where: jobWhere,
     include: {
       workout: {
         include: {
