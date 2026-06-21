@@ -4,105 +4,37 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getVapidPublicKey, isPushConfigured } from "@/lib/push-config";
-import { subscriptionToPayload, urlBase64ToUint8Array } from "@/lib/push-client";
-import {
-  removePushSubscriptionAction,
-  savePushSubscriptionAction,
-} from "@/server/actions/push";
+import { isPushConfigured } from "@/lib/push-config";
+
+import { usePushNotifications } from "../hooks/use-push-notifications";
 
 const DISMISS_KEY = "push-prompt-dismissed";
 
-type PushPermissionState = NotificationPermission | "unsupported";
-
-function getInitialPermission(): PushPermissionState {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return "unsupported";
-  }
-  return Notification.permission;
-}
-
-async function syncPushSubscription() {
-  const vapidPublicKey = getVapidPublicKey();
-  if (!vapidPublicKey) return;
-
-  const registration = await navigator.serviceWorker.register("/push-sw.js");
-  await navigator.serviceWorker.ready;
-
-  let subscription = await registration.pushManager.getSubscription();
-  if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-    });
-  }
-
-  const payload = subscriptionToPayload(subscription);
-  if (payload) {
-    await savePushSubscriptionAction(payload);
-  }
-}
-
 export function PushNotificationSetup() {
-  const [permission, setPermission] = useState<PushPermissionState>("default");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { status, busy, error, enable, isConfigured } = usePushNotifications();
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    setPermission(getInitialPermission());
     setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
   }, []);
 
-  useEffect(() => {
-    if (!isPushConfigured() || permission !== "granted") return;
-
-    syncPushSubscription().catch(() => {
-      // Browser may block silent subscription refresh; user can use the banner.
-    });
-  }, [permission]);
-
-  if (!isPushConfigured() || permission === "unsupported") {
+  if (!isConfigured || status === "loading" || status === "unsupported") {
     return null;
   }
 
-  if (permission === "granted" || dismissed) {
+  if (status === "enabled" || status === "denied" || dismissed || status !== "prompt") {
     return null;
   }
 
-  async function enablePush() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const permissionResult = await Notification.requestPermission();
-      setPermission(permissionResult);
-
-      if (permissionResult !== "granted") {
-        setError("יש לאשר התראות בדפדפן כדי לקבל עדכונים");
-        return;
-      }
-
-      await syncPushSubscription();
+  async function handleEnable() {
+    const ok = await enable();
+    if (ok) {
+      localStorage.setItem(DISMISS_KEY, "1");
       setDismissed(true);
-    } catch {
-      setError("לא ניתן להפעיל התראות במכשיר זה");
-    } finally {
-      setLoading(false);
     }
   }
 
-  async function dismissPrompt() {
-    const registration = await navigator.serviceWorker.getRegistration("/push-sw.js");
-    const subscription = await registration?.pushManager.getSubscription();
-    if (subscription) {
-      const payload = subscriptionToPayload(subscription);
-      if (payload) {
-        await removePushSubscriptionAction(payload.endpoint);
-        await subscription.unsubscribe();
-      }
-    }
-
+  function dismissPrompt() {
     localStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
   }
@@ -116,12 +48,12 @@ export function PushNotificationSetup() {
             הפעלת התראות למכשיר
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            קבל/י עדכונים על אימונים גם כשהאפליקציה סגורה. מומלץ להוסיף את האפליקציה למסך הבית (PWA).
+            קבל/י עדכונים על אימונים גם כשהאפליקציה סגורה. ניתן לנהל זאת גם בעמוד «עדכונים».
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" onClick={enablePush} disabled={loading}>
-            {loading ? "מפעיל..." : "הפעלת התראות"}
+          <Button type="button" size="sm" onClick={() => void handleEnable()} disabled={busy}>
+            {busy ? "מפעיל..." : "הפעלת התראות"}
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={dismissPrompt}>
             <BellOff className="size-4" aria-hidden />

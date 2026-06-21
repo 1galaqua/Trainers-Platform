@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PushNotificationSettings } from "@/features/push/components/push-notification-settings";
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
 import { buildCalendarWorkoutUrl } from "@/lib/calendar-navigation";
 import { isNotificationUnread } from "@/lib/notification-prisma-filters";
@@ -72,6 +73,8 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
           </Button>
         )}
       </div>
+
+      <PushNotificationSettings />
 
       {notifications.length === 0 ? (
         <Card>

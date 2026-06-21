@@ -32,6 +32,7 @@ export type PushMessage = {
   title: string;
   body: string;
   url?: string;
+  tag?: string;
 };
 
 export async function sendPushNotification(
@@ -57,6 +58,7 @@ export async function sendPushNotification(
         title: message.title,
         body: message.body,
         url: message.url ?? "/dashboard/updates",
+        tag: message.tag ?? "app-update",
       }),
     );
     return { ok: true as const, expired: false };

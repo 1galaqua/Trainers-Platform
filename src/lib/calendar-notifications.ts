@@ -75,7 +75,8 @@ async function deliverNotificationsToUsers(
     await sendPushNotificationsToUsers(recipients, {
       title: data.title,
       body: data.body,
-      url: "/dashboard/calendar",
+      url: "/dashboard/updates",
+      tag: `workout-${data.workoutId}`,
     });
   } catch {
     // Push is best-effort; in-app notification was already saved.

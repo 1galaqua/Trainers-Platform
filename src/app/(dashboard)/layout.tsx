@@ -1,4 +1,5 @@
 import { PushNotificationSetup } from "@/features/push/components/push-notification-setup";
+import { PushServiceWorkerRegister } from "@/features/push/components/push-service-worker-register";
 import { DashboardShell } from "@/features/dashboard/components/dashboard-shell";
 import { getCurrentUser } from "@/lib/auth";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
@@ -27,9 +28,12 @@ export default async function DashboardGroupLayout({
       unreadNotificationCount={unreadNotificationCount}
     >
       {user && user.role !== "ADMIN" && (
-        <div className="mx-auto w-full max-w-6xl px-4 pt-4 md:px-6">
-          <PushNotificationSetup />
-        </div>
+        <>
+          <PushServiceWorkerRegister />
+          <div className="mx-auto w-full max-w-6xl px-4 pt-4 md:px-6">
+            <PushNotificationSetup />
+          </div>
+        </>
       )}
       {children}
     </DashboardShell>

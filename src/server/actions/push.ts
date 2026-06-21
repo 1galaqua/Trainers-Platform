@@ -54,3 +54,13 @@ export async function removePushSubscriptionAction(endpoint: string) {
 
   return { success: true as const };
 }
+
+export async function getPushSubscriptionStatusAction() {
+  const user = await requireUser();
+
+  const count = await prisma.pushSubscription.count({
+    where: { userId: user.id },
+  });
+
+  return { hasSubscription: count > 0 };
+}
