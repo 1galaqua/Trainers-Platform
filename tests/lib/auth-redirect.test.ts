@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getSafeRedirectPath, isAuthEntryPath } from "@/lib/auth-redirect";
+import {
+  getSafeRedirectPath,
+  isAuthEntryPath,
+  shouldRedirectAuthenticatedUserToDashboard,
+} from "@/lib/auth-redirect";
 
 describe("isAuthEntryPath", () => {
   it("matches sign-in and sign-up routes", () => {
@@ -14,6 +18,21 @@ describe("isAuthEntryPath", () => {
     expect(isAuthEntryPath("/dashboard")).toBe(false);
     expect(isAuthEntryPath("/dashboard/calendar")).toBe(false);
     expect(isAuthEntryPath("/")).toBe(false);
+  });
+});
+
+describe("shouldRedirectAuthenticatedUserToDashboard", () => {
+  it("redirects home and auth entry pages", () => {
+    expect(shouldRedirectAuthenticatedUserToDashboard("/")).toBe(true);
+    expect(shouldRedirectAuthenticatedUserToDashboard("/sign-in")).toBe(true);
+    expect(shouldRedirectAuthenticatedUserToDashboard("/sign-up")).toBe(true);
+  });
+
+  it("does not redirect dashboard or invite flows", () => {
+    expect(shouldRedirectAuthenticatedUserToDashboard("/dashboard")).toBe(false);
+    expect(shouldRedirectAuthenticatedUserToDashboard("/dashboard/calendar")).toBe(false);
+    expect(shouldRedirectAuthenticatedUserToDashboard("/invite/abc")).toBe(false);
+    expect(shouldRedirectAuthenticatedUserToDashboard("/forgot-password")).toBe(false);
   });
 });
 

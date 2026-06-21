@@ -6,6 +6,11 @@ export function isAuthEntryPath(pathname: string) {
   );
 }
 
+/** Paths where an authenticated user should land on the dashboard instead. */
+export function shouldRedirectAuthenticatedUserToDashboard(pathname: string) {
+  return pathname === "/" || isAuthEntryPath(pathname);
+}
+
 export function getSafeRedirectPath(redirect: string | null | undefined) {
   if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
     return "/dashboard";

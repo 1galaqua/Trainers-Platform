@@ -1,9 +1,15 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { siteConfig } from "@/config/site";
 import { MarketingAuthCta } from "@/features/marketing/components/marketing-auth-cta";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-border border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">

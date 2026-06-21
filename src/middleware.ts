@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isAuthEntryPath } from "@/lib/auth-redirect";
+import { isAuthEntryPath, shouldRedirectAuthenticatedUserToDashboard } from "@/lib/auth-redirect";
 import { isClerkConfigured } from "@/config/clerk";
 import {
   applySlidingSessionRefresh,
@@ -23,8 +23,10 @@ async function localAuthMiddleware(req: NextRequest) {
   const session = await getSessionFromRequest(req);
 
   if (isPublicRoute(req)) {
-    if (session && isAuthEntryPath(req.nextUrl.pathname)) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+    if (session && shouldRedirectAuthenticatedUserToDashboard(req.nextUrl.pathname)) {
+      const response = NextResponse.redirect(new URL("/dashboard", req.url));
+      await applySlidingSessionRefresh(response, session);
+      return response;
     }
     return NextResponse.next();
   }
@@ -44,7 +46,7 @@ export default isClerkConfigured()
   ? clerkMiddleware(async (auth, req) => {
       if (isPublicRoute(req)) {
         const { userId } = await auth();
-        if (userId && isAuthEntryPath(req.nextUrl.pathname)) {
+        if (userId && shouldRedirectAuthenticatedUserToDashboard(req.nextUrl.pathname)) {
           return NextResponse.redirect(new URL("/dashboard", req.url));
         }
         return;
