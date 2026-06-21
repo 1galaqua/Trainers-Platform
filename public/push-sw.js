@@ -1,5 +1,32 @@
+async function syncAppBadge(unreadCount) {
+  if (!("setAppBadge" in navigator)) return;
+
+  try {
+    if (unreadCount > 0) {
+      await navigator.setAppBadge(unreadCount);
+    } else {
+      await navigator.clearAppBadge();
+    }
+  } catch {
+    // Best-effort across platforms.
+  }
+}
+
+async function notifyClientsUnreadCount(unreadCount) {
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  for (const client of clients) {
+    client.postMessage({ type: "SYNC_APP_BADGE", unreadCount });
+  }
+}
+
 self.addEventListener("push", (event) => {
-  let payload = { title: "עדכון", body: "", url: "/dashboard/updates", tag: "app-update" };
+  let payload = {
+    title: "עדכון",
+    body: "",
+    url: "/dashboard/updates",
+    tag: "app-update",
+    unreadCount: 1,
+  };
 
   if (event.data) {
     try {
@@ -9,18 +36,30 @@ self.addEventListener("push", (event) => {
     }
   }
 
+  const unreadCount =
+    typeof payload.unreadCount === "number" && payload.unreadCount > 0
+      ? payload.unreadCount
+      : 1;
+
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      tag: payload.tag || "app-update",
-      renotify: true,
-      dir: "rtl",
-      lang: "he",
-      vibrate: [120, 60, 120],
-      data: { url: payload.url || "/dashboard/updates" },
-    }),
+    Promise.all([
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: payload.tag || "app-update",
+        renotify: true,
+        dir: "rtl",
+        lang: "he",
+        vibrate: [120, 60, 120],
+        data: {
+          url: payload.url || "/dashboard/updates",
+          unreadCount,
+        },
+      }),
+      syncAppBadge(unreadCount),
+      notifyClientsUnreadCount(unreadCount),
+    ]),
   );
 });
 

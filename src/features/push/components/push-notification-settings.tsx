@@ -78,10 +78,22 @@ export function PushNotificationSettings({ className, compact = false }: PushNot
           <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
             <Smartphone className="mt-0.5 size-4 shrink-0" aria-hidden />
             <p>
-              לחוויה כמו אפליקציה: הוסיפ/י את האתר למסך הבית (בדפדפן: תפריט → «הוסף למסך הבית» / «Install app»).
-              ב-iPhone נדרש iOS 16.4 ומעלה.
+              לקבלת Push ותג אדום על האייקון: הוסיפ/י את האפליקציה למסך הבית, ואז הפעיל/י התראות מתוך האפליקציה
+              (לא מדפדפן רגיל). ב-iPhone נדרש iOS 16.4 ומעלה.
             </p>
           </div>
+        )}
+
+        {status === "granted-no-subscription" && (
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            ההרשאה אושרה אך המנוי לא נשמר. לחצ/י «הפעלת התראות» שוב.
+          </p>
+        )}
+
+        {isEnabled && isStandalone && (
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            כשיש עדכונים שלא נקראו, יוצג מספר אדום על אייקון האפליקציה במסך הבית (במכשירים שתומכים בכך).
+          </p>
         )}
 
         <div className="flex flex-wrap gap-2">

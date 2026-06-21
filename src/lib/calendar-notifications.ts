@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
 import { notCancelledWhere } from "@/lib/calendar-prisma-filters";
 import { filterUsersWithoutRecentDuplicateNotification } from "@/lib/notification-dedupe";
+import { getUnreadNotificationCountsForUsers } from "@/lib/notifications";
 import { programTypeLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
@@ -72,14 +73,21 @@ async function deliverNotificationsToUsers(
   });
 
   try {
-    await sendPushNotificationsToUsers(recipients, {
-      title: data.title,
-      body: data.body,
-      url: "/dashboard/updates",
-      tag: `workout-${data.workoutId}`,
-    });
-  } catch {
-    // Push is best-effort; in-app notification was already saved.
+    const unreadCounts = await getUnreadNotificationCountsForUsers(recipients);
+    await sendPushNotificationsToUsers(
+      recipients,
+      {
+        title: data.title,
+        body: data.body,
+        url: "/dashboard/updates",
+        tag: `workout-${data.workoutId}`,
+      },
+      unreadCounts,
+    );
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[push] calendar notification delivery failed:", error);
+    }
   }
 
   try {

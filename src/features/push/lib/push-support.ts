@@ -16,11 +16,27 @@ export function isStandaloneDisplayMode() {
   );
 }
 
+export async function getPushServiceWorkerRegistration() {
+  if (!isPushSupported()) return null;
+
+  const existing = await navigator.serviceWorker.getRegistration("/");
+  if (existing) return existing;
+
+  try {
+    return await navigator.serviceWorker.ready;
+  } catch {
+    return null;
+  }
+}
+
 export async function registerPushServiceWorker() {
   if (!isPushSupported()) return null;
 
   try {
-    const registration = await navigator.serviceWorker.register("/push-sw.js");
+    const registration = await navigator.serviceWorker.register("/push-sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
     await navigator.serviceWorker.ready;
     return registration;
   } catch {
@@ -29,7 +45,7 @@ export async function registerPushServiceWorker() {
 }
 
 export async function getCurrentPushSubscription() {
-  const registration = await navigator.serviceWorker.getRegistration("/push-sw.js");
+  const registration = await getPushServiceWorkerRegistration();
   if (!registration) return null;
   return registration.pushManager.getSubscription();
 }

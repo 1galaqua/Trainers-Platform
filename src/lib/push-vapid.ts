@@ -1,13 +1,27 @@
 import webpush from "web-push";
 
-import { siteConfig } from "@/config/site";
+export { isPushConfigured } from "@/lib/push-config";
 
 let vapidConfigured = false;
 
-export { isPushConfigured } from "@/lib/push-config";
-
 export function getVapidPublicKey(): string | null {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim() ?? null;
+}
+
+export function getVapidSubject(): string {
+  const explicit = process.env.VAPID_SUBJECT?.trim();
+  if (explicit) return explicit;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    try {
+      return new URL(appUrl).origin;
+    } catch {
+      // Fall through to default contact.
+    }
+  }
+
+  return "mailto:notifications@trainers-platform.local";
 }
 
 function ensureVapidConfigured() {
@@ -20,7 +34,7 @@ function ensureVapidConfigured() {
   if (vapidConfigured) return true;
 
   webpush.setVapidDetails(
-    `mailto:${siteConfig.url}`,
+    getVapidSubject(),
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!.trim(),
     process.env.VAPID_PRIVATE_KEY!.trim(),
   );
@@ -33,6 +47,7 @@ export type PushMessage = {
   body: string;
   url?: string;
   tag?: string;
+  unreadCount?: number;
 };
 
 export async function sendPushNotification(
@@ -59,7 +74,12 @@ export async function sendPushNotification(
         body: message.body,
         url: message.url ?? "/dashboard/updates",
         tag: message.tag ?? "app-update",
+        unreadCount: message.unreadCount ?? 1,
       }),
+      {
+        TTL: 60 * 60 * 24,
+        urgency: "high",
+      },
     );
     return { ok: true as const, expired: false };
   } catch (error) {
@@ -70,6 +90,10 @@ export async function sendPushNotification(
       typeof error.statusCode === "number"
         ? error.statusCode
         : null;
+
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[push] send failed:", statusCode, error);
+    }
 
     return { ok: false as const, expired: statusCode === 404 || statusCode === 410 };
   }
