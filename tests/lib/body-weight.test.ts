@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendQuestionnaireStartingWeight,
   mapBodyWeightLogsToChartData,
+  resolveBodyWeightCurrentDisplay,
 } from "@/lib/body-weight-chart-data";
 import {
   BODY_WEIGHT_PROGRESS_ID,
@@ -84,6 +85,29 @@ describe("buildProgressSeries", () => {
     const series = buildProgressSeries([], [{ date: "2026-06-01T10:00:00.000Z", weight: 80, volume: 80 }]);
     expect(series).toHaveLength(1);
     expect(series[0]?.id).toBe(BODY_WEIGHT_PROGRESS_ID);
+  });
+});
+
+describe("resolveBodyWeightCurrentDisplay", () => {
+  it("falls back to questionnaire weight when there are no logs", () => {
+    expect(resolveBodyWeightCurrentDisplay([], 82.5)).toEqual({
+      latestWeightKg: 82.5,
+      previousWeightKg: null,
+    });
+  });
+
+  it("prefers the latest log over questionnaire weight", () => {
+    expect(resolveBodyWeightCurrentDisplay([{ weightKg: 79 }, { weightKg: 81 }], 82.5)).toEqual({
+      latestWeightKg: 79,
+      previousWeightKg: 81,
+    });
+  });
+
+  it("returns null when there is no log and no questionnaire weight", () => {
+    expect(resolveBodyWeightCurrentDisplay([], null)).toEqual({
+      latestWeightKg: null,
+      previousWeightKg: null,
+    });
   });
 });
 

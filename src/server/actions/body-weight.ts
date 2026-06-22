@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   appendQuestionnaireStartingWeight,
   mapBodyWeightLogsToChartData,
+  resolveBodyWeightCurrentDisplay,
 } from "@/lib/body-weight-chart-data";
 import {
   BODY_WEIGHT_MAX_KG,
@@ -88,7 +89,7 @@ async function buildChartDataForTrainee(traineeId: string) {
 export async function getBodyWeightPageDataAction(): Promise<BodyWeightPageData> {
   const trainee = await requireTraineeOnboarded();
 
-  const [logs, reminder, chartData] = await Promise.all([
+  const [logs, reminder, chartData, startingWeight] = await Promise.all([
     prisma.bodyWeightLog.findMany({
       where: { traineeId: trainee.id },
       orderBy: { recordedAt: "desc" },
@@ -97,10 +98,13 @@ export async function getBodyWeightPageDataAction(): Promise<BodyWeightPageData>
       where: { traineeId: trainee.id },
     }),
     buildChartDataForTrainee(trainee.id),
+    getQuestionnaireStartingWeight(trainee.id),
   ]);
 
-  const latestWeightKg = logs[0]?.weightKg ?? null;
-  const previousWeightKg = logs[1]?.weightKg ?? null;
+  const { latestWeightKg, previousWeightKg } = resolveBodyWeightCurrentDisplay(
+    logs,
+    startingWeight?.weightKg ?? null,
+  );
 
   return {
     logs: logs.map(mapLog),

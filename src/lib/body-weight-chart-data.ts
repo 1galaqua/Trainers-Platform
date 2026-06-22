@@ -53,3 +53,15 @@ export function appendQuestionnaireStartingWeight(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 }
+
+export function resolveBodyWeightCurrentDisplay(
+  logs: Array<{ weightKg: number }>,
+  questionnaireWeightKg: number | null,
+) {
+  const latestFromLog = logs[0]?.weightKg ?? null;
+
+  return {
+    latestWeightKg: latestFromLog ?? questionnaireWeightKg,
+    previousWeightKg: logs[1]?.weightKg ?? null,
+  };
+}
