@@ -22,14 +22,14 @@ function buildWorkoutReminderBody(workout: WorkoutReminderContext) {
 export async function notifyUserAboutWorkoutReminder(params: {
   userId: string;
   workout: WorkoutReminderContext;
-}) {
+}): Promise<boolean> {
   const recipients = await filterUsersWithoutRecentDuplicateNotification(
     [params.userId],
     "WORKOUT_REMINDER",
     params.workout.id,
   );
 
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) return false;
 
   const body = buildWorkoutReminderBody(params.workout);
 
@@ -69,4 +69,5 @@ export async function notifyUserAboutWorkoutReminder(params: {
   }
 
   safeRevalidatePaths(["/dashboard", "/dashboard/updates"]);
+  return true;
 }

@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isAuthEntryPath, shouldRedirectAuthenticatedUserToDashboard } from "@/lib/auth-redirect";
+import { CRON_PUBLIC_PATHS } from "@/lib/cron-public-paths";
 import { isClerkConfigured } from "@/config/clerk";
 import {
   applySlidingSessionRefresh,
@@ -16,7 +17,7 @@ const isPublicRoute = createRouteMatcher([
   "/reset-password",
   "/invite(.*)",
   "/api/auth/forgot-password",
-  "/api/cron/calendar-reminders",
+  ...CRON_PUBLIC_PATHS,
 ]);
 
 async function localAuthMiddleware(req: NextRequest) {

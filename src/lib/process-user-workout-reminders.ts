@@ -64,11 +64,11 @@ export async function processDueUserWorkoutReminders() {
     }
 
     try {
-      await notifyUserAboutWorkoutReminder({
+      const delivered = await notifyUserAboutWorkoutReminder({
         userId: reminder.userId,
         workout,
       });
-      sent += 1;
+      if (delivered) sent += 1;
     } catch (error) {
       console.error("[workout-reminder] delivery failed after claim:", reminder.id, error);
     }
