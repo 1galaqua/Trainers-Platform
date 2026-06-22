@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 
@@ -22,14 +22,18 @@ import { getIsraelDateString } from "@/lib/calendar-datetime";
 import { WORKOUT_DURATION_OPTIONS } from "@/lib/calendar-validation";
 import { programTypeLabels } from "@/lib/program-labels";
 import type { ProgramType } from "@/lib/prisma-client";
-import { cn } from "@/lib/utils";
 import {
   createScheduledWorkoutAction,
   type CalendarTraineeOption,
 } from "@/server/actions/calendar";
 
+import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
 import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
 import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
+import {
+  workoutSheetContentClassName,
+  workoutSheetScrollClassName,
+} from "./workout-sheet-layout";
 
 type WorkoutFormType = "PERSONAL" | "GROUP";
 
@@ -47,11 +51,6 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
   const [maxParticipants, setMaxParticipants] = useState(8);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const activeTrainees = useMemo(
-    () => trainees.filter((trainee) => trainee.status === "active"),
-    [trainees],
-  );
 
   function resetFormState() {
     setError(null);
@@ -72,18 +71,6 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
     if (!nextOpen) {
       resetFormState();
     }
-  }
-
-  function toggleGroupTrainee(traineeId: string) {
-    setSelectedGroupTraineeIds((current) => {
-      if (current.includes(traineeId)) {
-        return current.filter((id) => id !== traineeId);
-      }
-      if (current.length >= maxParticipants) {
-        return current;
-      }
-      return [...current, traineeId];
-    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -119,178 +106,141 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
           </Button>
         }
       />
-      <SheetContent
-        side="right"
-        className="gap-0 overflow-y-auto p-0 sm:max-w-md [&>button]:top-3 [&>button]:right-auto [&>button]:left-3"
-      >
-        <SheetHeader className="border-border border-b px-4 py-4">
+      <SheetContent side="right" className={workoutSheetContentClassName}>
+        <SheetHeader className="shrink-0 border-border border-b px-4 py-4">
           <SheetTitle>אימון חדש</SheetTitle>
           <SheetDescription>קביעת אימון אישי או קבוצתי ביומן</SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={workoutType === "PERSONAL" ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => setWorkoutType("PERSONAL")}
-            >
-              אישי
-            </Button>
-            <Button
-              type="button"
-              variant={workoutType === "GROUP" ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => setWorkoutType("GROUP")}
-            >
-              קבוצתי
-            </Button>
-          </div>
+        <div className={workoutSheetScrollClassName}>
+          <form onSubmit={handleSubmit} className="min-w-0 space-y-4 px-4 py-4 pb-6">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={workoutType === "PERSONAL" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setWorkoutType("PERSONAL")}
+              >
+                אישי
+              </Button>
+              <Button
+                type="button"
+                variant={workoutType === "GROUP" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setWorkoutType("GROUP")}
+              >
+                קבוצתי
+              </Button>
+            </div>
 
-          {workoutType === "PERSONAL" ? (
-            <>
-              <PersonalWorkoutTraineePicker
-                trainees={trainees}
-                selectedTraineeId={selectedPersonalTraineeId}
-                onSelect={handlePersonalTraineeSelect}
-                disabled={trainees.length === 0}
-              />
-              <PersonalWorkoutProgramSelect
-                traineeId={selectedPersonalTraineeId}
-                selectedProgramId={selectedProgramId}
-                onSelect={setSelectedProgramId}
-                disabled={!selectedPersonalTraineeId}
-              />
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="workoutKind">סוג אימון</Label>
-                <Select id="workoutKind" name="workoutKind" defaultValue="STRENGTH" required>
-                  {(Object.keys(programTypeLabels) as ProgramType[]).map((type) => (
-                    <option key={type} value={type}>
-                      {programTypeLabels[type]}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxParticipants">מקסימום משתתפים</Label>
-                <Input
-                  id="maxParticipants"
-                  name="maxParticipants"
-                  type="number"
-                  min={2}
-                  max={50}
-                  value={maxParticipants}
-                  onChange={(event) => {
-                    const next = Number(event.target.value);
-                    setMaxParticipants(next);
-                    if (Number.isInteger(next) && next > 0) {
-                      setSelectedGroupTraineeIds((current) =>
-                        current.length > next ? current.slice(0, next) : current,
-                      );
-                    }
-                  }}
-                  required
+            {workoutType === "PERSONAL" ? (
+              <>
+                <PersonalWorkoutTraineePicker
+                  trainees={trainees}
+                  selectedTraineeId={selectedPersonalTraineeId}
+                  onSelect={handlePersonalTraineeSelect}
+                  disabled={trainees.length === 0}
                 />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>מתאמנים פעילים (אופציונלי)</Label>
-                  <span className="text-muted-foreground text-xs">
-                    {selectedGroupTraineeIds.length} / {maxParticipants}
-                  </span>
+                <PersonalWorkoutProgramSelect
+                  traineeId={selectedPersonalTraineeId}
+                  selectedProgramId={selectedProgramId}
+                  onSelect={setSelectedProgramId}
+                  disabled={!selectedPersonalTraineeId}
+                />
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="workoutKind">סוג אימון</Label>
+                  <Select id="workoutKind" name="workoutKind" defaultValue="STRENGTH" required>
+                    {(Object.keys(programTypeLabels) as ProgramType[]).map((type) => (
+                      <option key={type} value={type}>
+                        {programTypeLabels[type]}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
-                {activeTrainees.length === 0 ? (
-                  <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
-                    אין מתאמנים פעילים לרישום
-                  </p>
-                ) : (
-                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2">
-                    {activeTrainees.map((trainee) => {
-                      const isSelected = selectedGroupTraineeIds.includes(trainee.id);
-                      const isDisabled =
-                        !isSelected && selectedGroupTraineeIds.length >= maxParticipants;
-
-                      return (
-                        <label
-                          key={trainee.id}
-                          className={cn(
-                            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-                            isSelected ? "bg-primary/10" : "hover:bg-muted/60",
-                            isDisabled && "cursor-not-allowed opacity-50",
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            value={trainee.id}
-                            checked={isSelected}
-                            disabled={isDisabled}
-                            onChange={() => toggleGroupTrainee(trainee.id)}
-                            className="size-4 shrink-0 accent-primary"
-                          />
-                          <span className="truncate">{trainee.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="maxParticipants">מקסימום משתתפים</Label>
+                  <Input
+                    id="maxParticipants"
+                    name="maxParticipants"
+                    type="number"
+                    min={2}
+                    max={50}
+                    value={maxParticipants}
+                    onChange={(event) => {
+                      const next = Number(event.target.value);
+                      setMaxParticipants(next);
+                      if (Number.isInteger(next) && next > 0) {
+                        setSelectedGroupTraineeIds((current) =>
+                          current.length > next ? current.slice(0, next) : current,
+                        );
+                      }
+                    }}
+                    required
+                  />
+                </div>
+                <GroupWorkoutTraineeManager
+                  trainees={trainees}
+                  selectedIds={selectedGroupTraineeIds}
+                  onSelectedIdsChange={setSelectedGroupTraineeIds}
+                  maxParticipants={maxParticipants}
+                />
                 <p className="text-muted-foreground text-xs">
                   ניתן לרשום מתאמנים פעילים כבר ביצירת האימון
                 </p>
+              </>
+            )}
+
+            <div className="min-w-0 space-y-3">
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="date">תאריך</Label>
+                <DateInput
+                  id="date"
+                  name="date"
+                  required
+                  min={getIsraelDateString()}
+                  defaultValue={getIsraelDateString()}
+                />
               </div>
-            </>
-          )}
-
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="date">תאריך</Label>
-              <DateInput
-                id="date"
-                name="date"
-                required
-                min={getIsraelDateString()}
-                defaultValue={getIsraelDateString()}
-              />
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="time">שעה</Label>
+                <TimeInput id="time" name="time" required defaultValue="09:00" />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="time">שעה</Label>
-              <TimeInput id="time" name="time" required defaultValue="09:00" />
+              <Label htmlFor="durationMinutes">משך (דקות)</Label>
+              <Select id="durationMinutes" name="durationMinutes" defaultValue="60" required>
+                {WORKOUT_DURATION_OPTIONS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {minutes} דק׳
+                  </option>
+                ))}
+              </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="durationMinutes">משך (דקות)</Label>
-            <Select id="durationMinutes" name="durationMinutes" defaultValue="60" required>
-              {WORKOUT_DURATION_OPTIONS.map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {minutes} דק׳
-                </option>
-              ))}
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">הערות (אופציונלי)</Label>
+              <Textarea id="notes" name="notes" rows={3} placeholder="הערות לאימון" />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">הערות (אופציונלי)</Label>
-            <Textarea id="notes" name="notes" rows={3} placeholder="הערות לאימון" />
-          </div>
+            {error && <p className="text-destructive text-sm">{error}</p>}
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={
-              loading ||
-              (workoutType === "PERSONAL" &&
-                (trainees.length === 0 || !selectedPersonalTraineeId))
-            }
-          >
-            {loading ? "שומר..." : "שמירת אימון"}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={
+                loading ||
+                (workoutType === "PERSONAL" &&
+                  (trainees.length === 0 || !selectedPersonalTraineeId))
+              }
+            >
+              {loading ? "שומר..." : "שמירת אימון"}
+            </Button>
+          </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

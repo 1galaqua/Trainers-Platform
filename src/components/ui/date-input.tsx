@@ -1,23 +1,20 @@
 import * as React from "react";
+import { CalendarDays, Clock } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const pickerIndicatorClasses =
-  "[&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:left-2.5 [&::-webkit-calendar-picker-indicator]:right-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer";
-
 function DateInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0 w-full">
       <Input
         type="date"
-        dir="ltr"
-        className={cn(
-          "min-w-0 py-2 pl-10 pr-3 text-right [color-scheme:light] dark:[color-scheme:dark]",
-          pickerIndicatorClasses,
-          className,
-        )}
+        className={cn("input-date-rtl dark:[color-scheme:dark]", className)}
         {...props}
+      />
+      <CalendarDays
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
       />
     </div>
   );
@@ -25,16 +22,15 @@ function DateInput({ className, ...props }: React.ComponentProps<typeof Input>) 
 
 function TimeInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0 w-full">
       <Input
         type="time"
-        dir="ltr"
-        className={cn(
-          "min-w-0 py-2 pl-10 pr-3 text-right [color-scheme:light] dark:[color-scheme:dark]",
-          pickerIndicatorClasses,
-          className,
-        )}
+        className={cn("input-time-rtl dark:[color-scheme:dark]", className)}
         {...props}
+      />
+      <Clock
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
       />
     </div>
   );

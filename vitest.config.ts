@@ -1,11 +1,14 @@
 import path from "node:path";
 
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    environmentMatchGlobs: [["tests/features/**/*.test.ts", "happy-dom"]],
     env: {
       SESSION_SECRET: "vitest-session-secret-key",
     },

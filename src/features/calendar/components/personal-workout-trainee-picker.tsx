@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { traineeNameMatchesSearch } from "@/lib/trainee-name-search";
 import type { CalendarTraineeOption } from "@/server/actions/calendar";
 
 type PersonalWorkoutTraineePickerProps = {
@@ -16,10 +17,6 @@ type PersonalWorkoutTraineePickerProps = {
   disabled?: boolean;
 };
 
-function normalizeSearch(value: string) {
-  return value.trim().toLowerCase();
-}
-
 export function PersonalWorkoutTraineePicker({
   trainees,
   selectedTraineeId,
@@ -27,7 +24,6 @@ export function PersonalWorkoutTraineePicker({
   disabled = false,
 }: PersonalWorkoutTraineePickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const normalizedSearch = normalizeSearch(searchQuery);
 
   const selectedTrainee = useMemo(
     () => trainees.find((trainee) => trainee.id === selectedTraineeId) ?? null,
@@ -38,9 +34,9 @@ export function PersonalWorkoutTraineePicker({
     return trainees.filter(
       (trainee) =>
         trainee.id !== selectedTraineeId &&
-        (!normalizedSearch || trainee.name.toLowerCase().includes(normalizedSearch)),
+        traineeNameMatchesSearch(trainee.name, searchQuery),
     );
-  }, [trainees, selectedTraineeId, normalizedSearch]);
+  }, [trainees, selectedTraineeId, searchQuery]);
 
   return (
     <div className="space-y-2">
@@ -87,7 +83,7 @@ export function PersonalWorkoutTraineePicker({
 
           {matchingTrainees.length === 0 ? (
             <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
-              {normalizedSearch ? "לא נמצאו מתאמנים תואמים" : "כל המתאמנים כבר נבחרו"}
+              {searchQuery.trim() ? "לא נמצאו מתאמנים תואמים" : "כל המתאמנים כבר נבחרו"}
             </p>
           ) : (
             <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2">

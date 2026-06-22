@@ -31,6 +31,10 @@ import {
 import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
 import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
 import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
+import {
+  workoutSheetContentClassName,
+  workoutSheetScrollClassName,
+} from "./workout-sheet-layout";
 import { useCalendarFeedback } from "./calendar-feedback-context";
 
 type EditWorkoutSheetProps = {
@@ -114,18 +118,16 @@ export function EditWorkoutSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="right"
-        className="gap-0 overflow-y-auto p-0 sm:max-w-md [&>button]:top-3 [&>button]:right-auto [&>button]:left-3"
-      >
-        <SheetHeader className="border-border border-b px-4 py-4">
+      <SheetContent side="right" className={workoutSheetContentClassName}>
+        <SheetHeader className="shrink-0 border-border border-b px-4 py-4">
           <SheetTitle>עריכת אימון</SheetTitle>
           <SheetDescription>
             {isPersonal ? "אימון אישי" : "אימון קבוצתי"}
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
+        <div className={workoutSheetScrollClassName}>
+          <form onSubmit={handleSubmit} className="min-w-0 space-y-4 px-4 py-4 pb-6">
           {isPersonal ? (
             <>
               <PersonalWorkoutTraineePicker
@@ -188,8 +190,8 @@ export function EditWorkoutSheet({
             </>
           )}
 
-          <div className="space-y-3">
-            <div className="space-y-2">
+          <div className="min-w-0 space-y-3">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor={`date-${workout.id}`}>תאריך</Label>
               <DateInput
                 id={`date-${workout.id}`}
@@ -198,7 +200,7 @@ export function EditWorkoutSheet({
                 defaultValue={date}
               />
             </div>
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor={`time-${workout.id}`}>שעה</Label>
               <TimeInput
                 id={`time-${workout.id}`}
@@ -245,7 +247,8 @@ export function EditWorkoutSheet({
           >
             {loading ? "שומר..." : "שמירת שינויים"}
           </Button>
-        </form>
+          </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

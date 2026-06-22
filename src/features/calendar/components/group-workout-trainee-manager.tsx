@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import {
+  normalizeTraineeNameSearch,
+  traineeNameMatchesSearch,
+} from "@/lib/trainee-name-search";
 import type {
   CalendarRegisteredTrainee,
   CalendarTraineeOption,
@@ -20,10 +24,6 @@ type GroupWorkoutTraineeManagerProps = {
   registeredTrainees?: CalendarRegisteredTrainee[];
 };
 
-function normalizeSearch(value: string) {
-  return value.trim().toLowerCase();
-}
-
 export function GroupWorkoutTraineeManager({
   trainees,
   selectedIds,
@@ -32,7 +32,7 @@ export function GroupWorkoutTraineeManager({
   registeredTrainees = [],
 }: GroupWorkoutTraineeManagerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const normalizedSearch = normalizeSearch(searchQuery);
+  const normalizedSearch = normalizeTraineeNameSearch(searchQuery);
 
   const traineeNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -59,10 +59,9 @@ export function GroupWorkoutTraineeManager({
     return activeTrainees
       .filter((trainee) => !selectedIds.includes(trainee.id))
       .filter(
-        (trainee) =>
-          !normalizedSearch || trainee.name.toLowerCase().includes(normalizedSearch),
+        (trainee) => traineeNameMatchesSearch(trainee.name, searchQuery),
       );
-  }, [activeTrainees, selectedIds, normalizedSearch]);
+  }, [activeTrainees, selectedIds, searchQuery]);
 
   const atCapacity = selectedIds.length >= maxParticipants;
 
