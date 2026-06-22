@@ -8,7 +8,6 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    environmentMatchGlobs: [["tests/features/**/*.test.ts", "happy-dom"]],
     env: {
       SESSION_SECRET: "vitest-session-secret-key",
     },
