@@ -50,12 +50,26 @@ function spotsSummary(
   return `${summary} · נותרו ${spotsLeft} מקומות`;
 }
 
+export function resolveNotificationRecipients(
+  userIds: string[],
+  excludeUserIds: string[] = [],
+) {
+  const excluded = new Set(excludeUserIds);
+  return [...new Set(userIds)].filter((userId) => !excluded.has(userId));
+}
+
 async function deliverNotificationsToUsers(
   userIds: string[],
   data: NotificationDelivery,
+  options?: { excludeUserIds?: string[] },
 ) {
-  const recipients = await filterUsersWithoutRecentDuplicateNotification(
+  const uniqueUserIds = resolveNotificationRecipients(
     userIds,
+    options?.excludeUserIds,
+  );
+
+  const recipients = await filterUsersWithoutRecentDuplicateNotification(
+    uniqueUserIds,
     data.type,
     data.workoutId,
   );
@@ -98,22 +112,34 @@ async function deliverNotificationsToUsers(
   }
 }
 
-async function deliverNotificationToUser(userId: string, data: NotificationDelivery) {
-  await deliverNotificationsToUsers([userId], data);
+async function deliverNotificationToUser(
+  userId: string,
+  data: NotificationDelivery,
+  options?: { excludeUserIds?: string[] },
+) {
+  await deliverNotificationsToUsers([userId], data, options);
 }
 
 export async function notifyTraineeAboutPersonalScheduled(params: {
   workout: WorkoutNotificationContext;
   traineeId: string;
 }) {
+  if (params.traineeId === params.workout.coachId) {
+    return;
+  }
+
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationToUser(params.traineeId, {
-    type: "PERSONAL_SCHEDULED",
-    title: "נקבע לך אימון",
-    body: `נקבע לך אימון אישי: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationToUser(
+    params.traineeId,
+    {
+      type: "PERSONAL_SCHEDULED",
+      title: "נקבע לך אימון",
+      body: `נקבע לך אימון אישי: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyCoachAboutGroupRegistration(params: {
@@ -150,28 +176,44 @@ export async function notifyTraineeAboutPersonalCancellation(params: {
   workout: WorkoutNotificationContext;
   traineeId: string;
 }) {
+  if (params.traineeId === params.workout.coachId) {
+    return;
+  }
+
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationToUser(params.traineeId, {
-    type: "PERSONAL_CANCELLED",
-    title: "אימון אישי בוטל",
-    body: `האימון האישי בוטל: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationToUser(
+    params.traineeId,
+    {
+      type: "PERSONAL_CANCELLED",
+      title: "אימון אישי בוטל",
+      body: `האימון האישי בוטל: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyTraineeAboutPersonalUpdate(params: {
   workout: WorkoutNotificationContext;
   traineeId: string;
 }) {
+  if (params.traineeId === params.workout.coachId) {
+    return;
+  }
+
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationToUser(params.traineeId, {
-    type: "PERSONAL_UPDATED",
-    title: "אימון אישי עודכן",
-    body: `האימון האישי עודכן: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationToUser(
+    params.traineeId,
+    {
+      type: "PERSONAL_UPDATED",
+      title: "אימון אישי עודכן",
+      body: `האימון האישי עודכן: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyRegisteredTraineesAboutGroupCancellation(params: {
@@ -180,12 +222,16 @@ export async function notifyRegisteredTraineesAboutGroupCancellation(params: {
 }) {
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationsToUsers(params.traineeIds, {
-    type: "GROUP_CANCELLED",
-    title: "אימון קבוצתי בוטל",
-    body: `האימון הקבוצתי בוטל: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationsToUsers(
+    params.traineeIds,
+    {
+      type: "GROUP_CANCELLED",
+      title: "אימון קבוצתי בוטל",
+      body: `האימון הקבוצתי בוטל: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyRegisteredTraineesAboutGroupUpdate(params: {
@@ -194,12 +240,16 @@ export async function notifyRegisteredTraineesAboutGroupUpdate(params: {
 }) {
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationsToUsers(params.traineeIds, {
-    type: "GROUP_UPDATED",
-    title: "אימון קבוצתי עודכן",
-    body: `האימון הקבוצתי עודכן: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationsToUsers(
+    params.traineeIds,
+    {
+      type: "GROUP_UPDATED",
+      title: "אימון קבוצתי עודכן",
+      body: `האימון הקבוצתי עודכן: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyTraineesAboutGroupEnrollment(params: {
@@ -210,12 +260,16 @@ export async function notifyTraineesAboutGroupEnrollment(params: {
 
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationsToUsers(params.traineeIds, {
-    type: "GROUP_ENROLLED",
-    title: "נרשמת לאימון קבוצתי",
-    body: `נרשמת לאימון קבוצתי: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationsToUsers(
+    params.traineeIds,
+    {
+      type: "GROUP_ENROLLED",
+      title: "נרשמת לאימון קבוצתי",
+      body: `נרשמת לאימון קבוצתי: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyTraineesAboutGroupUnenrollment(params: {
@@ -226,12 +280,16 @@ export async function notifyTraineesAboutGroupUnenrollment(params: {
 
   const summary = formatWorkoutSummary(params.workout);
 
-  await deliverNotificationsToUsers(params.traineeIds, {
-    type: "GROUP_UNENROLLED",
-    title: "הוסרת מרישום לאימון קבוצתי",
-    body: `הוסרת מרישום לאימון קבוצתי: ${summary}`,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationsToUsers(
+    params.traineeIds,
+    {
+      type: "GROUP_UNENROLLED",
+      title: "הוסרת מרישום לאימון קבוצתי",
+      body: `הוסרת מרישום לאימון קבוצתי: ${summary}`,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function notifyUnregisteredTraineesAboutGroupSpots(params: {
@@ -242,12 +300,16 @@ export async function notifyUnregisteredTraineesAboutGroupSpots(params: {
 }) {
   const body = spotsSummary(params.workout, params.maxParticipants, params.registeredCount);
 
-  await deliverNotificationsToUsers(params.traineeIds, {
-    type: "GROUP_SPOTS_AVAILABLE",
-    title: "מקומות פנויים באימון קבוצתי",
-    body,
-    workoutId: params.workout.id,
-  });
+  await deliverNotificationsToUsers(
+    params.traineeIds,
+    {
+      type: "GROUP_SPOTS_AVAILABLE",
+      title: "מקומות פנויים באימון קבוצתי",
+      body,
+      workoutId: params.workout.id,
+    },
+    { excludeUserIds: [params.workout.coachId] },
+  );
 }
 
 export async function getCoachTraineeIdsNotRegistered(
@@ -268,5 +330,5 @@ export async function getCoachTraineeIdsNotRegistered(
   const registeredIds = new Set(registrations.map((registration) => registration.traineeId));
   return links
     .map((link) => link.traineeId)
-    .filter((traineeId) => !registeredIds.has(traineeId));
+    .filter((traineeId) => traineeId !== coachId && !registeredIds.has(traineeId));
 }
