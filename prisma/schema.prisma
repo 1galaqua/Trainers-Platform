@@ -48,6 +48,7 @@ enum AppNotificationType {
   GROUP_UNENROLLED
   GROUP_CANCELLATION_BY_TRAINEE
   WORKOUT_REMINDER
+  BODY_WEIGHT_REMINDER
 }
 
 enum ScheduledReminderType {
@@ -96,6 +97,8 @@ model User {
   appNotifications           AppNotification[]
   pushSubscriptions          PushSubscription[]
   workoutReminders           UserWorkoutReminder[]
+  bodyWeightLogs             BodyWeightLog[]
+  bodyWeightReminder         BodyWeightReminder?
 }
 
 model TraineeInvite {
@@ -370,4 +373,31 @@ model UserWorkoutReminder {
   @@unique([workoutId, userId])
   @@index([scheduledFor, sentAt])
   @@index([userId])
+}
+
+model BodyWeightLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId   String   @db.ObjectId
+  weightKg    Float
+  recordedAt  DateTime
+  recordedDay String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainee     User     @relation(fields: [traineeId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
+}
+
+model BodyWeightReminder {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String    @unique @db.ObjectId
+  enabled    Boolean   @default(true)
+  daysOfWeek Int[]
+  timeLocal  String
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  trainee    User      @relation(fields: [traineeId], references: [id])
 }

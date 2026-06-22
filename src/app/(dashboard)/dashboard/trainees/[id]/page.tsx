@@ -20,7 +20,10 @@ import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus }
 import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
 import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
-import { getCoachTraineeProgressAction } from "@/server/actions/workouts";
+import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
+import { BODY_WEIGHT_PROGRESS_ID } from "@/lib/body-weight-validation";
+import { getCoachTraineeBodyWeightChartAction } from "@/server/actions/body-weight";
+import { getCoachTraineeProgressExercisesAction, getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
 export const metadata = {
@@ -50,7 +53,8 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const [sessions, coachingPeriod, template, coachLink] = await Promise.all([
+  const [sessions, coachingPeriod, template, coachLink, exercises, bodyWeightData] =
+    await Promise.all([
     getCoachTraineeProgressAction(id),
     getTraineeCoachingPeriodAction(id),
     getCoachOnboardingTemplateAction(),
@@ -61,6 +65,8 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         agreementRedoRequestedAt: true,
       },
     }),
+    getCoachTraineeProgressExercisesAction(id),
+    getCoachTraineeBodyWeightChartAction(id),
   ]);
 
   const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
@@ -153,7 +159,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
           <Button
             variant="outline"
             size="sm"
-            render={<Link href="#workout-history" />}
+            render={<Link href="#progress-graphs" />}
           >
             צפייה בהתקדמות
           </Button>
@@ -192,6 +198,24 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
       <div className="flex justify-end">
         <DeleteTraineeButton traineeId={id} traineeName={name} />
+      </div>
+
+      <div id="progress-graphs" className="scroll-mt-6 min-w-0 space-y-4">
+        <div>
+          <h2 className="font-medium text-base">גרפי התקדמות</h2>
+          <p className="mt-1 text-muted-foreground text-sm">
+            משקל גוף וגרפי אימון — תצוגה לקריאה בלבד
+          </p>
+        </div>
+        <ProgressPageClient
+          exercises={exercises}
+          bodyWeightData={bodyWeightData}
+          readOnly
+          defaultSelectedId={
+            bodyWeightData.length > 0 ? BODY_WEIGHT_PROGRESS_ID : undefined
+          }
+          emptyMessage="אין עדיין נתוני התקדמות להצגה."
+        />
       </div>
 
       <div id="workout-history" className="scroll-mt-6 space-y-4">

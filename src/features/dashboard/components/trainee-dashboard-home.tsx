@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TraineeWeeklyWorkoutChart } from "@/features/dashboard/components/trainee-weekly-workout-chart";
 import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
 import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
+import { getTraineeBodyWeightChartAction } from "@/server/actions/body-weight";
 import {
   getTraineeProgressExercisesAction,
   getWorkoutHistoryAction,
@@ -14,23 +15,35 @@ type TraineeDashboardHomeProps = {
 };
 
 export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHomeProps) {
-  const [sessions, exercises] = await Promise.all([
+  const [sessions, exercises, bodyWeightData] = await Promise.all([
     getWorkoutHistoryAction(),
     getTraineeProgressExercisesAction(),
+    getTraineeBodyWeightChartAction(),
   ]);
 
   const sessionDates = sessions.map((session) => session.completedAt.toISOString());
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+    <div className="min-w-0 space-y-8">
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">לוח בקרה</h1>
           <p className="mt-1 text-muted-foreground text-sm">
             {traineeName ? `שלום, ${traineeName}` : "סיכום אימונים והתקדמות"}
           </p>
         </div>
-        <Button render={<Link href="/dashboard/workouts/log" />}>דיווח אימון</Button>
+        <div className="flex w-full min-w-0 items-stretch gap-2 sm:w-auto sm:items-center">
+          <Button className="min-w-0 flex-1 sm:flex-none" render={<Link href="/dashboard/workouts/log" />}>
+            דיווח אימון
+          </Button>
+          <Button
+            className="min-w-0 flex-1 sm:flex-none"
+            variant="outline"
+            render={<Link href="/dashboard/body-weight" />}
+          >
+            משקל גוף
+          </Button>
+        </div>
       </div>
 
       <TraineeWeeklyWorkoutChart sessionDates={sessionDates} />
@@ -38,9 +51,9 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
       <div className="space-y-4">
         <div>
           <h2 className="font-medium text-base">גרפי התקדמות</h2>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב משקל ונפח אימון לפי תאריך</p>
+          <p className="mt-1 text-muted-foreground text-sm">מעקב משקל גוף, משקלי אימון ונפח לפי תאריך</p>
         </div>
-        <ProgressPageClient exercises={exercises} />
+        <ProgressPageClient exercises={exercises} bodyWeightData={bodyWeightData} />
       </div>
 
       <div className="space-y-4">

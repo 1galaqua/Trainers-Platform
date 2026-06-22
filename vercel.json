@@ -9,6 +9,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/body-weight-reminders",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/cleanup-notifications",
       "schedule": "0 3 * * *"
     }

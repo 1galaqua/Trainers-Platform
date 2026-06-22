@@ -202,7 +202,7 @@ export function DashboardShell({
           </header>
         )}
 
-        <main className="mx-auto w-full max-w-6xl flex-1 overflow-auto p-4 md:p-6">
+        <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
           {children}
         </main>
       </div>

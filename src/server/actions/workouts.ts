@@ -435,6 +435,59 @@ export async function getTraineeProgressExercisesAction() {
   );
 }
 
+export async function getCoachTraineeProgressExercisesAction(traineeId: string) {
+  const coach = await requireCoach();
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return [];
+
+  const programs = await getCoachTraineeProgramsAction(traineeId);
+
+  const results = await Promise.all(
+    programs.flatMap((program) =>
+      program.exercises.map(async (ex) => {
+        const logs = await prisma.exerciseLog.findMany({
+          where: {
+            exerciseId: ex.id,
+            session: { traineeId },
+          },
+          include: {
+            session: true,
+            exercise: true,
+            setLogs: { orderBy: { setNumber: "asc" } },
+          },
+          orderBy: { session: { completedAt: "asc" } },
+        });
+
+        const data = logs.map((log) => {
+          const metrics = computeExerciseLogMetrics({
+            weightKg: log.weightKg,
+            repsCompleted: log.repsCompleted,
+            setLogs: log.setLogs,
+            defaultReps: log.exercise.reps,
+            plannedSets: log.exercise.sets,
+          });
+
+          return {
+            date: log.session.completedAt.toISOString(),
+            weight: metrics.averageWeight,
+            volume: metrics.volume,
+          };
+        });
+
+        const label = programs.length > 1 ? `${ex.name} (${program.name})` : ex.name;
+
+        return {
+          id: ex.id,
+          name: label,
+          data,
+        };
+      }),
+    ),
+  );
+
+  return results.filter((item) => item.data.length > 0);
+}
+
 export async function getExerciseProgressAction(exerciseId: string) {
   const trainee = await requireTrainee();
 

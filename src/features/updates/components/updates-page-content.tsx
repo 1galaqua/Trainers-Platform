@@ -141,6 +141,22 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                       <p className="text-muted-foreground text-xs">
                         {formatWorkoutDateTime(new Date(notification.createdAt))}
                       </p>
+                      {notification.type === "BODY_WEIGHT_REMINDER" && (
+                        <Button
+                          render={<Link href="/dashboard/body-weight?log=1" />}
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (unread && !isPending) {
+                              void handleMarkRead(notification.id);
+                            }
+                          }}
+                        >
+                          עדכון משקל
+                        </Button>
+                      )}
                       {notification.workoutId && (
                         <Button
                           render={
