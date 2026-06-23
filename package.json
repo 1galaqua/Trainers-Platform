@@ -16,9 +16,6 @@
     "db:studio": "prisma studio",
     "db:seed": "npx prisma db seed"
   },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@clerk/nextjs": "^6.12.0",

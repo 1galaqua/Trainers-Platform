@@ -1,10 +1,10 @@
 "use client";
 
-import { CalendarDays } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEffectiveWorkoutsCompleted } from "@/lib/trainee-status";
@@ -23,20 +23,12 @@ function DateInputField({ id, label, value, onChange }: DateInputFieldProps) {
       <Label className="block w-full text-right" htmlFor={id}>
         {label}
       </Label>
-      <div className="relative w-full">
-        <Input
-          id={id}
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          required
-          className="input-date-rtl"
-        />
-        <CalendarDays
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-        />
-      </div>
+      <DateInput
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+      />
     </div>
   );
 }

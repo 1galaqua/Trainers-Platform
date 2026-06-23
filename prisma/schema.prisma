@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -49,6 +48,10 @@ enum AppNotificationType {
   GROUP_CANCELLATION_BY_TRAINEE
   WORKOUT_REMINDER
   BODY_WEIGHT_REMINDER
+  SLEEP_REMINDER
+  WATER_REMINDER
+  MEASUREMENTS_REMINDER
+  STEPS_REMINDER
 }
 
 enum ScheduledReminderType {
@@ -99,6 +102,15 @@ model User {
   workoutReminders           UserWorkoutReminder[]
   bodyWeightLogs             BodyWeightLog[]
   bodyWeightReminder         BodyWeightReminder?
+  sleepLogs                  SleepLog[]
+  sleepReminder              SleepReminder?
+  waterLogs                  WaterLog[]
+  waterReminder              WaterReminder?
+  stepsLogs                  StepsLog[]
+  stepsReminder              StepsReminder?
+  measurementsLogs           MeasurementsLog[] @relation("TraineeMeasurements")
+  measurementsEntered        MeasurementsLog[] @relation("CoachMeasurements")
+  measurementsReminder       MeasurementsReminder?
 }
 
 model TraineeInvite {
@@ -400,4 +412,125 @@ model BodyWeightReminder {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   trainee    User      @relation(fields: [traineeId], references: [id])
+}
+
+model SleepLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId   String   @db.ObjectId
+  recordedDay String
+  sleepStart  String
+  sleepEnd    String
+  recordedAt  DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainee     User     @relation(fields: [traineeId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
+}
+
+model SleepReminder {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String    @unique @db.ObjectId
+  enabled    Boolean   @default(true)
+  daysOfWeek Int[]
+  timeLocal  String
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  trainee    User      @relation(fields: [traineeId], references: [id])
+}
+
+model WaterLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId   String   @db.ObjectId
+  amountMl    Int
+  recordedDay String
+  recordedAt  DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainee     User     @relation(fields: [traineeId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
+}
+
+model WaterReminder {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId     String    @unique @db.ObjectId
+  enabled       Boolean   @default(true)
+  daysOfWeek    Int[]
+  timesLocal    String[]
+  lastSentSlots Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  trainee       User      @relation(fields: [traineeId], references: [id])
+}
+
+model StepsLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId   String   @db.ObjectId
+  recordedDay String
+  steps       Int
+  recordedAt  DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainee     User     @relation(fields: [traineeId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
+}
+
+model StepsReminder {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String    @unique @db.ObjectId
+  enabled    Boolean   @default(true)
+  daysOfWeek Int[]
+  timeLocal  String
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  trainee    User      @relation(fields: [traineeId], references: [id])
+}
+
+model MeasurementsReminder {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String    @unique @db.ObjectId
+  enabled    Boolean   @default(true)
+  daysOfWeek Int[]
+  timeLocal  String
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  trainee    User      @relation(fields: [traineeId], references: [id])
+}
+
+model MeasurementsLog {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId      String   @db.ObjectId
+  coachId        String   @db.ObjectId
+  recordedDay    String
+  recordedAt     DateTime
+  notes          String?
+  bellyCm        Float?
+  shouldersCm    Float?
+  rightArmCm     Float?
+  rightForearmCm Float?
+  leftArmCm      Float?
+  leftForearmCm  Float?
+  rightLegCm     Float?
+  leftLegCm      Float?
+  chestCm        Float?
+  rightCalfCm    Float?
+  leftCalfCm     Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  trainee        User     @relation("TraineeMeasurements", fields: [traineeId], references: [id])
+  coach          User     @relation("CoachMeasurements", fields: [coachId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
 }

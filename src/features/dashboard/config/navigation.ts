@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, Calendar, ClipboardList, Dumbbell } from "lucide-react";
+import { Activity, BarChart3, Calendar, ClipboardList, Dumbbell } from "lucide-react";
 
 import type { UserRole } from "@/lib/prisma-client";
 
@@ -11,12 +11,14 @@ export type HeaderShortcut = {
 
 export const traineeHeaderShortcuts: HeaderShortcut[] = [
   { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
+  { href: "/dashboard/tracking", label: "מעקב", icon: Activity },
   { href: "/dashboard/my-program", label: "התוכניות שלי", icon: ClipboardList },
   { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
 ];
 
 export const coachHeaderShortcuts: HeaderShortcut[] = [
   { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
+  { href: "/dashboard/tracking", label: "מעקב", icon: Activity },
   { href: "/dashboard/workouts", label: "תוכניות אימון", icon: Dumbbell },
   { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
 ];

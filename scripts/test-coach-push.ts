@@ -1,4 +1,4 @@
-import { PrismaClient } from "../src/generated/prisma";
+import { PrismaClient } from "@prisma/client";
 import { sendPushNotification } from "../src/lib/push-vapid";
 
 const databaseUrl =

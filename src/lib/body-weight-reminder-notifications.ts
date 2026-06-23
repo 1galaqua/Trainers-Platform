@@ -44,7 +44,7 @@ export async function notifyUserAboutBodyWeightReminder(params: {
       await sendPushNotificationsToUsers([params.userId], {
         title: "תזכורת: עדכון משקל",
         body,
-        url: "/dashboard/body-weight?log=1",
+        url: "/dashboard/tracking",
         tag: `body-weight-reminder-${today}`,
         unreadCount,
       });
@@ -53,6 +53,6 @@ export async function notifyUserAboutBodyWeightReminder(params: {
     console.error("[push] body weight reminder delivery failed:", error);
   }
 
-  safeRevalidatePaths(["/dashboard/body-weight", "/dashboard/updates"]);
+  safeRevalidatePaths(["/dashboard/tracking", "/dashboard/updates"]);
   return true;
 }

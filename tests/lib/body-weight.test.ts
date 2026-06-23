@@ -133,4 +133,26 @@ describe("body weight chart data", () => {
     expect(merged[0]?.weight).toBe(85);
     expect(merged[1]?.weight).toBe(80);
   });
+
+  it("includes notes on chart points from logs", () => {
+    const chartData = mapBodyWeightLogsToChartData([
+      {
+        id: "1",
+        weightKg: 80,
+        recordedAt: new Date("2026-06-10T09:00:00.000Z"),
+        recordedDay: "2026-06-10",
+        notes: "אחרי ארוחת בוקר",
+      },
+      {
+        id: "2",
+        weightKg: 79,
+        recordedAt: new Date("2026-06-12T09:00:00.000Z"),
+        recordedDay: "2026-06-12",
+        notes: null,
+      },
+    ]);
+
+    expect(chartData[0]?.notes).toBe("אחרי ארוחת בוקר");
+    expect(chartData[1]?.notes).toBeNull();
+  });
 });

@@ -15,17 +15,74 @@ const CHART_GREEN = "#22c55e";
 const CHART_GREEN_BRIGHT = "#4ade80";
 const CHART_POINT_MIN_WIDTH_PX = 44;
 
+type ChartPoint = {
+  date: string;
+  weight: number;
+  volume: number;
+  label?: string;
+  notes?: string | null;
+  sleepStart?: string;
+  sleepEnd?: string;
+};
+
 type ProgressChartProps = {
-  data: Array<{ date: string; weight: number; volume: number }>;
+  data: Array<{
+    date: string;
+    weight: number;
+    volume: number;
+    notes?: string | null;
+    sleepStart?: string;
+    sleepEnd?: string;
+  }>;
   mode: "weight" | "volume";
   weightLabel?: string;
+  showNotesInTooltip?: boolean;
 };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short" });
 }
 
-export function ProgressChart({ data, mode, weightLabel }: ProgressChartProps) {
+function ProgressChartTooltip({
+  active,
+  payload,
+  label,
+  yLabel,
+  showNotesInTooltip,
+}: {
+  active?: boolean;
+  payload?: Array<{ value?: number; payload?: ChartPoint }>;
+  label?: string;
+  yLabel: string;
+  showNotesInTooltip?: boolean;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload as ChartPoint | undefined;
+  const value = payload[0]?.value;
+  const notes = point?.notes?.trim();
+
+  return (
+    <div
+      className="rounded-lg border bg-popover px-3 py-2 text-popover-foreground shadow-md text-sm"
+      dir="rtl"
+    >
+      <p>{`תאריך: ${label}`}</p>
+      <p>{`${yLabel}: ${value}`}</p>
+      {point?.sleepStart && point.sleepEnd ? (
+        <p className="text-muted-foreground">{`${point.sleepStart} – ${point.sleepEnd}`}</p>
+      ) : null}
+      {showNotesInTooltip && notes ? <p className="mt-1 text-muted-foreground">{notes}</p> : null}
+    </div>
+  );
+}
+
+export function ProgressChart({
+  data,
+  mode,
+  weightLabel,
+  showNotesInTooltip = false,
+}: ProgressChartProps) {
   const gradientId = useId().replace(/:/g, "");
 
   if (data.length === 0) {
@@ -68,8 +125,9 @@ export function ProgressChart({ data, mode, weightLabel }: ProgressChartProps) {
             />
             <YAxis tick={{ fontSize: 11 }} width={40} />
             <Tooltip
-              formatter={(value) => [`${value}`, yLabel]}
-              labelFormatter={(label) => `תאריך: ${label}`}
+              content={
+                <ProgressChartTooltip yLabel={yLabel} showNotesInTooltip={showNotesInTooltip} />
+              }
             />
             <Area
               type="monotone"

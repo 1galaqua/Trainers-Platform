@@ -69,11 +69,11 @@ describe("notifyUserAboutBodyWeightReminder", () => {
       ["trainee-1"],
       expect.objectContaining({
         title: "תזכורת: עדכון משקל",
-        url: "/dashboard/body-weight?log=1",
+        url: "/dashboard/tracking",
       }),
     );
     expect(revalidateMock).toHaveBeenCalledWith([
-      "/dashboard/body-weight",
+      "/dashboard/tracking",
       "/dashboard/updates",
     ]);
   });

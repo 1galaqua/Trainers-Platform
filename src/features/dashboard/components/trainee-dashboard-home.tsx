@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { TraineeWeeklyWorkoutChart } from "@/features/dashboard/components/trainee-weekly-workout-chart";
 import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
 import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
-import { getTraineeBodyWeightChartAction } from "@/server/actions/body-weight";
 import {
   getTraineeProgressExercisesAction,
   getWorkoutHistoryAction,
@@ -15,10 +14,9 @@ type TraineeDashboardHomeProps = {
 };
 
 export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHomeProps) {
-  const [sessions, exercises, bodyWeightData] = await Promise.all([
+  const [sessions, exercises] = await Promise.all([
     getWorkoutHistoryAction(),
     getTraineeProgressExercisesAction(),
-    getTraineeBodyWeightChartAction(),
   ]);
 
   const sessionDates = sessions.map((session) => session.completedAt.toISOString());
@@ -39,9 +37,9 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
           <Button
             className="min-w-0 flex-1 sm:flex-none"
             variant="outline"
-            render={<Link href="/dashboard/body-weight" />}
+            render={<Link href="/dashboard/tracking" />}
           >
-            משקל גוף
+            צפייה במעקב
           </Button>
         </div>
       </div>
@@ -51,9 +49,12 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
       <div className="space-y-4">
         <div>
           <h2 className="font-medium text-base">גרפי התקדמות</h2>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב משקל גוף, משקלי אימון ונפח לפי תאריך</p>
+          <p className="mt-1 text-muted-foreground text-sm">מעקב משקלי אימון ונפח לפי תאריך</p>
         </div>
-        <ProgressPageClient exercises={exercises} bodyWeightData={bodyWeightData} />
+        <ProgressPageClient
+          exercises={exercises}
+          emptyMessage="אין עדיין נתוני התקדמות. דווח על אימון כדי להתחיל."
+        />
       </div>
 
       <div className="space-y-4">

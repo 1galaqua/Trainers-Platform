@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
@@ -25,27 +26,35 @@ export function BodyWeightLogForm({
 }: BodyWeightLogFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
+    setSaved(false);
     setError(null);
 
-    const formData = new FormData(event.currentTarget);
-    const result = await upsertBodyWeightLogAction(formData);
-    setLoading(false);
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await upsertBodyWeightLogAction(formData);
 
-    if (result && "error" in result && result.error) {
-      setError(result.error);
-      return;
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        return;
+      }
+
+      setSaved(true);
+      router.refresh();
+    } catch {
+      setError("שגיאה בשמירת המשקל. נסה/י שוב.");
+    } finally {
+      setLoading(false);
     }
-
-    router.refresh();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <div className="min-w-0 space-y-2">
           <Label htmlFor="body-weight-value">משקל (ק״ג)</Label>
@@ -57,6 +66,7 @@ export function BodyWeightLogForm({
             max={BODY_WEIGHT_MAX_KG}
             step={0.1}
             required
+            disabled={loading}
             defaultValue={defaultWeightKg ?? undefined}
             placeholder="לדוגמה: 78.5"
           />
@@ -67,6 +77,7 @@ export function BodyWeightLogForm({
             id="body-weight-date"
             name="date"
             required
+            disabled={loading}
             max={getIsraelDateString()}
             defaultValue={defaultDate}
           />
@@ -75,13 +86,31 @@ export function BodyWeightLogForm({
 
       <div className="space-y-2">
         <Label htmlFor="body-weight-notes">הערות (אופציונלי)</Label>
-        <Textarea id="body-weight-notes" name="notes" rows={2} placeholder="למשל: אחרי אימון" />
+        <Textarea
+          id="body-weight-notes"
+          name="notes"
+          rows={2}
+          disabled={loading}
+          placeholder="למשל: אחרי אימון"
+        />
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
       <Button type="submit" className="w-full sm:w-auto" disabled={loading}>
-        {loading ? "שומר..." : submitLabel}
+        {loading ? (
+          <>
+            <Loader2 className="animate-spin" aria-hidden />
+            שומר...
+          </>
+        ) : saved ? (
+          <>
+            <Check aria-hidden />
+            נשמר!
+          </>
+        ) : (
+          submitLabel
+        )}
       </Button>
     </form>
   );

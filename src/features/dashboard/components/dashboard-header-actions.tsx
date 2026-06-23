@@ -14,9 +14,9 @@ export function DashboardHeaderActions({ userRole, unreadCount }: DashboardHeade
   if (userRole === "ADMIN") return null;
 
   return (
-    <div className="flex items-end gap-3">
-      <HeaderQuickLinks userRole={userRole} />
-      <UpdatesBellButton unreadCount={unreadCount} />
+    <div className="flex min-w-0 items-end gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <HeaderQuickLinks userRole={userRole} className="shrink-0" />
+      <UpdatesBellButton unreadCount={unreadCount} className="shrink-0" />
     </div>
   );
 }

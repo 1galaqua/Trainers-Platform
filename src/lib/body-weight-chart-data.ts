@@ -4,6 +4,7 @@ export type BodyWeightChartPoint = {
   date: string;
   weight: number;
   volume: number;
+  notes?: string | null;
 };
 
 export type BodyWeightLogRecord = {
@@ -27,6 +28,7 @@ export function mapBodyWeightLogsToChartData(logs: BodyWeightLogRecord[]): BodyW
       date: log.recordedAt.toISOString(),
       weight: log.weightKg,
       volume: log.weightKg,
+      notes: log.notes,
     }));
 }
 

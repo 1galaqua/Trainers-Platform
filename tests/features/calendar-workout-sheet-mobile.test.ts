@@ -49,15 +49,45 @@ describe("DateInput and TimeInput mobile layout", () => {
 
     const dateInput = container.querySelector("#date") as HTMLInputElement;
     expect(dateInput).toBeTruthy();
-    expect(dateInput.className).toContain("input-date-rtl");
+    expect(dateInput.className).toContain("input-date-rtl-field");
     expect(container.querySelector("svg.lucide-calendar-days")).toBeTruthy();
 
+    const dateWrapper = dateInput.closest(".grid");
+    expect(dateWrapper).toBeTruthy();
+
+    const iconButton = container.querySelector('button[aria-label="פתיחת בוחר תאריך"]');
+    expect(iconButton).toBeTruthy();
+
     const timeInput = container.querySelector("#time") as HTMLInputElement;
-    expect(timeInput.className).toContain("input-time-rtl");
+    expect(timeInput.type).toBe("text");
+    expect(timeInput.placeholder).toBe("17:30");
+    expect(timeInput.className).toContain("input-time-rtl-field");
     expect(container.querySelector("svg.lucide-clock")).toBeTruthy();
 
-    const wrappers = container.querySelectorAll(".relative.min-w-0.w-full");
-    expect(wrappers.length).toBeGreaterThanOrEqual(2);
+    const timeWrapper = timeInput.closest(".grid");
+    expect(timeWrapper).toBeTruthy();
+  });
+
+  it("opens the native date picker when clicking the calendar icon", async () => {
+    const user = userEvent.setup();
+    const showPicker = vi.fn();
+
+    const { container } = render(
+      createElement(DateInput, {
+        id: "date-icon",
+        name: "date",
+        defaultValue: "2026-06-22",
+      }),
+    );
+
+    const dateInput = container.querySelector("#date-icon") as HTMLInputElement & {
+      showPicker?: () => void;
+    };
+    dateInput.showPicker = showPicker;
+
+    await user.click(container.querySelector('button[aria-label="פתיחת בוחר תאריך"]')!);
+
+    expect(showPicker).toHaveBeenCalledTimes(1);
   });
 });
 

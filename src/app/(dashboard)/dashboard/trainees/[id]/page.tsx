@@ -21,8 +21,6 @@ import { prisma } from "@/lib/prisma";
 import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
 import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
-import { BODY_WEIGHT_PROGRESS_ID } from "@/lib/body-weight-validation";
-import { getCoachTraineeBodyWeightChartAction } from "@/server/actions/body-weight";
 import { getCoachTraineeProgressExercisesAction, getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
@@ -53,7 +51,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const [sessions, coachingPeriod, template, coachLink, exercises, bodyWeightData] =
+  const [sessions, coachingPeriod, template, coachLink, exercises] =
     await Promise.all([
     getCoachTraineeProgressAction(id),
     getTraineeCoachingPeriodAction(id),
@@ -66,7 +64,6 @@ export default async function TraineeDetailPage({ params }: PageProps) {
       },
     }),
     getCoachTraineeProgressExercisesAction(id),
-    getCoachTraineeBodyWeightChartAction(id),
   ]);
 
   const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
@@ -159,9 +156,9 @@ export default async function TraineeDetailPage({ params }: PageProps) {
           <Button
             variant="outline"
             size="sm"
-            render={<Link href="#progress-graphs" />}
+            render={<Link href={`/dashboard/tracking?traineeId=${id}`} />}
           >
-            צפייה בהתקדמות
+            צפייה במעקב
           </Button>
           <Button
             variant="outline"
@@ -204,16 +201,12 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         <div>
           <h2 className="font-medium text-base">גרפי התקדמות</h2>
           <p className="mt-1 text-muted-foreground text-sm">
-            משקל גוף וגרפי אימון — תצוגה לקריאה בלבד
+            גרפי אימון — תצוגה לקריאה בלבד
           </p>
         </div>
         <ProgressPageClient
           exercises={exercises}
-          bodyWeightData={bodyWeightData}
           readOnly
-          defaultSelectedId={
-            bodyWeightData.length > 0 ? BODY_WEIGHT_PROGRESS_ID : undefined
-          }
           emptyMessage="אין עדיין נתוני התקדמות להצגה."
         />
       </div>

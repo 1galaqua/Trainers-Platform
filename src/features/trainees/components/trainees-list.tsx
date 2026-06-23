@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { TraineeCard } from "@/features/trainees/components/trainee-card";
+import { traineeNameMatchesSearch } from "@/lib/trainee-name-search";
 import { matchesTraineeFilter, type TraineeFilter } from "@/lib/trainee-status";
 import type { QuestionField } from "@/lib/onboarding-template";
 import type { CoachTraineeListItem } from "@/server/actions/trainees";
@@ -33,19 +35,36 @@ export function TraineesList({
   initialFilter = "all",
 }: TraineesListProps) {
   const [filter, setFilter] = useState<TraineeFilter>(initialFilter);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setFilter(initialFilter);
   }, [initialFilter]);
 
   const filtered = useMemo(
-    () => trainees.filter((trainee) => matchesTraineeFilter(filter, trainee)),
-    [trainees, filter],
+    () =>
+      trainees.filter((trainee) => {
+        if (!matchesTraineeFilter(filter, trainee)) return false;
+        const name = trainee.displayName ?? "מתאמן";
+        return traineeNameMatchesSearch(name, searchQuery);
+      }),
+    [trainees, filter, searchQuery],
   );
+
+  const hasSearch = searchQuery.trim().length > 0;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="w-full min-w-0 space-y-1 sm:max-w-xs sm:flex-1">
+          <Label htmlFor="trainee-search">חיפוש לפי שם</Label>
+          <Input
+            id="trainee-search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="הקלד/י שם..."
+          />
+        </div>
         <div className="w-full min-w-0 space-y-1 sm:max-w-xs sm:flex-1">
           <Label htmlFor="trainee-filter">סינון מתאמנים</Label>
           <Select
@@ -67,7 +86,9 @@ export function TraineesList({
 
       {filtered.length === 0 ? (
         <p className="rounded-lg border border-border py-8 text-center text-muted-foreground text-sm">
-          אין מתאמנים התואמים לסינון שנבחר
+          {hasSearch
+            ? "לא נמצאו מתאמנים התואמים לחיפוש"
+            : "אין מתאמנים התואמים לסינון שנבחר"}
         </p>
       ) : (
         <div className="grid gap-4">

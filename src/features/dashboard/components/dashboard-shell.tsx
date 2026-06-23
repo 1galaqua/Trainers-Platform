@@ -153,7 +153,7 @@ export function DashboardShell({
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex min-h-14 items-end justify-between gap-3 border-border border-b bg-background/95 px-4 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+        <header className="sticky top-0 z-40 flex min-h-14 min-w-0 items-end justify-between gap-2 overflow-x-hidden border-border border-b bg-background/95 px-3 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
           <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
             <SheetTrigger
               render={

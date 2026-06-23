@@ -11,12 +11,15 @@ export type ProgressChartPoint = {
   date: string;
   weight: number;
   volume: number;
+  notes?: string | null;
+  sleepStart?: string;
+  sleepEnd?: string;
 };
 
 export type ProgressSeries = {
   id: string;
   name: string;
-  kind: "exercise" | "body-weight";
+  kind: "exercise" | "body-weight" | "water" | "sleep" | "measurement";
   data: ProgressChartPoint[];
 };
 
@@ -86,7 +89,23 @@ export function ProgressPageClient({
   const [mode, setMode] = useState<"weight" | "volume">("weight");
 
   const selected = series.find((item) => item.id === selectedId) ?? series[0];
-  const isBodyWeight = selected?.kind === "body-weight";
+  const isExercise = selected?.kind === "exercise";
+  const isTrackingMetric =
+    selected?.kind === "body-weight" ||
+    selected?.kind === "water" ||
+    selected?.kind === "sleep" ||
+    selected?.kind === "measurement";
+
+  const weightLabel =
+    selected?.kind === "body-weight"
+      ? "משקל גוף (ק״ג)"
+      : selected?.kind === "water"
+        ? 'שתייה (מ"ל)'
+        : selected?.kind === "sleep"
+          ? "שעות שינה"
+          : selected?.kind === "measurement"
+            ? 'היקף (ס"מ)'
+            : undefined;
 
   if (series.length === 0) {
     return (
@@ -115,7 +134,7 @@ export function ProgressPageClient({
             </option>
           ))}
         </Select>
-        {!isBodyWeight && (
+        {isExercise ? (
           <Select
             value={mode}
             onChange={(event) => setMode(event.target.value as "weight" | "volume")}
@@ -124,7 +143,7 @@ export function ProgressPageClient({
             <option value="weight">גרף משקל</option>
             <option value="volume">גרף נפח (משקל × חזרות × סטים)</option>
           </Select>
-        )}
+        ) : null}
       </div>
 
       <Card className="min-w-0 overflow-hidden">
@@ -134,8 +153,9 @@ export function ProgressPageClient({
         <CardContent className="min-w-0">
           <ProgressChart
             data={selected?.data ?? []}
-            mode={isBodyWeight ? "weight" : mode}
-            weightLabel={isBodyWeight ? "משקל גוף (ק״ג)" : undefined}
+            mode={isTrackingMetric || mode === "weight" ? "weight" : "volume"}
+            weightLabel={weightLabel}
+            showNotesInTooltip={isTrackingMetric}
           />
         </CardContent>
       </Card>

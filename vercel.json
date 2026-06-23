@@ -13,6 +13,22 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/sleep-reminders",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/water-reminders",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/measurements-reminders",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/steps-reminders",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/cleanup-notifications",
       "schedule": "0 3 * * *"
     }

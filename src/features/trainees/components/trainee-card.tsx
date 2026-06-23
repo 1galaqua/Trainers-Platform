@@ -109,9 +109,9 @@ export function TraineeCard({ trainee, questionnaireFields }: TraineeCardProps) 
             variant="outline"
             size="sm"
             className="w-full"
-            render={<Link href={`/dashboard/trainees/${trainee.id}#progress-graphs`} />}
+            render={<Link href={`/dashboard/tracking?traineeId=${trainee.id}`} />}
           >
-            צפייה בהתקדמות
+            צפייה במעקב
           </Button>
           <Button
             variant="outline"

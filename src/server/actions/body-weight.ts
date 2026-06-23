@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import {
-  appendQuestionnaireStartingWeight,
-  mapBodyWeightLogsToChartData,
-  resolveBodyWeightCurrentDisplay,
-} from "@/lib/body-weight-chart-data";
+  loadBodyWeightChartData,
+  loadBodyWeightCurrentDisplay,
+} from "@/lib/body-weight-load";
 import {
   BODY_WEIGHT_MAX_KG,
   BODY_WEIGHT_MIN_KG,
@@ -37,7 +36,7 @@ export type BodyWeightReminderSettings = {
 
 export type BodyWeightPageData = {
   logs: BodyWeightLogItem[];
-  chartData: Array<{ date: string; weight: number; volume: number }>;
+  chartData: Array<{ date: string; weight: number; volume: number; notes?: string | null }>;
   latestWeightKg: number | null;
   previousWeightKg: number | null;
   reminder: BodyWeightReminderSettings | null;
@@ -59,37 +58,10 @@ function mapLog(log: {
   };
 }
 
-async function getQuestionnaireStartingWeight(traineeId: string) {
-  const response = await prisma.questionnaireResponse.findUnique({
-    where: { traineeId },
-    select: { weightKg: true, completedAt: true },
-  });
-
-  if (!response?.weightKg) return null;
-
-  return {
-    weightKg: response.weightKg,
-    completedAt: response.completedAt,
-  };
-}
-
-async function buildChartDataForTrainee(traineeId: string) {
-  const [logs, startingWeight] = await Promise.all([
-    prisma.bodyWeightLog.findMany({
-      where: { traineeId },
-      orderBy: { recordedAt: "asc" },
-    }),
-    getQuestionnaireStartingWeight(traineeId),
-  ]);
-
-  const chartData = mapBodyWeightLogsToChartData(logs);
-  return appendQuestionnaireStartingWeight(chartData, startingWeight);
-}
-
 export async function getBodyWeightPageDataAction(): Promise<BodyWeightPageData> {
   const trainee = await requireTraineeOnboarded();
 
-  const [logs, reminder, chartData, startingWeight] = await Promise.all([
+  const [logs, reminder, chartData, { latestWeightKg, previousWeightKg }] = await Promise.all([
     prisma.bodyWeightLog.findMany({
       where: { traineeId: trainee.id },
       orderBy: { recordedAt: "desc" },
@@ -97,14 +69,9 @@ export async function getBodyWeightPageDataAction(): Promise<BodyWeightPageData>
     prisma.bodyWeightReminder.findUnique({
       where: { traineeId: trainee.id },
     }),
-    buildChartDataForTrainee(trainee.id),
-    getQuestionnaireStartingWeight(trainee.id),
+    loadBodyWeightChartData(trainee.id),
+    loadBodyWeightCurrentDisplay(trainee.id),
   ]);
-
-  const { latestWeightKg, previousWeightKg } = resolveBodyWeightCurrentDisplay(
-    logs,
-    startingWeight?.weightKg ?? null,
-  );
 
   return {
     logs: logs.map(mapLog),
@@ -126,12 +93,12 @@ export async function getCoachTraineeBodyWeightChartAction(traineeId: string) {
   const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
   if (!ownsTrainee) return [];
 
-  return buildChartDataForTrainee(traineeId);
+  return loadBodyWeightChartData(traineeId);
 }
 
 export async function getTraineeBodyWeightChartAction() {
   const trainee = await requireTraineeOnboarded();
-  return buildChartDataForTrainee(trainee.id);
+  return loadBodyWeightChartData(trainee.id);
 }
 
 export async function upsertBodyWeightLogAction(formData: FormData) {
@@ -178,6 +145,7 @@ export async function upsertBodyWeightLogAction(formData: FormData) {
   }
 
   revalidatePath("/dashboard/body-weight");
+  revalidatePath("/dashboard/tracking");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/trainees");
 
@@ -203,6 +171,7 @@ export async function deleteBodyWeightLogAction(logId: string) {
   }
 
   revalidatePath("/dashboard/body-weight");
+  revalidatePath("/dashboard/tracking");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/trainees");
 
@@ -240,6 +209,31 @@ export async function upsertBodyWeightReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidatePath("/dashboard/body-weight");
+  revalidatePath("/dashboard/tracking");
+  return { success: true as const };
+}
+
+export async function cancelBodyWeightReminderAction() {
+  const trainee = await requireTraineeOnboarded();
+
+  try {
+    const existing = await prisma.bodyWeightReminder.findUnique({
+      where: { traineeId: trainee.id },
+      select: { id: true, enabled: true },
+    });
+
+    if (!existing?.enabled) {
+      return { error: "אין תזכורת פעילה לביטול" };
+    }
+
+    await prisma.bodyWeightReminder.update({
+      where: { traineeId: trainee.id },
+      data: { enabled: false },
+    });
+  } catch {
+    return { error: "שגיאה בביטול התזכורת" };
+  }
+
+  revalidatePath("/dashboard/tracking");
   return { success: true as const };
 }
