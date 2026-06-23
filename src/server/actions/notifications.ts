@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
-import { notReadWhere, isNotificationUnread } from "@/lib/notification-prisma-filters";
+import { notReadWhere } from "@/lib/notification-prisma-filters";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import type { AppNotificationType } from "@/lib/prisma-client";

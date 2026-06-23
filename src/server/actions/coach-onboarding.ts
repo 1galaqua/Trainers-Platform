@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCoach, requireTrainee } from "@/lib/auth";
-import { isCoachOwnerOfTrainee, getTraineeCoachId } from "@/lib/coach-trainee";
+import { getTraineeCoachId } from "@/lib/coach-trainee";
 import { fetchTraineeOnboardingExportData } from "@/lib/fetch-onboarding-export";
 import {
   DEFAULT_AGREEMENT_TEXT,

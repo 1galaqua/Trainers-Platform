@@ -84,7 +84,7 @@ export async function registerAction(formData: FormData) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         clerkId: `local_${crypto.randomUUID()}`,
         email,

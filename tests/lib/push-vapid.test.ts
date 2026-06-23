@@ -56,8 +56,8 @@ describe("sendPushNotification", () => {
   });
 
   async function loadSendPushNotification() {
-    const module = await import("@/lib/push-vapid");
-    return module.sendPushNotification;
+    const pushModule = await import("@/lib/push-vapid");
+    return pushModule.sendPushNotification;
   }
 
   it("returns failure when VAPID keys are not configured", async () => {

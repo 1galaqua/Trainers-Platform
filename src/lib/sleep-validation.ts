@@ -18,7 +18,7 @@ export function parseSleepTime(value: unknown) {
 export function computeSleepHours(sleepStart: string, sleepEnd: string): number {
   const [startH, startM] = sleepStart.split(":").map(Number);
   const [endH, endM] = sleepEnd.split(":").map(Number);
-  let startMinutes = startH * 60 + startM;
+  const startMinutes = startH * 60 + startM;
   let endMinutes = endH * 60 + endM;
 
   if (endMinutes <= startMinutes) {
@@ -34,7 +34,7 @@ export function formatSleepRange(sleepStart: string, sleepEnd: string) {
 
 export function sleepHoursToRange(hours: number, sleepEnd = "07:00") {
   const [endH, endM] = sleepEnd.split(":").map(Number);
-  let endMinutes = endH * 60 + endM;
+  const endMinutes = endH * 60 + endM;
   let startMinutes = endMinutes - Math.round(hours * 60);
   if (startMinutes < 0) startMinutes += 24 * 60;
 

@@ -78,7 +78,7 @@ export function WaterLogForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <div className="min-w-0 space-y-2">
-          <Label htmlFor="water-amount-ml">כמות (מ"ל)</Label>
+          <Label htmlFor="water-amount-ml">כמות (מ&quot;ל)</Label>
           <Input
             id="water-amount-ml"
             name="amountMl"

@@ -62,7 +62,7 @@ export function MeasurementsLogForm({
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         {MEASUREMENT_FIELDS.map((field) => (
           <div key={field.key} className="min-w-0 space-y-2">
-            <Label htmlFor={`measurements-${field.key}`}>{field.label} (ס"מ)</Label>
+            <Label htmlFor={`measurements-${field.key}`}>{field.label} (ס&quot;מ)</Label>
             <Input
               id={`measurements-${field.key}`}
               name={field.key}
