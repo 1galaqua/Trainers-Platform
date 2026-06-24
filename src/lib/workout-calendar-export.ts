@@ -25,6 +25,10 @@ function formatICSUtc(date: Date) {
     .replace(/\.\d{3}Z$/, "Z");
 }
 
+function formatGoogleCalendarDate(date: Date) {
+  return formatICSUtc(date);
+}
+
 function escapeICSValue(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
@@ -89,60 +93,84 @@ export function buildWorkoutICSContent(workout: WorkoutCalendarExportInput) {
   ].join("\r\n");
 }
 
+export function buildGoogleCalendarAddEventUrl(workout: WorkoutCalendarExportInput) {
+  const startsAt = new Date(workout.startsAt);
+  const endsAt = new Date(startsAt.getTime() + workout.durationMinutes * 60_000);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: getWorkoutCalendarTitle(workout),
+    dates: `${formatGoogleCalendarDate(startsAt)}/${formatGoogleCalendarDate(endsAt)}`,
+    details: getWorkoutCalendarDescription(workout),
+  });
+
+  const deliveryMode = workout.deliveryMode ?? "IN_PERSON";
+  if (deliveryMode === "ONLINE" && workout.meetingLink) {
+    params.set("location", workout.meetingLink);
+  }
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 export function createWorkoutICSFile(workout: WorkoutCalendarExportInput) {
   const content = buildWorkoutICSContent(workout);
   return new File([content], `workout-${workout.id}.ics`, {
-    type: "text/calendar;charset=utf-8",
+    type: "text/calendar",
   });
 }
 
 export function isMobileCalendarDevice(userAgent: string) {
-  return /Android|iPhone|iPad|iPod/i.test(userAgent);
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
 }
 
-function buildWorkoutICSDataUrl(content: string) {
-  return `data:text/calendar;charset=utf-8,${encodeURIComponent(content)}`;
+export function isAndroidCalendarDevice(userAgent: string) {
+  return /Android/i.test(userAgent);
 }
 
-async function tryShareWorkoutICS(workout: WorkoutCalendarExportInput): Promise<boolean> {
+export function isIOSCalendarDevice(userAgent: string) {
+  return /iPhone|iPad|iPod/i.test(userAgent);
+}
+
+export function getWorkoutICSUrl(workoutId: string, origin = "") {
+  const base = origin || (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/api/calendar/workouts/${workoutId}/calendar.ics`;
+}
+
+async function tryShareWorkoutICS(
+  workout: WorkoutCalendarExportInput,
+  icsUrl: string,
+): Promise<boolean> {
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return false;
   }
 
+  const title = getWorkoutCalendarTitle(workout);
   const file = createWorkoutICSFile(workout);
-  const shareData = {
-    files: [file],
-    title: getWorkoutCalendarTitle(workout),
-  };
 
-  if (typeof navigator.canShare === "function") {
+  const fileShare = { files: [file], title };
+  if (typeof navigator.canShare !== "function" || navigator.canShare(fileShare)) {
     try {
-      if (!navigator.canShare(shareData)) return false;
-    } catch {
-      return false;
+      await navigator.share(fileShare);
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
     }
   }
 
-  try {
-    await navigator.share(shareData);
-    return true;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw error;
+  const urlShare = { url: icsUrl, title };
+  if (typeof navigator.canShare !== "function" || navigator.canShare(urlShare)) {
+    try {
+      await navigator.share(urlShare);
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") throw error;
     }
-    return false;
   }
+
+  return false;
 }
 
-export function openWorkoutICSInNativeCalendar(workout: WorkoutCalendarExportInput) {
-  const content = buildWorkoutICSContent(workout);
-  const dataUrl = buildWorkoutICSDataUrl(content);
-  const anchor = document.createElement("a");
-  anchor.href = dataUrl;
-  anchor.rel = "noopener noreferrer";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
+function openExternalCalendarUrl(url: string) {
+  window.location.assign(url);
 }
 
 function downloadWorkoutICSBlob(workout: WorkoutCalendarExportInput) {
@@ -158,29 +186,44 @@ function downloadWorkoutICSBlob(workout: WorkoutCalendarExportInput) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export type AddWorkoutToCalendarResult = "shared" | "opened" | "downloaded";
+export type AddWorkoutToCalendarResult =
+  | "shared"
+  | "google-calendar"
+  | "ics-opened"
+  | "downloaded";
 
 export async function addWorkoutToCalendar(
   workout: WorkoutCalendarExportInput,
-  options?: { userAgent?: string },
+  options?: { userAgent?: string; origin?: string },
 ): Promise<AddWorkoutToCalendarResult> {
   const userAgent =
     options?.userAgent ?? (typeof navigator !== "undefined" ? navigator.userAgent : "");
+  const icsUrl = getWorkoutICSUrl(workout.id, options?.origin);
 
-  if (await tryShareWorkoutICS(workout)) {
+  if (!isMobileCalendarDevice(userAgent)) {
+    downloadWorkoutICSBlob(workout);
+    return "downloaded";
+  }
+
+  if (await tryShareWorkoutICS(workout, icsUrl)) {
     return "shared";
   }
 
-  if (isMobileCalendarDevice(userAgent)) {
-    openWorkoutICSInNativeCalendar(workout);
-    return "opened";
+  if (isAndroidCalendarDevice(userAgent)) {
+    openExternalCalendarUrl(buildGoogleCalendarAddEventUrl(workout));
+    return "google-calendar";
   }
 
-  downloadWorkoutICSBlob(workout);
-  return "downloaded";
+  openExternalCalendarUrl(icsUrl);
+  return "ics-opened";
 }
 
 /** @deprecated Use addWorkoutToCalendar */
 export function downloadWorkoutICS(workout: WorkoutCalendarExportInput) {
   downloadWorkoutICSBlob(workout);
+}
+
+/** @deprecated Prefer addWorkoutToCalendar */
+export function openWorkoutICSInNativeCalendar(workout: WorkoutCalendarExportInput) {
+  openExternalCalendarUrl(getWorkoutICSUrl(workout.id));
 }

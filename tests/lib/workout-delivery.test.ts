@@ -3,11 +3,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  addWorkoutToCalendar,
+  buildGoogleCalendarAddEventUrl,
   buildWorkoutICSContent,
   getWorkoutCalendarDescription,
   getWorkoutCalendarTitle,
+  getWorkoutICSUrl,
+  isAndroidCalendarDevice,
+  isIOSCalendarDevice,
   isMobileCalendarDevice,
-  openWorkoutICSInNativeCalendar,
 } from "@/lib/workout-calendar-export";
 import {
   isValidMeetingLink,
@@ -76,46 +80,95 @@ describe("workout calendar export", () => {
     expect(description).toContain("https://meet.google.com/abc");
     expect(ics).toContain("LOCATION:https://meet.google.com/abc");
   });
-});
 
-describe("isMobileCalendarDevice", () => {
-  it("detects common phone user agents", () => {
-    expect(isMobileCalendarDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)")).toBe(
-      true,
+  it("builds a google calendar add-event url for android", () => {
+    const url = buildGoogleCalendarAddEventUrl({
+      ...baseWorkout,
+      deliveryMode: "ONLINE",
+      meetingLink: "https://meet.google.com/abc",
+    });
+
+    expect(url).toContain("calendar.google.com/calendar/render");
+    expect(url).toContain("action=TEMPLATE");
+    expect(url).toContain(encodeURIComponent("https://meet.google.com/abc"));
+  });
+
+  it("builds a server ics url for ios calendar import", () => {
+    expect(getWorkoutICSUrl("workout-1", "https://app.example.com")).toBe(
+      "https://app.example.com/api/calendar/workouts/workout-1/calendar.ics",
     );
-    expect(isMobileCalendarDevice("Mozilla/5.0 (Linux; Android 14)")).toBe(true);
-    expect(isMobileCalendarDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe(false);
   });
 });
 
-describe("openWorkoutICSInNativeCalendar", () => {
-  it("opens a calendar data url without downloading", () => {
-    const click = vi.fn();
-    const remove = vi.fn();
-    const appendChild = vi.fn();
-    const anchor = {
-      href: "",
-      rel: "",
-      click,
-      remove,
-    };
+describe("calendar device detection", () => {
+  it("detects mobile, android, and ios user agents", () => {
+    const iphone =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15";
+    const android = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36";
+    const desktop = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
 
-    vi.spyOn(document, "createElement").mockReturnValue(anchor as unknown as HTMLElement);
-    vi.spyOn(document.body, "appendChild").mockImplementation(appendChild);
+    expect(isMobileCalendarDevice(iphone)).toBe(true);
+    expect(isIOSCalendarDevice(iphone)).toBe(true);
+    expect(isAndroidCalendarDevice(iphone)).toBe(false);
 
-    openWorkoutICSInNativeCalendar({
-      id: "workout-1",
-      type: "PERSONAL",
-      workoutKind: "STRENGTH",
-      startsAt: "2026-06-22T06:00:00.000Z",
-      durationMinutes: 60,
+    expect(isMobileCalendarDevice(android)).toBe(true);
+    expect(isAndroidCalendarDevice(android)).toBe(true);
+    expect(isIOSCalendarDevice(android)).toBe(false);
+
+    expect(isMobileCalendarDevice(desktop)).toBe(false);
+  });
+});
+
+describe("addWorkoutToCalendar mobile navigation", () => {
+  it("opens google calendar on android when share is unavailable", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { assign },
     });
 
-    expect(anchor.href.startsWith("data:text/calendar;charset=utf-8,")).toBe(true);
-    expect(click).toHaveBeenCalled();
-    expect(appendChild).toHaveBeenCalledWith(anchor);
-    expect(remove).toHaveBeenCalled();
+    const result = await addWorkoutToCalendar(
+      {
+        id: "workout-1",
+        type: "PERSONAL",
+        workoutKind: "STRENGTH",
+        startsAt: "2026-06-22T06:00:00.000Z",
+        durationMinutes: 60,
+      },
+      {
+        userAgent: "Mozilla/5.0 (Linux; Android 14)",
+        origin: "https://app.example.com",
+      },
+    );
 
-    vi.restoreAllMocks();
+    expect(result).toBe("google-calendar");
+    expect(assign).toHaveBeenCalledWith(expect.stringContaining("calendar.google.com"));
+  });
+
+  it("opens server ics url on ios when share is unavailable", async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { assign },
+    });
+
+    const result = await addWorkoutToCalendar(
+      {
+        id: "workout-1",
+        type: "PERSONAL",
+        workoutKind: "STRENGTH",
+        startsAt: "2026-06-22T06:00:00.000Z",
+        durationMinutes: 60,
+      },
+      {
+        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+        origin: "https://app.example.com",
+      },
+    );
+
+    expect(result).toBe("ics-opened");
+    expect(assign).toHaveBeenCalledWith(
+      "https://app.example.com/api/calendar/workouts/workout-1/calendar.ics",
+    );
   });
 });

@@ -39,7 +39,13 @@ export function AddToCalendarButton({
         notes: workout.notes,
       });
       showSuccess(
-        result === "downloaded" ? "קובץ היומן הורד" : "פתח/י את היומן כדי לאשר את ההוספה",
+        result === "downloaded"
+          ? "קובץ היומן הורד"
+          : result === "google-calendar"
+            ? "נפתח Google Calendar — לחצ/י שמור"
+            : result === "shared"
+              ? "בחר/י יומן לשמירת האירוע"
+              : "פתח/י את היומן כדי לאשר את ההוספה",
       );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
