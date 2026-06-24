@@ -130,6 +130,30 @@
 }
 
 @layer components {
+  .tracking-grid-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tracking-grid-sticky-col {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    isolation: isolate;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .tracking-grid-cell-filled {
+    @apply border border-green-200 bg-green-50 text-foreground dark:border-green-900 dark:bg-green-950;
+  }
+
+  .tracking-grid-cell-empty {
+    @apply border-border bg-muted text-muted-foreground;
+  }
+
   .input-date-rtl {
     position: relative;
     box-sizing: border-box;

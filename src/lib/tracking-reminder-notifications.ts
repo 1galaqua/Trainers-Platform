@@ -132,3 +132,18 @@ export async function notifyUserAboutStepsReminder(params: {
     tagSuffix: `steps-reminder-${today}`,
   });
 }
+
+export async function notifyUserAboutCaloriesReminder(params: {
+  userId: string;
+  reminderId: string;
+}): Promise<boolean> {
+  const today = getIsraelDateString();
+  return deliverTrackingReminder({
+    userId: params.userId,
+    reminderId: params.reminderId,
+    type: "CALORIES_REMINDER",
+    title: "תזכורת: עדכון קלוריות",
+    body: "זמן לעדכן את צריכת הקלוריות היומית שלך",
+    tagSuffix: `calories-reminder-${today}`,
+  });
+}

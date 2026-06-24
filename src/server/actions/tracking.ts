@@ -28,6 +28,7 @@ export type TrackingReminderBundle = {
   water: { enabled: boolean; daysOfWeek: number[]; timesLocal: string[] } | null;
   measurements: { enabled: boolean; daysOfWeek: number[]; timeLocal: string } | null;
   steps: { enabled: boolean; daysOfWeek: number[]; timeLocal: string } | null;
+  calories: { enabled: boolean; daysOfWeek: number[]; timeLocal: string } | null;
 };
 
 export type TrackingHubData = {
@@ -45,7 +46,8 @@ export type TrackingHubData = {
 };
 
 async function loadWeekLogsForTrainee(traineeId: string, weekStart: string, weekEnd: string) {
-  const [bodyWeightLogs, sleepLogs, waterLogs, stepsLogs, measurementsLogs] = await Promise.all([
+  const [bodyWeightLogs, sleepLogs, waterLogs, stepsLogs, caloriesLogs, measurementsLogs] =
+    await Promise.all([
     prisma.bodyWeightLog.findMany({
       where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
     }),
@@ -58,6 +60,9 @@ async function loadWeekLogsForTrainee(traineeId: string, weekStart: string, week
     prisma.stepsLog.findMany({
       where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
     }),
+    prisma.caloriesLog.findMany({
+      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
+    }),
     prisma.measurementsLog.findMany({
       where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
     }),
@@ -68,17 +73,19 @@ async function loadWeekLogsForTrainee(traineeId: string, weekStart: string, week
     sleepLogs,
     waterLogs,
     stepsLogs,
+    caloriesLogs,
     measurementsLogs,
   });
 }
 
 async function loadRemindersForTrainee(traineeId: string): Promise<TrackingReminderBundle> {
-  const [bodyWeight, sleep, water, measurements, steps] = await Promise.all([
+  const [bodyWeight, sleep, water, measurements, steps, calories] = await Promise.all([
     prisma.bodyWeightReminder.findUnique({ where: { traineeId } }),
     prisma.sleepReminder.findUnique({ where: { traineeId } }),
     prisma.waterReminder.findUnique({ where: { traineeId } }),
     prisma.measurementsReminder.findUnique({ where: { traineeId } }),
     prisma.stepsReminder.findUnique({ where: { traineeId } }),
+    prisma.caloriesReminder.findUnique({ where: { traineeId } }),
   ]);
 
   return {
@@ -105,6 +112,13 @@ async function loadRemindersForTrainee(traineeId: string): Promise<TrackingRemin
     steps: steps
       ? { enabled: steps.enabled, daysOfWeek: steps.daysOfWeek, timeLocal: steps.timeLocal }
       : null,
+    calories: calories
+      ? {
+          enabled: calories.enabled,
+          daysOfWeek: calories.daysOfWeek,
+          timeLocal: calories.timeLocal,
+        }
+      : null,
   };
 }
 
@@ -116,6 +130,7 @@ function emptyGrid(weekStart: string): TrackingWeekGrid {
       sleepLogs: [],
       waterLogs: [],
       stepsLogs: [],
+      caloriesLogs: [],
       measurementsLogs: [],
     }),
     false,
@@ -177,6 +192,7 @@ export async function getTrackingHubDataAction(
             sleepLogs: [],
             waterLogs: [],
             stepsLogs: [],
+            caloriesLogs: [],
             measurementsLogs: [],
           }),
           false,
@@ -204,6 +220,7 @@ export async function getTrackingHubDataAction(
             sleepLogs: [],
             waterLogs: [],
             stepsLogs: [],
+            caloriesLogs: [],
             measurementsLogs: [],
           }),
           false,

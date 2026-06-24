@@ -1,4 +1,5 @@
 import { computeSleepHours } from "@/lib/sleep-validation";
+import { formatCaloriesDisplay } from "@/lib/calories-validation";
 import { formatStepsDisplay } from "@/lib/steps-validation";
 import { MEASUREMENT_FIELDS, type MeasurementFieldKey } from "@/lib/measurements-validation";
 import { buildWeekDayHeaders, averageNumbers } from "@/lib/tracking-week-navigation";
@@ -20,6 +21,7 @@ export type TrackingWeekRowKind =
   | "sleep"
   | "water"
   | "steps"
+  | "calories"
   | "measurement";
 
 export type TrackingWeekRow = {
@@ -42,6 +44,7 @@ export type TrackingWeekRawLogs = {
   sleepTimesByDay: Map<string, { sleepStart: string; sleepEnd: string }>;
   waterMlByDay: Map<string, number>;
   stepsByDay: Map<string, number>;
+  caloriesByDay: Map<string, number>;
   measurementsByDay: Map<string, Partial<Record<MeasurementFieldKey, number>>>;
 };
 
@@ -83,6 +86,7 @@ export function buildTrackingWeekRawLogs(params: {
   sleepLogs: Array<{ recordedDay: string; sleepStart: string; sleepEnd: string }>;
   waterLogs: Array<{ recordedDay: string; amountMl: number }>;
   stepsLogs: Array<{ recordedDay: string; steps: number }>;
+  caloriesLogs: Array<{ recordedDay: string; calories: number }>;
   measurementsLogs: Array<
     { recordedDay: string } & Partial<Record<MeasurementFieldKey, number | null>>
   >;
@@ -112,6 +116,11 @@ export function buildTrackingWeekRawLogs(params: {
     stepsByDay.set(log.recordedDay, log.steps);
   }
 
+  const caloriesByDay = new Map<string, number>();
+  for (const log of params.caloriesLogs) {
+    caloriesByDay.set(log.recordedDay, log.calories);
+  }
+
   const measurementsByDay = new Map<string, Partial<Record<MeasurementFieldKey, number>>>();
   for (const log of params.measurementsLogs) {
     const entry: Partial<Record<MeasurementFieldKey, number>> = {};
@@ -128,6 +137,7 @@ export function buildTrackingWeekRawLogs(params: {
     sleepTimesByDay,
     waterMlByDay,
     stepsByDay,
+    caloriesByDay,
     measurementsByDay,
   };
 }
@@ -185,6 +195,14 @@ export function buildDailyTrackingWeekGrid(
       format: (value) => formatStepsDisplay(value),
       averageDecimals: 0,
     },
+    {
+      id: "calories",
+      label: "קלוריות",
+      kind: "calories",
+      getValue: (date) => raw.caloriesByDay.get(date) ?? null,
+      format: (value) => formatCaloriesDisplay(value),
+      averageDecimals: 0,
+    },
   ];
 
   const rows: TrackingWeekRow[] = rowDefs.map((rowDef) => {
@@ -218,7 +236,9 @@ export function buildDailyTrackingWeekGrid(
           ? `${avgRaw.toLocaleString("he-IL")} ל'`
           : rowDef.kind === "steps"
             ? formatStepsDisplay(avgRaw)
-            : rowDef.kind === "sleep"
+            : rowDef.kind === "calories"
+              ? formatCaloriesDisplay(avgRaw)
+              : rowDef.kind === "sleep"
               ? formatSleepHours(avgRaw)
               : formatWeightKg(avgRaw);
 

@@ -21,27 +21,27 @@ export function TrackingWeeklyGrid({
   const showInputs = canEdit && Boolean(traineeId);
 
   return (
-    <Card className="min-w-0 overflow-hidden">
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 p-0 pb-4">
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div className="tracking-grid-scroll">
           <table className="w-full min-w-max text-sm" dir="rtl">
             <thead>
-              <tr className="border-border border-b bg-muted/40">
-                <th className="sticky right-0 z-10 min-w-[8rem] border-border border-l bg-muted/95 px-3 py-2.5 text-start font-medium backdrop-blur-sm">
+              <tr className="border-border border-b bg-muted">
+                <th className="tracking-grid-sticky-col min-w-[8rem] border-border border-l bg-muted px-3 py-2.5 text-start font-medium">
                   שדה
                 </th>
-                <th className="min-w-[5.5rem] px-2 py-2.5 text-center font-medium whitespace-nowrap">
+                <th className="min-w-[5.5rem] bg-muted px-2 py-2.5 text-center font-medium whitespace-nowrap">
                   ממוצע שבועי
                 </th>
                 {grid.days.map((day) => (
                   <th
                     key={day.date}
                     className={cn(
-                      "min-w-[5.5rem] px-2 py-2.5 text-center font-medium whitespace-nowrap",
-                      day.isToday && "bg-primary/5",
+                      "min-w-[5.5rem] bg-muted px-2 py-2.5 text-center font-medium whitespace-nowrap",
+                      day.isToday && "bg-accent/50",
                     )}
                   >
                     {day.label}
@@ -54,11 +54,11 @@ export function TrackingWeeklyGrid({
                 <tr key={row.id} className="border-border border-b last:border-0">
                   <th
                     scope="row"
-                    className="sticky right-0 z-10 border-border border-l bg-background px-3 py-2 text-start font-normal text-muted-foreground"
+                    className="tracking-grid-sticky-col border-border border-l bg-background px-3 py-2 text-start font-normal text-muted-foreground"
                   >
                     {row.label}
                   </th>
-                  <td className="bg-muted/20 px-2 py-2 text-center font-medium tabular-nums">
+                  <td className="bg-muted px-2 py-2 text-center font-medium tabular-nums">
                     {row.weeklyAverage.display}
                   </td>
                   {row.cells.map((cell) => (
@@ -70,8 +70,8 @@ export function TrackingWeeklyGrid({
                           className={cn(
                             "flex h-12 w-full min-w-[5rem] items-center justify-center rounded-md border px-1 text-center text-xs tabular-nums",
                             cell.raw != null
-                              ? "border-green-500/30 bg-green-500/10"
-                              : "border-border bg-muted/30 text-muted-foreground",
+                              ? "tracking-grid-cell-filled"
+                              : "tracking-grid-cell-empty",
                             !cell.editable && "opacity-60",
                           )}
                         >

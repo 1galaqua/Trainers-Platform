@@ -10,8 +10,10 @@ import {
 import { cancelSleepReminderAction, upsertSleepReminderAction } from "@/server/actions/sleep";
 import { cancelWaterReminderAction, upsertWaterReminderAction } from "@/server/actions/water";
 import {
+  cancelCaloriesReminderAction,
   cancelMeasurementsReminderAction,
   cancelStepsReminderAction,
+  upsertCaloriesReminderAction,
   upsertMeasurementsReminderAction,
   upsertStepsReminderAction,
 } from "@/server/actions/tracking-reminders";
@@ -87,6 +89,19 @@ export function TrackingRemindersSection({ reminders }: TrackingRemindersSection
               submitLabel="שמירת תזכורת"
               onSave={upsertStepsReminderAction}
               onCancel={cancelStepsReminderAction}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">תזכורת קלוריות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrackingReminderForm
+              reminder={reminders.calories}
+              submitLabel="שמירת תזכורת"
+              onSave={upsertCaloriesReminderAction}
+              onCancel={cancelCaloriesReminderAction}
             />
           </CardContent>
         </Card>

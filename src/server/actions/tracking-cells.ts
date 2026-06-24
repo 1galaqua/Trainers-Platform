@@ -17,6 +17,13 @@ import {
   type MeasurementFieldKey,
 } from "@/lib/measurements-validation";
 import {
+  parseCalories,
+  resolveCaloriesRecordedAt,
+  validateCaloriesDate,
+  CALORIES_MAX,
+  CALORIES_MIN,
+} from "@/lib/calories-validation";
+import {
   parseSteps,
   resolveStepsRecordedAt,
   validateStepsDate,
@@ -193,6 +200,41 @@ export async function upsertTrackingStepsAction(traineeId: string, formData: For
   return { success: true as const };
 }
 
+export async function upsertTrackingCaloriesAction(traineeId: string, formData: FormData) {
+  const auth = await authorizeTrackingWrite(traineeId);
+  if ("error" in auth) return { error: auth.error };
+
+  const calories = parseCalories(formData.get("calories"));
+  if (calories == null) {
+    return {
+      error: `יש להזין קלוריות בין ${CALORIES_MIN} ל-${CALORIES_MAX.toLocaleString("he-IL")}`,
+    };
+  }
+
+  const dateStr = String(formData.get("date") ?? getIsraelDateString()).trim();
+  const dateError = validateCaloriesDate(dateStr);
+  if (dateError) return { error: dateError };
+
+  const recordedAt = resolveCaloriesRecordedAt(dateStr);
+  if (!recordedAt) return { error: "תאריך לא תקין" };
+
+  const notesRaw = String(formData.get("notes") ?? "").trim();
+  const notes = notesRaw.length > 0 ? notesRaw.slice(0, 500) : null;
+
+  try {
+    await prisma.caloriesLog.upsert({
+      where: { traineeId_recordedDay: { traineeId, recordedDay: dateStr } },
+      create: { traineeId, calories, recordedAt, recordedDay: dateStr, notes },
+      update: { calories, recordedAt, notes },
+    });
+  } catch {
+    return { error: "שגיאה בשמירת הקלוריות" };
+  }
+
+  revalidateTrackingPaths(traineeId);
+  return { success: true as const };
+}
+
 export async function upsertTrackingMeasurementFieldAction(
   traineeId: string,
   formData: FormData,
@@ -274,6 +316,9 @@ export async function clearTrackingCellAction(
         break;
       case "steps":
         await prisma.stepsLog.deleteMany({ where: { traineeId, recordedDay: dateStr } });
+        break;
+      case "calories":
+        await prisma.caloriesLog.deleteMany({ where: { traineeId, recordedDay: dateStr } });
         break;
       case "measurement":
         if (!fieldKey) return { error: "שדה לא תקין" };

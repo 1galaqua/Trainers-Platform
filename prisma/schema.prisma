@@ -52,6 +52,7 @@ enum AppNotificationType {
   WATER_REMINDER
   MEASUREMENTS_REMINDER
   STEPS_REMINDER
+  CALORIES_REMINDER
 }
 
 enum ScheduledReminderType {
@@ -108,6 +109,8 @@ model User {
   waterReminder              WaterReminder?
   stepsLogs                  StepsLog[]
   stepsReminder              StepsReminder?
+  caloriesLogs               CaloriesLog[]
+  caloriesReminder           CaloriesReminder?
   measurementsLogs           MeasurementsLog[] @relation("TraineeMeasurements")
   measurementsEntered        MeasurementsLog[] @relation("CoachMeasurements")
   measurementsReminder       MeasurementsReminder?
@@ -484,7 +487,34 @@ model StepsLog {
   @@index([traineeId, recordedAt])
 }
 
+model CaloriesLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId   String   @db.ObjectId
+  recordedDay String
+  calories    Int
+  recordedAt  DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trainee     User     @relation(fields: [traineeId], references: [id])
+
+  @@unique([traineeId, recordedDay])
+  @@index([traineeId, recordedAt])
+}
+
 model StepsReminder {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  traineeId  String    @unique @db.ObjectId
+  enabled    Boolean   @default(true)
+  daysOfWeek Int[]
+  timeLocal  String
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  trainee    User      @relation(fields: [traineeId], references: [id])
+}
+
+model CaloriesReminder {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId
   traineeId  String    @unique @db.ObjectId
   enabled    Boolean   @default(true)

@@ -110,7 +110,7 @@ function TimeInput({
     <div
       dir="ltr"
       className={cn(
-        "grid w-fit max-w-full min-w-0 grid-cols-[2.75rem_5.5ch] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
+        "grid w-fit max-w-full min-w-0 grid-cols-[2.75rem_7ch] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
         "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         "has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
@@ -127,7 +127,7 @@ function TimeInput({
         maxLength={maxLength}
         pattern="[0-9]{2}:[0-9]{2}"
         title="שעה בפורמט 24 שעות, למשל 17:30"
-        className="input-time-rtl-field h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-1.5 shadow-none focus-visible:ring-0"
+        className="input-time-rtl-field h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
         onChange={handleChange}
         onBlur={handleBlur}
         {...props}

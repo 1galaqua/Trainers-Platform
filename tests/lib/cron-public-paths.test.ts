@@ -12,6 +12,7 @@ describe("cron public paths", () => {
     expect(CRON_PUBLIC_PATHS).toContain("/api/cron/water-reminders");
     expect(CRON_PUBLIC_PATHS).toContain("/api/cron/measurements-reminders");
     expect(CRON_PUBLIC_PATHS).toContain("/api/cron/steps-reminders");
+    expect(CRON_PUBLIC_PATHS).toContain("/api/cron/calories-reminders");
     expect(CRON_PUBLIC_PATHS).toContain("/api/cron/calendar-reminders");
   });
 

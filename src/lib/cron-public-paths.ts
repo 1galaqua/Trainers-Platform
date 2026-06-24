@@ -8,6 +8,7 @@ export const CRON_PUBLIC_PATHS = [
   "/api/cron/water-reminders",
   "/api/cron/measurements-reminders",
   "/api/cron/steps-reminders",
+  "/api/cron/calories-reminders",
   "/api/cron/cleanup-notifications",
 ] as const;
 

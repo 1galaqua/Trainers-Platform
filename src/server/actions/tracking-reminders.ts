@@ -134,3 +134,61 @@ export async function cancelMeasurementsReminderAction() {
   revalidatePath("/dashboard/tracking");
   return { success: true as const };
 }
+
+export async function upsertCaloriesReminderAction(formData: FormData) {
+  const trainee = await requireTraineeOnboarded();
+
+  const enabled = formData.get("enabled") === "true" || formData.get("enabled") === "on";
+  const daysOfWeek = parseTrackingDaysOfWeek(formData.getAll("daysOfWeek"));
+  const timeLocal = parseTrackingTimeLocal(formData.get("timeLocal"));
+
+  if (enabled) {
+    if (!daysOfWeek) return { error: "יש לבחור לפחות יום אחד" };
+    if (!timeLocal) return { error: "יש לבחור שעה תקינה" };
+  }
+
+  try {
+    await prisma.caloriesReminder.upsert({
+      where: { traineeId: trainee.id },
+      create: {
+        traineeId: trainee.id,
+        enabled,
+        daysOfWeek: daysOfWeek ?? [],
+        timeLocal: timeLocal ?? "21:00",
+      },
+      update: {
+        enabled,
+        ...(daysOfWeek ? { daysOfWeek } : {}),
+        ...(timeLocal ? { timeLocal } : {}),
+      },
+    });
+  } catch {
+    return { error: "שגיאה בשמירת התזכורת" };
+  }
+
+  revalidatePath("/dashboard/tracking");
+  return { success: true as const };
+}
+
+export async function cancelCaloriesReminderAction() {
+  const trainee = await requireTraineeOnboarded();
+
+  try {
+    const existing = await prisma.caloriesReminder.findUnique({
+      where: { traineeId: trainee.id },
+      select: { id: true, enabled: true },
+    });
+
+    if (!existing?.enabled) return { error: "אין תזכורת פעילה לביטול" };
+
+    await prisma.caloriesReminder.update({
+      where: { traineeId: trainee.id },
+      data: { enabled: false },
+    });
+  } catch {
+    return { error: "שגיאה בביטול התזכורת" };
+  }
+
+  revalidatePath("/dashboard/tracking");
+  return { success: true as const };
+}
