@@ -163,6 +163,28 @@ export function formatIsraelDayHeader(dateStr: string): string {
   return `${dayName}, ${day} ${month}`;
 }
 
+/** Column header — weekday line, e.g. "יום ג׳" */
+export function formatIsraelTrackingColumnDayName(dateStr: string): string {
+  const noon = parseIsraelDateTime(dateStr, "12:00");
+  if (!noon) return dateStr;
+
+  const weekday = new Intl.DateTimeFormat("he-IL", {
+    timeZone: CALENDAR_TIMEZONE,
+    weekday: "short",
+  }).format(noon);
+
+  return weekday.startsWith("יום") ? weekday : `יום ${weekday}`;
+}
+
+/** Column header — date line, e.g. "22/06" */
+export function formatIsraelTrackingColumnDate(dateStr: string): string {
+  const noon = parseIsraelDateTime(dateStr, "12:00");
+  if (!noon) return dateStr;
+
+  const parts = getIsraelParts(noon);
+  return `${parts.day}/${parts.month}`;
+}
+
 export function getIsraelHourMinuteFromInstant(instant: Date): { hour: number; minute: number } {
   const parts = getIsraelParts(instant);
   return { hour: parts.hour, minute: parts.minute };

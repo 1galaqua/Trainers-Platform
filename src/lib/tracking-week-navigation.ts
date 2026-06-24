@@ -1,6 +1,8 @@
 import {
   addIsraelDays,
   formatIsraelDayLabel,
+  formatIsraelTrackingColumnDate,
+  formatIsraelTrackingColumnDayName,
   getIsraelDateString,
   getWeekDateStrings,
   getWeekStartDateString,
@@ -41,6 +43,8 @@ export function buildWeekDayHeaders(weekStart: string, now = new Date()) {
   return dates.map((date) => ({
     date,
     label: formatIsraelDayLabel(date),
+    dayName: formatIsraelTrackingColumnDayName(date),
+    dateLabel: formatIsraelTrackingColumnDate(date),
     isToday: date === today,
     isFuture: date > today,
   }));

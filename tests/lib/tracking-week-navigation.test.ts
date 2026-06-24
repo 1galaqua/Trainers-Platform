@@ -53,6 +53,8 @@ describe("week navigation helpers", () => {
     const headers = buildWeekDayHeaders("2026-06-21", new Date("2026-06-22T10:00:00.000Z"));
     expect(headers).toHaveLength(7);
     expect(headers.some((day) => day.isToday)).toBe(true);
+    expect(headers[0]?.dayName).toBeTruthy();
+    expect(headers[0]?.dateLabel).toMatch(/\d+\/\d+/);
   });
 });
 
