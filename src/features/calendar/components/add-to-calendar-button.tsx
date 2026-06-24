@@ -26,7 +26,7 @@ export function AddToCalendarButton({
   async function handleAddToCalendar() {
     setLoading(true);
     try {
-      await addWorkoutToCalendar({
+      const result = await addWorkoutToCalendar({
         id: workout.id,
         type: workout.type,
         workoutKind: workout.workoutKind,
@@ -38,7 +38,9 @@ export function AddToCalendarButton({
         programName: workout.programName,
         notes: workout.notes,
       });
-      showSuccess("האירוע נוסף ליומן");
+      showSuccess(
+        result === "downloaded" ? "קובץ היומן הורד" : "פתח/י את היומן כדי לאשר את ההוספה",
+      );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;

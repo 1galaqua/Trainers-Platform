@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment happy-dom
+
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildWorkoutICSContent,
   getWorkoutCalendarDescription,
   getWorkoutCalendarTitle,
+  isMobileCalendarDevice,
+  openWorkoutICSInNativeCalendar,
 } from "@/lib/workout-calendar-export";
 import {
   isValidMeetingLink,
@@ -71,5 +75,47 @@ describe("workout calendar export", () => {
     expect(title).toContain("אונליין");
     expect(description).toContain("https://meet.google.com/abc");
     expect(ics).toContain("LOCATION:https://meet.google.com/abc");
+  });
+});
+
+describe("isMobileCalendarDevice", () => {
+  it("detects common phone user agents", () => {
+    expect(isMobileCalendarDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)")).toBe(
+      true,
+    );
+    expect(isMobileCalendarDevice("Mozilla/5.0 (Linux; Android 14)")).toBe(true);
+    expect(isMobileCalendarDevice("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe(false);
+  });
+});
+
+describe("openWorkoutICSInNativeCalendar", () => {
+  it("opens a calendar data url without downloading", () => {
+    const click = vi.fn();
+    const remove = vi.fn();
+    const appendChild = vi.fn();
+    const anchor = {
+      href: "",
+      rel: "",
+      click,
+      remove,
+    };
+
+    vi.spyOn(document, "createElement").mockReturnValue(anchor as unknown as HTMLElement);
+    vi.spyOn(document.body, "appendChild").mockImplementation(appendChild);
+
+    openWorkoutICSInNativeCalendar({
+      id: "workout-1",
+      type: "PERSONAL",
+      workoutKind: "STRENGTH",
+      startsAt: "2026-06-22T06:00:00.000Z",
+      durationMinutes: 60,
+    });
+
+    expect(anchor.href.startsWith("data:text/calendar;charset=utf-8,")).toBe(true);
+    expect(click).toHaveBeenCalled();
+    expect(appendChild).toHaveBeenCalledWith(anchor);
+    expect(remove).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });
