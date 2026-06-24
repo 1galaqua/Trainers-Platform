@@ -207,15 +207,20 @@ export function WorkoutReminderControls({
         </Button>
       </div>
 
-      <div className="space-y-1">
+      <div className="space-y-2">
         <p className="font-medium text-xs">תזכורת מותאמת</p>
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        <div className="flex w-full min-w-0 flex-col gap-2">
           <DateInput
+            className="w-full"
             value={customDate}
             onChange={(event) => setCustomDate(event.target.value)}
             max={getIsraelDateAndTimeFromInstant(new Date(workout.startsAt)).date}
           />
-          <TimeInput value={customTime} onChange={(event) => setCustomTime(event.target.value)} />
+          <TimeInput
+            className="w-full"
+            value={customTime}
+            onChange={(event) => setCustomTime(event.target.value)}
+          />
         </div>
         <Button
           type="button"

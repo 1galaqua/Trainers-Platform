@@ -65,7 +65,7 @@ export function CalendarWorkoutCard({
           ? "border-blue-200 bg-blue-50/80 dark:border-blue-900 dark:bg-blue-950/40"
           : "border-green-200 bg-green-50/80 dark:border-green-900 dark:bg-green-950/40",
         compact && !inTimeGrid && "p-2 text-xs",
-        inTimeGrid && "w-full min-w-0 overflow-hidden",
+        inTimeGrid && "w-full min-w-0",
         isPast && "opacity-70",
         className,
       )}

@@ -44,7 +44,7 @@ function DateInput({ className, disabled, id, ...props }: React.ComponentProps<t
       ref={wrapperRef}
       dir="ltr"
       className={cn(
-        "grid w-full max-w-full min-w-0 grid-cols-[2.75rem_1fr] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
+        "grid w-full max-w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
         "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         "has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
@@ -110,7 +110,7 @@ function TimeInput({
     <div
       dir="ltr"
       className={cn(
-        "grid w-fit max-w-full min-w-0 grid-cols-[2.75rem_7ch] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
+        "grid w-full max-w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
         "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         "has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
