@@ -30,10 +30,12 @@ import {
 import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
 import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
 import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
+import { WorkoutDeliveryFields } from "./workout-delivery-fields";
 import {
   workoutSheetContentClassName,
   workoutSheetScrollClassName,
 } from "./workout-sheet-layout";
+import type { WorkoutDeliveryMode } from "@/lib/workout-delivery";
 
 type WorkoutFormType = "PERSONAL" | "GROUP";
 
@@ -49,6 +51,8 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [selectedGroupTraineeIds, setSelectedGroupTraineeIds] = useState<string[]>([]);
   const [maxParticipants, setMaxParticipants] = useState(8);
+  const [deliveryMode, setDeliveryMode] = useState<WorkoutDeliveryMode>("IN_PERSON");
+  const [meetingLink, setMeetingLink] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +63,8 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
     setSelectedProgramId(null);
     setSelectedGroupTraineeIds([]);
     setMaxParticipants(8);
+    setDeliveryMode("IN_PERSON");
+    setMeetingLink("");
   }
 
   function handlePersonalTraineeSelect(traineeId: string | null) {
@@ -220,6 +226,16 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
                 ))}
               </Select>
             </div>
+
+            <WorkoutDeliveryFields
+              deliveryMode={deliveryMode}
+              onDeliveryModeChange={(mode) => {
+                setDeliveryMode(mode);
+                if (mode === "IN_PERSON") setMeetingLink("");
+              }}
+              meetingLink={meetingLink}
+              onMeetingLinkChange={setMeetingLink}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="notes">הערות (אופציונלי)</Label>

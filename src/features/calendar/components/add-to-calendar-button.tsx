@@ -1,9 +1,11 @@
 "use client";
 
 import { CalendarPlus } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { downloadWorkoutICS } from "@/lib/workout-calendar-export";
+import { useCalendarFeedback } from "@/features/calendar/components/calendar-feedback-context";
+import { addWorkoutToCalendar } from "@/lib/workout-calendar-export";
 import type { CalendarWorkoutItem } from "@/server/actions/calendar";
 import { cn } from "@/lib/utils";
 
@@ -18,17 +20,33 @@ export function AddToCalendarButton({
   compact = false,
   className,
 }: AddToCalendarButtonProps) {
-  function handleAddToCalendar() {
-    downloadWorkoutICS({
-      id: workout.id,
-      type: workout.type,
-      workoutKind: workout.workoutKind,
-      startsAt: workout.startsAt,
-      durationMinutes: workout.durationMinutes,
-      traineeName: workout.traineeName,
-      programName: workout.programName,
-      notes: workout.notes,
-    });
+  const { showSuccess } = useCalendarFeedback();
+  const [loading, setLoading] = useState(false);
+
+  async function handleAddToCalendar() {
+    setLoading(true);
+    try {
+      await addWorkoutToCalendar({
+        id: workout.id,
+        type: workout.type,
+        workoutKind: workout.workoutKind,
+        startsAt: workout.startsAt,
+        durationMinutes: workout.durationMinutes,
+        deliveryMode: workout.deliveryMode,
+        meetingLink: workout.meetingLink,
+        traineeName: workout.traineeName,
+        programName: workout.programName,
+        notes: workout.notes,
+      });
+      showSuccess("האירוע נוסף ליומן");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      showSuccess("לא ניתן להוסיף ליומן כרגע");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -40,10 +58,11 @@ export function AddToCalendarButton({
         compact ? "h-7 w-full min-w-0 shrink px-1.5 text-xs" : "min-w-0 flex-1 shrink",
         className,
       )}
-      onClick={handleAddToCalendar}
+      onClick={() => void handleAddToCalendar()}
+      disabled={loading}
     >
       <CalendarPlus className="size-3.5" aria-hidden />
-      הוספה ליומן
+      {loading ? "מוסיף..." : "הוספה ליומן"}
     </Button>
   );
 }

@@ -1,5 +1,10 @@
 import { isDateOnOrAfterTodayInIsrael, parseIsraelDateTime } from "@/lib/calendar-datetime";
 import type { ProgramType } from "@/lib/prisma-client";
+import {
+  parseWorkoutDeliveryMode,
+  validateWorkoutDeliveryInput,
+  type WorkoutDeliveryMode,
+} from "@/lib/workout-delivery";
 
 export const WORKOUT_DURATION_OPTIONS = [30, 45, 60, 75, 90, 120] as const;
 
@@ -22,6 +27,8 @@ export type CreateWorkoutInput = {
   maxParticipants: number;
   groupTraineeIds: string[];
   notes: string;
+  deliveryMode: WorkoutDeliveryMode;
+  meetingLink: string;
 };
 
 export function validateCreateWorkoutInput(input: CreateWorkoutInput): string | null {
@@ -35,6 +42,9 @@ export function validateCreateWorkoutInput(input: CreateWorkoutInput): string | 
   if (!WORKOUT_DURATION_OPTIONS.includes(input.durationMinutes as (typeof WORKOUT_DURATION_OPTIONS)[number])) {
     return "יש לבחור משך אימון תקין";
   }
+
+  const deliveryError = validateWorkoutDeliveryInput(input.deliveryMode, input.meetingLink);
+  if (deliveryError) return deliveryError;
 
   if (input.type === "PERSONAL") {
     if (!input.traineeId.trim()) return "יש לבחור מתאמן";
@@ -62,6 +72,9 @@ export function validateCreateWorkoutInput(input: CreateWorkoutInput): string | 
 }
 
 export function createWorkoutInputFromFormData(formData: FormData): CreateWorkoutInput {
+  const deliveryMode =
+    parseWorkoutDeliveryMode(String(formData.get("deliveryMode") ?? "IN_PERSON")) ?? "IN_PERSON";
+
   return {
     type: String(formData.get("type") ?? "PERSONAL") as CreateWorkoutInput["type"],
     date: String(formData.get("date") ?? ""),
@@ -76,6 +89,8 @@ export function createWorkoutInputFromFormData(formData: FormData): CreateWorkou
       .map((value) => String(value))
       .filter(Boolean),
     notes: String(formData.get("notes") ?? "").trim(),
+    deliveryMode,
+    meetingLink: String(formData.get("meetingLink") ?? "").trim(),
   };
 }
 

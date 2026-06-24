@@ -1,5 +1,9 @@
 import { programTypeLabels } from "@/lib/program-labels";
 import type { ProgramType } from "@/lib/prisma-client";
+import {
+  formatWorkoutDeliverySummary,
+  type WorkoutDeliveryMode,
+} from "@/lib/workout-delivery";
 
 export type WorkoutCalendarExportInput = {
   id: string;
@@ -7,6 +11,8 @@ export type WorkoutCalendarExportInput = {
   workoutKind: string;
   startsAt: string;
   durationMinutes: number;
+  deliveryMode?: WorkoutDeliveryMode;
+  meetingLink?: string | null;
   traineeName?: string | null;
   programName?: string | null;
   notes?: string | null;
@@ -25,22 +31,27 @@ function escapeICSValue(value: string) {
 
 export function getWorkoutCalendarTitle(workout: WorkoutCalendarExportInput) {
   const kindLabel = programTypeLabels[workout.workoutKind as ProgramType] ?? workout.workoutKind;
+  const deliveryMode = workout.deliveryMode ?? "IN_PERSON";
+  const deliveryLabel = formatWorkoutDeliverySummary(deliveryMode, workout.meetingLink);
 
   if (workout.type === "PERSONAL") {
     if (workout.traineeName) {
-      return `אימון אישי · ${workout.traineeName}`;
+      return `אימון אישי · ${workout.traineeName} · ${deliveryLabel}`;
     }
-    return "אימון אישי";
+    return `אימון אישי · ${deliveryLabel}`;
   }
 
-  return `אימון קבוצתי · ${kindLabel}`;
+  return `אימון קבוצתי · ${kindLabel} · ${deliveryLabel}`;
 }
 
 export function getWorkoutCalendarDescription(workout: WorkoutCalendarExportInput) {
+  const deliveryMode = workout.deliveryMode ?? "IN_PERSON";
   const parts = [
     workout.type === "PERSONAL" ? "אימון אישי" : "אימון קבוצתי",
+    formatWorkoutDeliverySummary(deliveryMode, workout.meetingLink),
     programTypeLabels[workout.workoutKind as ProgramType] ?? workout.workoutKind,
     workout.programName ? `תוכנית: ${workout.programName}` : null,
+    workout.meetingLink ? `קישור: ${workout.meetingLink}` : null,
     workout.notes ? workout.notes : null,
   ].filter(Boolean);
 
@@ -53,6 +64,11 @@ export function buildWorkoutICSContent(workout: WorkoutCalendarExportInput) {
   const title = getWorkoutCalendarTitle(workout);
   const description = getWorkoutCalendarDescription(workout);
   const uid = `workout-${workout.id}@trainers-platform`;
+  const deliveryMode = workout.deliveryMode ?? "IN_PERSON";
+  const locationLine =
+    deliveryMode === "ONLINE" && workout.meetingLink
+      ? `LOCATION:${escapeICSValue(workout.meetingLink)}`
+      : null;
 
   return [
     "BEGIN:VCALENDAR",
@@ -67,12 +83,24 @@ export function buildWorkoutICSContent(workout: WorkoutCalendarExportInput) {
     `DTEND:${formatICSUtc(endsAt)}`,
     `SUMMARY:${escapeICSValue(title)}`,
     `DESCRIPTION:${escapeICSValue(description)}`,
+    ...(locationLine ? [locationLine] : []),
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
 }
 
-export function downloadWorkoutICS(workout: WorkoutCalendarExportInput) {
+export function createWorkoutICSFile(workout: WorkoutCalendarExportInput) {
+  const content = buildWorkoutICSContent(workout);
+  return new File([content], `workout-${workout.id}.ics`, {
+    type: "text/calendar;charset=utf-8",
+  });
+}
+
+function canShareWorkoutICS() {
+  return typeof navigator !== "undefined" && typeof navigator.share === "function";
+}
+
+function downloadWorkoutICSBlob(workout: WorkoutCalendarExportInput) {
   const content = buildWorkoutICSContent(workout);
   const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -82,5 +110,34 @@ export function downloadWorkoutICS(workout: WorkoutCalendarExportInput) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export type AddWorkoutToCalendarResult = "shared" | "downloaded";
+
+export async function addWorkoutToCalendar(
+  workout: WorkoutCalendarExportInput,
+): Promise<AddWorkoutToCalendarResult> {
+  if (canShareWorkoutICS()) {
+    const file = createWorkoutICSFile(workout);
+    try {
+      await navigator.share({
+        files: [file],
+        title: getWorkoutCalendarTitle(workout),
+      });
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw error;
+      }
+    }
+  }
+
+  downloadWorkoutICSBlob(workout);
+  return "downloaded";
+}
+
+/** @deprecated Use addWorkoutToCalendar */
+export function downloadWorkoutICS(workout: WorkoutCalendarExportInput) {
+  downloadWorkoutICSBlob(workout);
 }

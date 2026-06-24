@@ -31,11 +31,13 @@ import {
 import { GroupWorkoutTraineeManager } from "./group-workout-trainee-manager";
 import { PersonalWorkoutProgramSelect } from "./personal-workout-program-select";
 import { PersonalWorkoutTraineePicker } from "./personal-workout-trainee-picker";
+import { WorkoutDeliveryFields } from "./workout-delivery-fields";
 import {
   workoutSheetContentClassName,
   workoutSheetScrollClassName,
 } from "./workout-sheet-layout";
 import { useCalendarFeedback } from "./calendar-feedback-context";
+import type { WorkoutDeliveryMode } from "@/lib/workout-delivery";
 
 type EditWorkoutSheetProps = {
   workout: CalendarWorkoutItem;
@@ -62,6 +64,8 @@ export function EditWorkoutSheet({
     workout.programId,
   );
   const [maxParticipants, setMaxParticipants] = useState(workout.maxParticipants ?? 8);
+  const [deliveryMode, setDeliveryMode] = useState<WorkoutDeliveryMode>(workout.deliveryMode);
+  const [meetingLink, setMeetingLink] = useState(workout.meetingLink ?? "");
   const { date, time } = getIsraelDateAndTimeFromInstant(new Date(workout.startsAt));
   const isPersonal = workout.type === "PERSONAL";
 
@@ -72,6 +76,8 @@ export function EditWorkoutSheet({
     setSelectedPersonalTraineeId(workout.traineeId);
     setSelectedProgramId(workout.programId);
     setMaxParticipants(workout.maxParticipants ?? 8);
+    setDeliveryMode(workout.deliveryMode);
+    setMeetingLink(workout.meetingLink ?? "");
     setError(null);
   }, [open, workout]);
 
@@ -226,6 +232,16 @@ export function EditWorkoutSheet({
               ))}
             </Select>
           </div>
+
+          <WorkoutDeliveryFields
+            deliveryMode={deliveryMode}
+            onDeliveryModeChange={(mode) => {
+              setDeliveryMode(mode);
+              if (mode === "IN_PERSON") setMeetingLink("");
+            }}
+            meetingLink={meetingLink}
+            onMeetingLinkChange={setMeetingLink}
+          />
 
           <div className="space-y-2">
             <Label htmlFor={`notes-${workout.id}`}>הערות (אופציונלי)</Label>

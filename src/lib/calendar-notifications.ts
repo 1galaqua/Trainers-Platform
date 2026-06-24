@@ -7,11 +7,20 @@ import { getUnreadNotificationCountsForUsers } from "@/lib/notifications";
 import { programTypeLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
-import type { ProgramType, ScheduledWorkout } from "@/lib/prisma-client";
+import type { ProgramType, ScheduledWorkout, WorkoutDeliveryMode } from "@/lib/prisma-client";
+import {
+  workoutDeliveryModeLabels,
+} from "@/lib/workout-delivery";
 
 type WorkoutNotificationContext = Pick<
   ScheduledWorkout,
-  "id" | "coachId" | "workoutKind" | "startsAt" | "durationMinutes"
+  | "id"
+  | "coachId"
+  | "workoutKind"
+  | "startsAt"
+  | "durationMinutes"
+  | "deliveryMode"
+  | "meetingLink"
 >;
 
 type NotificationDelivery = {
@@ -37,7 +46,19 @@ function workoutKindLabel(workoutKind: ProgramType) {
 
 function formatWorkoutSummary(workout: WorkoutNotificationContext) {
   const when = formatWorkoutDateTime(workout.startsAt);
-  return `${workoutKindLabel(workout.workoutKind)} · ${when} · ${workout.durationMinutes} דק׳`;
+  const deliveryLabel = workoutDeliveryModeLabels[workout.deliveryMode as WorkoutDeliveryMode];
+  const parts = [
+    deliveryLabel,
+    workoutKindLabel(workout.workoutKind),
+    when,
+    `${workout.durationMinutes} דק׳`,
+  ];
+
+  if (workout.deliveryMode === "ONLINE" && workout.meetingLink) {
+    parts.push(workout.meetingLink);
+  }
+
+  return parts.join(" · ");
 }
 
 function spotsSummary(

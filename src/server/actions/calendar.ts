@@ -16,7 +16,6 @@ import {
   validateUpdateWorkoutInput,
 } from "@/lib/calendar-validation";
 import {
-  getCoachTraineeIdsNotRegistered,
   notifyCoachAboutGroupCancellation,
   notifyCoachAboutGroupRegistration,
   notifyRegisteredTraineesAboutGroupCancellation,
@@ -26,12 +25,8 @@ import {
   notifyTraineeAboutPersonalUpdate,
   notifyTraineesAboutGroupEnrollment,
   notifyTraineesAboutGroupUnenrollment,
-  notifyUnregisteredTraineesAboutGroupSpots,
 } from "@/lib/calendar-notifications";
-import {
-  cancelGroupWorkoutReminder,
-  scheduleGroupWorkoutReminder,
-} from "@/lib/calendar-reminders";
+import { cancelGroupWorkoutReminder } from "@/lib/calendar-reminders";
 import {
   cancelAllUserWorkoutReminders,
   cancelUserWorkoutReminder,
@@ -46,7 +41,8 @@ import {
 } from "@/lib/trainee-status";
 import { notCancelledWhere } from "@/lib/calendar-prisma-filters";
 import { prisma } from "@/lib/prisma";
-import type { ProgramType, ScheduledWorkoutType, UserRole } from "@/lib/prisma-client";
+import type { ProgramType, ScheduledWorkoutType, UserRole, WorkoutDeliveryMode } from "@/lib/prisma-client";
+import { resolveStoredMeetingLink } from "@/lib/workout-delivery";
 
 export type CalendarWorkoutItem = {
   id: string;
@@ -63,6 +59,8 @@ export type CalendarWorkoutItem = {
   isRegistered: boolean;
   registeredTrainees: CalendarRegisteredTrainee[];
   notes: string | null;
+  deliveryMode: WorkoutDeliveryMode;
+  meetingLink: string | null;
   userReminder: CalendarUserReminder | null;
 };
 
@@ -361,6 +359,8 @@ export async function createScheduledWorkoutAction(formData: FormData) {
         durationMinutes: input.durationMinutes,
         traineeId: input.traineeId,
         programId: programResult.programId ?? null,
+        deliveryMode: input.deliveryMode,
+        meetingLink: resolveStoredMeetingLink(input.deliveryMode, input.meetingLink),
         notes: input.notes || null,
       },
     });
@@ -391,6 +391,8 @@ export async function createScheduledWorkoutAction(formData: FormData) {
         startsAt,
         durationMinutes: input.durationMinutes,
         maxParticipants: input.maxParticipants,
+        deliveryMode: input.deliveryMode,
+        meetingLink: resolveStoredMeetingLink(input.deliveryMode, input.meetingLink),
         notes: input.notes || null,
       },
     });
@@ -414,19 +416,6 @@ export async function createScheduledWorkoutAction(formData: FormData) {
     }
 
     await createDefaultUserWorkoutReminder(workout.id, coach.id, startsAt);
-
-    await scheduleGroupWorkoutReminder(workout.id, startsAt);
-
-    const registeredCount = groupTraineeIds.length;
-    const unregisteredIds = await getCoachTraineeIdsNotRegistered(coach.id, workout.id);
-    if (unregisteredIds.length > 0) {
-      await notifyUnregisteredTraineesAboutGroupSpots({
-        workout,
-        maxParticipants: input.maxParticipants,
-        registeredCount,
-        traineeIds: unregisteredIds,
-      });
-    }
   }
 
   revalidatePath("/dashboard/calendar");
@@ -534,6 +523,8 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
           traineeId: input.traineeId,
           programId: personalProgramUpdate?.programId ?? null,
           workoutKind: personalProgramUpdate?.workoutKind ?? existing.workoutKind,
+          deliveryMode: input.deliveryMode,
+          meetingLink: resolveStoredMeetingLink(input.deliveryMode, input.meetingLink),
           notes: input.notes || null,
         }
       : {
@@ -541,6 +532,8 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
           durationMinutes: input.durationMinutes,
           workoutKind: input.workoutKind,
           maxParticipants: input.maxParticipants,
+          deliveryMode: input.deliveryMode,
+          meetingLink: resolveStoredMeetingLink(input.deliveryMode, input.meetingLink),
           notes: input.notes || null,
         };
 
@@ -589,26 +582,6 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
           traineeIds: groupRegistrationChanges.toRemove,
         });
       }
-
-      const wasFullBefore =
-        existing.maxParticipants != null && registeredCount >= existing.maxParticipants;
-      const newRegisteredCount = nextGroupTraineeIds.length;
-
-      if (
-        wasFullBefore &&
-        updated.maxParticipants != null &&
-        newRegisteredCount < updated.maxParticipants
-      ) {
-        const unregisteredIds = await getCoachTraineeIdsNotRegistered(coach.id, updated.id);
-        if (unregisteredIds.length > 0) {
-          await notifyUnregisteredTraineesAboutGroupSpots({
-            workout: updated,
-            maxParticipants: updated.maxParticipants,
-            registeredCount: newRegisteredCount,
-            traineeIds: unregisteredIds,
-          });
-        }
-      }
     } catch (error) {
       console.error("Failed to send group registration notifications:", error);
     }
@@ -634,21 +607,7 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
         workout: updated,
         traineeIds: nextGroupTraineeIds,
       });
-
-      if (changeResult.spotsOpened && updated.maxParticipants != null) {
-        const unregisteredIds = await getCoachTraineeIdsNotRegistered(coach.id, updated.id);
-        await notifyUnregisteredTraineesAboutGroupSpots({
-          workout: updated,
-          maxParticipants: updated.maxParticipants,
-          registeredCount: nextGroupTraineeIds.length,
-          traineeIds: unregisteredIds,
-        });
-      }
     }
-  }
-
-  if (existing.type === "GROUP" && existing.startsAt.getTime() !== startsAt.getTime()) {
-    await scheduleGroupWorkoutReminder(updated.id, startsAt);
   }
 
   if (existing.startsAt.getTime() !== startsAt.getTime()) {
@@ -850,29 +809,6 @@ export async function cancelGroupWorkoutRegistrationAction(workoutId: string) {
 
   await cancelUserWorkoutReminder(workoutId, user.id);
 
-  if (workout.maxParticipants != null) {
-    const registeredCount = await prisma.groupWorkoutRegistration.count({
-      where: { workoutId, ...notCancelledWhere },
-    });
-    const hadNoSpotsBefore = registeredCount + 1 >= workout.maxParticipants;
-    const hasSpotsNow = registeredCount < workout.maxParticipants;
-
-    if (hadNoSpotsBefore && hasSpotsNow) {
-      const coachId = await getCoachIdForUser(user.id, "TRAINEE");
-      if (coachId) {
-        const unregisteredIds = await getCoachTraineeIdsNotRegistered(coachId, workoutId);
-        if (unregisteredIds.length > 0) {
-          await notifyUnregisteredTraineesAboutGroupSpots({
-            workout,
-            maxParticipants: workout.maxParticipants,
-            registeredCount,
-            traineeIds: unregisteredIds,
-          });
-        }
-      }
-    }
-  }
-
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard/updates");
   return { success: true as const };
@@ -969,6 +905,8 @@ export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]
           }))
         : [],
     notes: workout.notes,
+    deliveryMode: workout.deliveryMode,
+    meetingLink: workout.meetingLink,
     userReminder: reminder
       ? {
           kind: reminder.kind,

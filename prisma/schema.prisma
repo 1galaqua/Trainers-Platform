@@ -35,6 +35,11 @@ enum ScheduledWorkoutType {
   GROUP
 }
 
+enum WorkoutDeliveryMode {
+  IN_PERSON
+  ONLINE
+}
+
 enum AppNotificationType {
   PERSONAL_SCHEDULED
   PERSONAL_CANCELLED
@@ -305,6 +310,8 @@ model ScheduledWorkout {
   traineeId       String?              @db.ObjectId
   programId       String?              @db.ObjectId
   maxParticipants Int?
+  deliveryMode    WorkoutDeliveryMode @default(IN_PERSON)
+  meetingLink     String?
   notes           String?
   cancelledAt     DateTime?
   createdAt       DateTime             @default(now())

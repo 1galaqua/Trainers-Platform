@@ -1,10 +1,14 @@
 "use client";
 
+import { Link2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { programTypeLabels } from "@/lib/program-labels";
 import type { ProgramType, UserRole } from "@/lib/prisma-client";
 import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
 import { formatIsraelTime } from "@/lib/calendar-datetime";
 import { isWorkoutInPast } from "@/lib/calendar-range";
+import { workoutDeliveryModeLabels } from "@/lib/workout-delivery";
 import { cn } from "@/lib/utils";
 
 import { GroupWorkoutActions } from "./group-workout-actions";
@@ -96,8 +100,29 @@ export function CalendarWorkoutCard({
         </div>
       </div>
       <p className={cn("text-muted-foreground", inTimeGrid ? "mt-0.5" : "mt-1")}>
-        {formatIsraelTime(workout.startsAt)} · {workout.durationMinutes} דק׳
+        {formatIsraelTime(workout.startsAt)} · {workout.durationMinutes} דק׳ ·{" "}
+        {workoutDeliveryModeLabels[workout.deliveryMode]}
       </p>
+      {workout.deliveryMode === "ONLINE" && workout.meetingLink && (
+        <Button
+          render={
+            <a
+              href={workout.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+          variant="default"
+          size={compact || inTimeGrid ? "sm" : "default"}
+          className={cn(
+            "mt-2 w-full min-w-0",
+            inTimeGrid && "h-7 text-[11px]",
+          )}
+        >
+          <Link2 className="size-3.5" aria-hidden />
+          קישור לאימון
+        </Button>
+      )}
       {isPersonal && workout.programName && (
         <p className={cn("text-muted-foreground", inTimeGrid ? "mt-0.5" : "mt-1")}>
           {workout.programName}
