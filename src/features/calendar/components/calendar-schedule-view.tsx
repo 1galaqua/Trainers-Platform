@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { CalendarViewMode } from "@/lib/calendar-config";
 import {
   addIsraelDays,
   formatIsraelDayHeader,
@@ -11,28 +12,35 @@ import {
   getWeekStartDateString,
   getWorkoutIsraelDateKey,
 } from "@/lib/calendar-datetime";
-import { getCalendarNavigationBounds } from "@/lib/calendar-range";
+import { clampCalendarAnchorDate, getCalendarNavigationBounds } from "@/lib/calendar-range";
 import type { UserRole } from "@/lib/prisma-client";
 import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
 
 import { CalendarTimeGrid } from "./calendar-time-grid";
 
-type CalendarWeekViewProps = {
+type CalendarScheduleViewProps = {
+  viewMode: CalendarViewMode;
+  anchorDate: string;
+  onAnchorDateChange: (date: string) => void;
   workouts: CalendarWorkoutItem[];
   userRole: UserRole;
   trainees?: CalendarTraineeOption[];
+  scrollToWorkoutId?: string | null;
 };
 
-export function CalendarWeekView({
+export function CalendarScheduleView({
+  viewMode,
+  anchorDate,
+  onAnchorDateChange,
   workouts,
   userRole,
   trainees = [],
-}: CalendarWeekViewProps) {
+  scrollToWorkoutId = null,
+}: CalendarScheduleViewProps) {
   const bounds = useMemo(() => getCalendarNavigationBounds(), []);
-  const [weekStart, setWeekStart] = useState(() =>
-    getWeekStartDateString(bounds.today),
-  );
+  const weekStart = getWeekStartDateString(anchorDate);
   const weekDates = useMemo(() => getWeekDateStrings(weekStart), [weekStart]);
+  const dates = viewMode === "week" ? weekDates : [anchorDate];
 
   const workoutsByDate = useMemo(() => {
     const map = new Map<string, CalendarWorkoutItem[]>();
@@ -53,21 +61,21 @@ export function CalendarWeekView({
     return map;
   }, [workouts]);
 
-  const canGoBack = weekStart > bounds.earliestWeekStart;
-  const canGoForward = weekStart < bounds.latestWeekStart;
+  const isWeekView = viewMode === "week";
+  const isToday = anchorDate === bounds.today;
   const isCurrentWeek = weekStart === getWeekStartDateString(bounds.today);
 
-  function shiftWeek(delta: number) {
-    setWeekStart((current) => {
-      const next = addIsraelDays(current, delta * 7);
-      if (delta < 0 && next < bounds.earliestWeekStart) {
-        return bounds.earliestWeekStart;
-      }
-      if (delta > 0 && next > bounds.latestWeekStart) {
-        return bounds.latestWeekStart;
-      }
-      return next;
-    });
+  const canGoBack = isWeekView
+    ? weekStart > bounds.earliestWeekStart
+    : anchorDate > bounds.historyStart;
+  const canGoForward = isWeekView
+    ? weekStart < bounds.latestWeekStart
+    : anchorDate < bounds.forwardEnd;
+
+  function shiftAnchor(deltaDays: number) {
+    onAnchorDateChange(
+      clampCalendarAnchorDate(addIsraelDays(anchorDate, deltaDays), bounds),
+    );
   }
 
   return (
@@ -77,25 +85,38 @@ export function CalendarWeekView({
           type="button"
           variant="outline"
           size="icon"
-          onClick={() => shiftWeek(-1)}
+          onClick={() => shiftAnchor(isWeekView ? -7 : -1)}
           disabled={!canGoBack}
-          aria-label="שבוע קודם"
+          aria-label={isWeekView ? "שבוע קודם" : "יום קודם"}
         >
           <ChevronRight className="size-4" aria-hidden />
         </Button>
         <div className="text-center">
           <p className="font-medium text-sm">
-            {formatIsraelDayHeader(weekDates[0])} – {formatIsraelDayHeader(weekDates[6])}
+            {isWeekView
+              ? `${formatIsraelDayHeader(weekDates[0])} – ${formatIsraelDayHeader(weekDates[6])}`
+              : formatIsraelDayHeader(anchorDate)}
           </p>
-          {!isCurrentWeek && (
+          {isWeekView && !isCurrentWeek && (
             <Button
               type="button"
               variant="link"
               size="sm"
               className="h-auto p-0 text-xs"
-              onClick={() => setWeekStart(getWeekStartDateString(bounds.today))}
+              onClick={() => onAnchorDateChange(bounds.today)}
             >
               חזרה לשבוע הנוכחי
+            </Button>
+          )}
+          {!isWeekView && !isToday && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={() => onAnchorDateChange(bounds.today)}
+            >
+              חזרה להיום
             </Button>
           )}
         </div>
@@ -103,21 +124,22 @@ export function CalendarWeekView({
           type="button"
           variant="outline"
           size="icon"
-          onClick={() => shiftWeek(1)}
+          onClick={() => shiftAnchor(isWeekView ? 7 : 1)}
           disabled={!canGoForward}
-          aria-label="שבוע הבא"
+          aria-label={isWeekView ? "שבוע הבא" : "יום הבא"}
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Button>
       </div>
 
       <CalendarTimeGrid
-        dates={weekDates}
+        dates={dates}
         workoutsByDate={workoutsByDate}
         userRole={userRole}
         trainees={trainees}
         today={bounds.today}
         historyStart={bounds.historyStart}
+        scrollToWorkoutId={scrollToWorkoutId}
       />
     </div>
   );

@@ -178,3 +178,23 @@ export function getWorkoutGridPosition(
     minHeight: Math.max(minHeight, 28),
   };
 }
+
+export const CALENDAR_HOUR_COLUMN_WIDTH = "3.25rem";
+export const CALENDAR_WEEK_DAY_COLUMN_MIN = "9rem";
+export const CALENDAR_DAY_VIEW_MIN_WIDTH = "20rem";
+
+export function getCalendarGridColumnTemplate(dateCount: number): string {
+  if (dateCount === 1) {
+    return `${CALENDAR_HOUR_COLUMN_WIDTH} 1fr`;
+  }
+  return `${CALENDAR_HOUR_COLUMN_WIDTH} repeat(${dateCount}, minmax(${CALENDAR_WEEK_DAY_COLUMN_MIN}, 1fr))`;
+}
+
+export function getCalendarGridMinWidth(dateCount: number): string {
+  if (dateCount === 1) {
+    return CALENDAR_DAY_VIEW_MIN_WIDTH;
+  }
+  const hourColumnRem = 3.25;
+  const dayColumnRem = 9;
+  return `${hourColumnRem + dateCount * dayColumnRem}rem`;
+}

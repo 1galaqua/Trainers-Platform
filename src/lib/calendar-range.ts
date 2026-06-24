@@ -19,6 +19,8 @@ export function getCalendarVisibleRange(now = new Date()) {
   return { start, end };
 }
 
+export type CalendarNavigationBounds = ReturnType<typeof getCalendarNavigationBounds>;
+
 export function getCalendarNavigationBounds(now = new Date()) {
   const today = getIsraelDateString(now);
   const historyStart = addIsraelDays(today, -CALENDAR_HISTORY_DAYS);
@@ -31,6 +33,15 @@ export function getCalendarNavigationBounds(now = new Date()) {
     earliestWeekStart: getWeekStartDateString(historyStart),
     latestWeekStart: getWeekStartDateString(forwardEnd),
   };
+}
+
+export function clampCalendarAnchorDate(
+  dateStr: string,
+  bounds: CalendarNavigationBounds,
+) {
+  if (dateStr < bounds.historyStart) return bounds.historyStart;
+  if (dateStr > bounds.forwardEnd) return bounds.forwardEnd;
+  return dateStr;
 }
 
 export function isWorkoutInPast(startsAtIso: string, now = new Date()) {

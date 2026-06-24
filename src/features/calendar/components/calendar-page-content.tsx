@@ -1,10 +1,9 @@
 "use client";
 
-import type { ProgramType, UserRole } from "@/lib/prisma-client";
+import type { UserRole } from "@/lib/prisma-client";
 import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
 
-import { CalendarDayView } from "./calendar-day-view";
-import { CalendarWeekView } from "./calendar-week-view";
+import { CalendarScheduleView } from "./calendar-schedule-view";
 import { CreateWorkoutSheet } from "./create-workout-sheet";
 import {
   CalendarFeedbackProvider,
@@ -13,6 +12,10 @@ import {
 } from "./calendar-feedback-context";
 import { calendarViewLabels, type CalendarViewMode } from "@/lib/calendar-config";
 import { getWorkoutIsraelDateKey } from "@/lib/calendar-datetime";
+import {
+  clampCalendarAnchorDate,
+  getCalendarNavigationBounds,
+} from "@/lib/calendar-range";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -52,20 +55,35 @@ function CalendarPageContentInner({
     return workouts.find((workout) => workout.id === workoutId) ?? null;
   }, [searchParams, workouts]);
 
+  const bounds = useMemo(() => getCalendarNavigationBounds(), []);
   const [viewMode, setViewMode] = useState<CalendarViewMode>(() =>
     focusWorkout || searchParams.get("view") === "day" ? "day" : "week",
   );
+  const [anchorDate, setAnchorDate] = useState(() => {
+    if (focusWorkout) {
+      return clampCalendarAnchorDate(
+        getWorkoutIsraelDateKey(focusWorkout.startsAt),
+        bounds,
+      );
+    }
+    return bounds.today;
+  });
   const isCoach = userRole === "COACH";
 
   useEffect(() => {
     if (focusWorkout || searchParams.get("view") === "day") {
       setViewMode("day");
     }
-  }, [focusWorkout, searchParams]);
+    if (focusWorkout) {
+      setAnchorDate(
+        clampCalendarAnchorDate(
+          getWorkoutIsraelDateKey(focusWorkout.startsAt),
+          bounds,
+        ),
+      );
+    }
+  }, [focusWorkout, searchParams, bounds]);
 
-  const dayViewFocusDate = focusWorkout
-    ? getWorkoutIsraelDateKey(focusWorkout.startsAt)
-    : undefined;
   const scrollToWorkoutId = focusWorkout?.id ?? null;
 
   return (
@@ -100,17 +118,15 @@ function CalendarPageContentInner({
         </span>
       </div>
 
-      {viewMode === "week" ? (
-        <CalendarWeekView workouts={workouts} userRole={userRole} trainees={trainees} />
-      ) : (
-        <CalendarDayView
-          workouts={workouts}
-          userRole={userRole}
-          trainees={trainees}
-          initialFocusDate={dayViewFocusDate}
-          scrollToWorkoutId={scrollToWorkoutId}
-        />
-      )}
+      <CalendarScheduleView
+        viewMode={viewMode}
+        anchorDate={anchorDate}
+        onAnchorDateChange={setAnchorDate}
+        workouts={workouts}
+        userRole={userRole}
+        trainees={trainees}
+        scrollToWorkoutId={scrollToWorkoutId}
+      />
     </div>
   );
 }

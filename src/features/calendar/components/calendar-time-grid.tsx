@@ -8,8 +8,10 @@ import {
 } from "@/lib/calendar-datetime";
 import {
   computeHourHeightsForWorkouts,
+  getCalendarGridColumnTemplate,
   getCalendarGridHeightPx,
   getCalendarGridHours,
+  getCalendarGridMinWidth,
   getHourLineOffsets,
   getWorkoutGridPosition,
   mergeHourHeights,
@@ -47,9 +49,38 @@ export function CalendarTimeGrid({
 
   const datesKey = dates.join(",");
 
+  const visibleWorkoutIdsKey = useMemo(() => {
+    return dates
+      .flatMap((dateStr) => (workoutsByDate.get(dateStr) ?? []).map((workout) => workout.id))
+      .sort()
+      .join(",");
+  }, [dates, workoutsByDate]);
+
   useLayoutEffect(() => {
-    setContentHeights({});
-  }, [datesKey, userRole, trainees.length]);
+    setContentHeights((current) => {
+      if (visibleWorkoutIdsKey.length === 0) {
+        return Object.keys(current).length === 0 ? current : {};
+      }
+
+      const visibleIds = new Set(visibleWorkoutIdsKey.split(","));
+      const next: Record<string, number> = {};
+      let changed = false;
+
+      for (const [workoutId, height] of Object.entries(current)) {
+        if (visibleIds.has(workoutId)) {
+          next[workoutId] = height;
+        } else {
+          changed = true;
+        }
+      }
+
+      if (!changed && Object.keys(current).length === Object.keys(next).length) {
+        return current;
+      }
+
+      return next;
+    });
+  }, [visibleWorkoutIdsKey]);
 
   const handleContentHeight = useCallback((workoutId: string, height: number) => {
     setContentHeights((current) => {
@@ -100,10 +131,8 @@ export function CalendarTimeGrid({
     return () => window.cancelAnimationFrame(frame);
   }, [scrollToWorkoutId, contentHeights, datesKey]);
 
-  const columnTemplate =
-    dates.length === 1
-      ? "3.25rem 1fr"
-      : `3.25rem repeat(${dates.length}, minmax(0, 1fr))`;
+  const columnTemplate = getCalendarGridColumnTemplate(dates.length);
+  const gridMinWidth = getCalendarGridMinWidth(dates.length);
 
   return (
     <div
@@ -112,7 +141,7 @@ export function CalendarTimeGrid({
     >
       <div
         className="min-w-full"
-        style={{ minWidth: dates.length === 1 ? "20rem" : "56rem" }}
+        style={{ minWidth: gridMinWidth }}
       >
         <div
           className="sticky top-0 z-20 grid border-b border-border bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80"
