@@ -136,16 +136,6 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  .tracking-grid-sticky-col {
-    position: sticky;
-    right: 0;
-    z-index: 10;
-    isolation: isolate;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
-  }
-
   .tracking-grid-cell-filled {
     @apply border border-green-200 bg-green-50 text-foreground dark:border-green-900 dark:bg-green-950;
   }

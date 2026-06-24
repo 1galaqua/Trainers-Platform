@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TrackingGridCell } from "@/features/tracking/components/tracking-grid-cell";
-import type { TrackingWeekGrid } from "@/lib/tracking-week-data";
+import type { TrackingWeekCell, TrackingWeekGrid } from "@/lib/tracking-week-data";
 
 type TrackingWeeklyGridProps = {
   title: string;
@@ -11,6 +11,35 @@ type TrackingWeeklyGridProps = {
   traineeId?: string | null;
   canEdit?: boolean;
 };
+
+const DATA_COL_WIDTH = "min-w-[5.5rem]";
+const LABEL_COL_WIDTH = "w-[8rem]";
+
+function GridCellContent({
+  cell,
+  showInputs,
+  traineeId,
+}: {
+  cell: TrackingWeekCell;
+  showInputs: boolean;
+  traineeId: string | null | undefined;
+}) {
+  if (showInputs && traineeId) {
+    return <TrackingGridCell traineeId={traineeId} cell={cell} />;
+  }
+
+  return (
+    <span
+      className={cn(
+        "flex h-12 w-full min-w-[5rem] items-center justify-center rounded-md border px-1 text-center text-xs tabular-nums",
+        cell.raw != null ? "tracking-grid-cell-filled" : "tracking-grid-cell-empty",
+        !cell.editable && "opacity-60",
+      )}
+    >
+      {cell.display}
+    </span>
+  );
+}
 
 export function TrackingWeeklyGrid({
   title,
@@ -26,64 +55,80 @@ export function TrackingWeeklyGrid({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 p-0 pb-4">
-        <div className="tracking-grid-scroll">
-          <table className="w-full min-w-max text-sm" dir="rtl">
-            <thead>
-              <tr className="border-border border-b bg-muted">
-                <th className="tracking-grid-sticky-col min-w-[8rem] border-border border-l bg-muted px-3 py-2.5 text-start font-medium">
-                  שדה
-                </th>
-                <th className="min-w-[5.5rem] bg-muted px-2 py-2.5 text-center font-medium whitespace-nowrap">
+        <div className="flex min-w-0 text-sm" dir="rtl">
+          <div
+            className={cn(
+              "flex shrink-0 flex-col border-border border-l bg-background",
+              LABEL_COL_WIDTH,
+            )}
+          >
+            <div className="flex min-h-11 items-center border-border border-b bg-muted px-3 font-medium">
+              שדה
+            </div>
+            {grid.rows.map((row) => (
+              <div
+                key={row.id}
+                className="flex min-h-14 items-center border-border border-b px-3 text-start font-normal text-muted-foreground last:border-0"
+              >
+                {row.label}
+              </div>
+            ))}
+          </div>
+
+          <div className="tracking-grid-scroll min-w-0 flex-1">
+            <div className="min-w-max">
+              <div className="flex min-h-11 border-border border-b bg-muted">
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center justify-center bg-muted px-2 text-center font-medium whitespace-nowrap",
+                    DATA_COL_WIDTH,
+                  )}
+                >
                   ממוצע שבועי
-                </th>
+                </div>
                 {grid.days.map((day) => (
-                  <th
+                  <div
                     key={day.date}
                     className={cn(
-                      "min-w-[5.5rem] bg-muted px-2 py-2.5 text-center font-medium whitespace-nowrap",
-                      day.isToday && "bg-accent/50",
+                      "flex shrink-0 items-center justify-center bg-muted px-2 text-center font-medium whitespace-nowrap",
+                      DATA_COL_WIDTH,
+                      day.isToday && "bg-accent",
                     )}
                   >
                     {day.label}
-                  </th>
+                  </div>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </div>
+
               {grid.rows.map((row) => (
-                <tr key={row.id} className="border-border border-b last:border-0">
-                  <th
-                    scope="row"
-                    className="tracking-grid-sticky-col border-border border-l bg-background px-3 py-2 text-start font-normal text-muted-foreground"
+                <div
+                  key={row.id}
+                  className="flex min-h-14 border-border border-b last:border-0"
+                >
+                  <div
+                    className={cn(
+                      "flex shrink-0 items-center justify-center bg-muted px-2 text-center font-medium tabular-nums",
+                      DATA_COL_WIDTH,
+                    )}
                   >
-                    {row.label}
-                  </th>
-                  <td className="bg-muted px-2 py-2 text-center font-medium tabular-nums">
                     {row.weeklyAverage.display}
-                  </td>
+                  </div>
                   {row.cells.map((cell) => (
-                    <td key={`${row.id}-${cell.date}`} className="p-1">
-                      {showInputs && traineeId ? (
-                        <TrackingGridCell traineeId={traineeId} cell={cell} />
-                      ) : (
-                        <span
-                          className={cn(
-                            "flex h-12 w-full min-w-[5rem] items-center justify-center rounded-md border px-1 text-center text-xs tabular-nums",
-                            cell.raw != null
-                              ? "tracking-grid-cell-filled"
-                              : "tracking-grid-cell-empty",
-                            !cell.editable && "opacity-60",
-                          )}
-                        >
-                          {cell.display}
-                        </span>
-                      )}
-                    </td>
+                    <div
+                      key={`${row.id}-${cell.date}`}
+                      className={cn("flex shrink-0 items-center p-1", DATA_COL_WIDTH)}
+                    >
+                      <GridCellContent
+                        cell={cell}
+                        showInputs={showInputs}
+                        traineeId={traineeId}
+                      />
+                    </div>
                   ))}
-                </tr>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
