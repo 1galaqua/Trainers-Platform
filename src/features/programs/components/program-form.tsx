@@ -144,7 +144,7 @@ function ExerciseFields({
         <span className="font-medium text-sm">תרגיל {index + 1}</span>
         {confirmingRemove ? (
           <div className="max-w-xs shrink-0 space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-right">
-            <p className="text-sm">האם אתה בטוח שברצונך למחוק את התרגיל?</p>
+            <p className="text-sm">האם אתה בטוח?</p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="destructive" size="sm" onClick={handleConfirmRemove}>
                 מחק
