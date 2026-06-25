@@ -155,7 +155,7 @@ function ExerciseFields({
                 size="sm"
                 onClick={() => setConfirmingRemove(false)}
               >
-                לא
+                בטל
               </Button>
             </div>
           </div>
