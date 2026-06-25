@@ -57,10 +57,29 @@ export type ExistingProgramSection = {
 
 export type ProgramSectionSyncPlan = {
   sectionsToDelete: string[];
-  sectionDeletesBlocked: Array<{ sectionId: string; sectionName: string; exerciseName: string }>;
+  sectionsToArchive: string[];
   exercisesToDelete: string[];
-  exerciseDeletesBlocked: Array<{ exerciseId: string; exerciseName: string }>;
+  exercisesToArchive: string[];
 };
+
+function classifyRemovedExercises(
+  exercises: ExistingProgramSection["exercises"],
+  exercisesToDelete: string[],
+  exercisesToArchive: string[],
+) {
+  let hasArchived = false;
+
+  for (const exercise of exercises) {
+    if (exercise.logCount > 0) {
+      exercisesToArchive.push(exercise.id);
+      hasArchived = true;
+    } else {
+      exercisesToDelete.push(exercise.id);
+    }
+  }
+
+  return hasArchived;
+}
 
 export function parseProgramSectionsJson(json: string): ProgramSectionInput[] | null {
   try {
@@ -260,60 +279,45 @@ export function buildProgramSectionSyncPlan(
   );
 
   const sectionsToDelete: string[] = [];
-  const sectionDeletesBlocked: ProgramSectionSyncPlan["sectionDeletesBlocked"] = [];
+  const sectionsToArchive: string[] = [];
   const exercisesToDelete: string[] = [];
-  const exerciseDeletesBlocked: ProgramSectionSyncPlan["exerciseDeletesBlocked"] = [];
+  const exercisesToArchive: string[] = [];
 
   for (const existingSection of existingSections) {
     if (submittedSectionIds.has(existingSection.id)) continue;
 
-    sectionsToDelete.push(existingSection.id);
+    const hasArchived = classifyRemovedExercises(
+      existingSection.exercises,
+      exercisesToDelete,
+      exercisesToArchive,
+    );
 
-    for (const exercise of existingSection.exercises) {
-      if (exercise.logCount > 0) {
-        sectionDeletesBlocked.push({
-          sectionId: existingSection.id,
-          sectionName: existingSection.name,
-          exerciseName: exercise.name,
-        });
-      } else {
-        exercisesToDelete.push(exercise.id);
-      }
+    if (hasArchived) {
+      sectionsToArchive.push(existingSection.id);
+    } else {
+      sectionsToDelete.push(existingSection.id);
     }
   }
 
   for (const existingSection of existingSections) {
     if (sectionsToDelete.includes(existingSection.id)) continue;
+    if (sectionsToArchive.includes(existingSection.id)) continue;
 
     for (const exercise of existingSection.exercises) {
       if (submittedExerciseIds.has(exercise.id)) continue;
-      if (exercise.logCount > 0) {
-        exerciseDeletesBlocked.push({ exerciseId: exercise.id, exerciseName: exercise.name });
-      } else {
-        exercisesToDelete.push(exercise.id);
-      }
+      classifyRemovedExercises([exercise], exercisesToDelete, exercisesToArchive);
     }
   }
 
   return {
     sectionsToDelete,
-    sectionDeletesBlocked,
+    sectionsToArchive,
     exercisesToDelete: [...new Set(exercisesToDelete)],
-    exerciseDeletesBlocked,
+    exercisesToArchive: [...new Set(exercisesToArchive)],
   };
 }
 
-export function getProgramSectionSyncError(plan: ProgramSectionSyncPlan): string | null {
-  if (plan.sectionDeletesBlocked.length > 0) {
-    const blocked = plan.sectionDeletesBlocked[0];
-    return `לא ניתן למחוק את המקטע "${blocked.sectionName}" — לתרגיל "${blocked.exerciseName}" קיימים דיווחי אימון`;
-  }
-
-  if (plan.exerciseDeletesBlocked.length > 0) {
-    const blocked = plan.exerciseDeletesBlocked[0];
-    return `לא ניתן להסיר את התרגיל "${blocked.exerciseName}" — קיימים דיווחי אימון`;
-  }
-
+export function getProgramSectionSyncError(): string | null {
   return null;
 }
 

@@ -15,7 +15,10 @@ import {
   type ProgramSectionInput,
 } from "@/lib/program-sections";
 import {
+  applyActiveProgramFilters,
   ensureLegacyProgramSections,
+  filterActiveProgramExercises,
+  filterActiveProgramSections,
   programSectionsInclude,
 } from "@/lib/program-sections-persistence";
 import { workoutSessionLogInclude } from "@/lib/workout-session-display";
@@ -70,12 +73,28 @@ async function syncProgramSections(
     submittedSections,
   );
 
-  const syncError = getProgramSectionSyncError(syncPlan);
+  const syncError = getProgramSectionSyncError();
   if (syncError) return syncError;
+
+  const archivedAt = new Date();
+
+  if (syncPlan.exercisesToArchive.length > 0) {
+    await prisma.programExercise.updateMany({
+      where: { id: { in: syncPlan.exercisesToArchive }, programId },
+      data: { archivedAt },
+    });
+  }
 
   if (syncPlan.exercisesToDelete.length > 0) {
     await prisma.programExercise.deleteMany({
       where: { id: { in: syncPlan.exercisesToDelete }, programId },
+    });
+  }
+
+  if (syncPlan.sectionsToArchive.length > 0) {
+    await prisma.programSection.updateMany({
+      where: { id: { in: syncPlan.sectionsToArchive }, programId },
+      data: { archivedAt },
     });
   }
 
@@ -231,12 +250,14 @@ export async function updateTrainingProgramAction(formData: FormData) {
 
     if (!program) return { error: "תוכנית לא נמצאה" };
 
+    const activeSections = filterActiveProgramSections(program.sections);
+
     await prisma.trainingProgram.update({
       where: { id: programId },
       data: { name, type, description, isActive },
     });
 
-    const syncError = await syncProgramSections(programId, parsed.sections, program.sections);
+    const syncError = await syncProgramSections(programId, parsed.sections, activeSections);
     if (syncError) return { error: syncError };
 
     revalidatePath("/dashboard/workouts");
@@ -244,6 +265,7 @@ export async function updateTrainingProgramAction(formData: FormData) {
     revalidatePath(`/dashboard/workouts/${programId}/edit`);
     revalidatePath("/dashboard/trainees");
     revalidatePath("/dashboard/my-program");
+    revalidatePath("/dashboard/progress");
     return { success: true, programId };
   } catch {
     return { error: "שגיאה בעדכון התוכנית" };
@@ -371,14 +393,23 @@ export async function getCoachProgramsAction() {
   const coach = await requireCoach();
 
   try {
-    return await prisma.trainingProgram.findMany({
+    const programs = await prisma.trainingProgram.findMany({
       where: { coachId: coach.id },
       include: {
         trainee: true,
-        _count: { select: { exercises: true, sessions: true } },
+        exercises: { select: { archivedAt: true } },
+        _count: { select: { sessions: true } },
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    return programs.map((program) => ({
+      ...program,
+      _count: {
+        exercises: filterActiveProgramExercises(program.exercises).length,
+        sessions: program._count.sessions,
+      },
+    }));
   } catch {
     return [];
   }
@@ -390,7 +421,7 @@ export async function getProgramByIdAction(programId: string) {
   try {
     await ensureLegacyProgramSections(programId);
 
-    return prisma.trainingProgram.findFirst({
+    const program = await prisma.trainingProgram.findFirst({
       where: { id: programId, coachId: coach.id },
       include: {
         trainee: true,
@@ -407,6 +438,8 @@ export async function getProgramByIdAction(programId: string) {
         },
       },
     });
+
+    return program ? applyActiveProgramFilters(program) : null;
   } catch {
     return null;
   }

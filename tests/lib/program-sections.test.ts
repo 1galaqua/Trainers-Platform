@@ -347,28 +347,33 @@ describe("buildProgramSectionSyncPlan", () => {
 
     expect(plan.sectionsToDelete).toEqual(["s2"]);
     expect(plan.exercisesToDelete).toContain("e2");
-    expect(getProgramSectionSyncError(plan)).toBeNull();
+    expect(getProgramSectionSyncError()).toBeNull();
   });
 
-  it("blocks section deletion when any exercise has logs", () => {
+  it("archives removed section exercises with logs and deletes those without", () => {
     const plan = buildProgramSectionSyncPlan(
       [
         {
           id: "s1",
           name: "רגליים",
           sortOrder: 0,
-          exercises: [{ id: "e1", name: "סקוואט", logCount: 2 }],
+          exercises: [
+            { id: "e1", name: "סקוואט", logCount: 2 },
+            { id: "e2", name: "לחיצה", logCount: 0 },
+          ],
         },
       ],
       [],
     );
 
-    expect(getProgramSectionSyncError(plan)).toBe(
-      'לא ניתן למחוק את המקטע "רגליים" — לתרגיל "סקוואט" קיימים דיווחי אימון',
-    );
+    expect(plan.sectionsToArchive).toEqual(["s1"]);
+    expect(plan.sectionsToDelete).toEqual([]);
+    expect(plan.exercisesToArchive).toEqual(["e1"]);
+    expect(plan.exercisesToDelete).toContain("e2");
+    expect(getProgramSectionSyncError()).toBeNull();
   });
 
-  it("blocks removed exercise deletion when logs exist", () => {
+  it("archives removed exercise with logs and deletes exercise without logs", () => {
     const plan = buildProgramSectionSyncPlan(
       [
         {
@@ -391,9 +396,10 @@ describe("buildProgramSectionSyncPlan", () => {
     );
 
     expect(plan.sectionsToDelete).toEqual([]);
-    expect(getProgramSectionSyncError(plan)).toBe(
-      'לא ניתן להסיר את התרגיל "B" — קיימים דיווחי אימון',
-    );
+    expect(plan.sectionsToArchive).toEqual([]);
+    expect(plan.exercisesToArchive).toEqual(["e2"]);
+    expect(plan.exercisesToDelete).not.toContain("e2");
+    expect(getProgramSectionSyncError()).toBeNull();
   });
 });
 

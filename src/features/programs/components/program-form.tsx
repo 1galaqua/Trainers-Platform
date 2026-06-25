@@ -131,20 +131,47 @@ function ExerciseFields({
   onRemove,
   canRemove,
 }: ExerciseFieldsProps) {
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+
+  function handleConfirmRemove() {
+    onRemove();
+    setConfirmingRemove(false);
+  }
+
   return (
     <div className="space-y-3 rounded-lg border border-border p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <span className="font-medium text-sm">תרגיל {index + 1}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onRemove}
-          disabled={!canRemove}
-          aria-label="הסר תרגיל"
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        {confirmingRemove ? (
+          <div className="max-w-xs shrink-0 space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-right">
+            <p className="text-sm">האם אתה בטוח שברצונך למחוק את התרגיל?</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="destructive" size="sm" onClick={handleConfirmRemove}>
+                מחק
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmingRemove(false)}
+              >
+                לא
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setConfirmingRemove(true)}
+            disabled={!canRemove}
+            className="shrink-0 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="size-4" />
+            מחק תרגיל
+          </Button>
+        )}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">

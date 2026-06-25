@@ -178,12 +178,13 @@ model TrainingProgram {
 }
 
 model ProgramSection {
-  id        String            @id @default(auto()) @map("_id") @db.ObjectId
-  programId String            @db.ObjectId
-  name      String
-  sortOrder Int               @default(0)
-  program   TrainingProgram   @relation(fields: [programId], references: [id])
-  exercises ProgramExercise[]
+  id         String            @id @default(auto()) @map("_id") @db.ObjectId
+  programId  String            @db.ObjectId
+  name       String
+  sortOrder  Int               @default(0)
+  archivedAt DateTime?
+  program    TrainingProgram   @relation(fields: [programId], references: [id])
+  exercises  ProgramExercise[]
 }
 
 model ProgramExercise {
@@ -199,6 +200,7 @@ model ProgramExercise {
   videoUrl     String?
   instructions String?
   sortOrder    Int             @default(0)
+  archivedAt   DateTime?
   program      TrainingProgram @relation(fields: [programId], references: [id])
   section      ProgramSection? @relation(fields: [sectionId], references: [id])
   logs         ExerciseLog[]

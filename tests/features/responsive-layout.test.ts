@@ -8,6 +8,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DateInput } from "@/components/ui/date-input";
 import { CoachingPeriodForm } from "@/features/trainees/components/coaching-period-form";
+import {
+  CHART_POINT_MIN_WIDTH_PX,
+  ProgressChart,
+} from "@/features/progress/components/progress-chart";
 import { TraineeProgramPicker } from "@/features/workouts/components/trainee-program-picker";
 
 const mobileViewport = { width: 390, height: 844 };
@@ -162,11 +166,7 @@ describe("System-wide responsive layout contracts", () => {
     expect(getCalendarGridMinWidth(1)).toBe("20rem");
   });
 
-  it("wraps progress charts in horizontal scroll on narrow screens", async () => {
-    const { ProgressChart, CHART_POINT_MIN_WIDTH_PX } = await import(
-      "@/features/progress/components/progress-chart",
-    );
-
+  it("wraps progress charts in horizontal scroll on narrow screens", () => {
     const data = Array.from({ length: 6 }, (_, index) => ({
       date: `2026-06-${String(index + 1).padStart(2, "0")}T10:00:00.000Z`,
       weight: 70 + index,

@@ -11,7 +11,12 @@ import {
   buildWorkoutSessionCreateData,
   getNextWorkoutsCompletedValue,
 } from "@/lib/workout-session-create";
-import { ensureLegacyProgramSections, programSectionsInclude } from "@/lib/program-sections-persistence";
+import {
+  applyActiveProgramFilters,
+  ensureLegacyProgramSections,
+  loadProgressExercisesForProgram,
+  programSectionsInclude,
+} from "@/lib/program-sections-persistence";
 import { workoutSessionLogInclude } from "@/lib/workout-session-display";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
@@ -167,7 +172,7 @@ export async function getTraineeProgramsAction() {
 
     await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
 
-    return await prisma.trainingProgram.findMany({
+    const loaded = await prisma.trainingProgram.findMany({
       where: { traineeId: trainee.id, isActive: true },
       include: {
         ...programSectionsInclude,
@@ -175,6 +180,8 @@ export async function getTraineeProgramsAction() {
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    return loaded.map(applyActiveProgramFilters);
   } catch {
     return [];
   }
@@ -186,13 +193,15 @@ export async function getTraineeProgramByIdAction(programId: string) {
   try {
     await ensureLegacyProgramSections(programId);
 
-    return await prisma.trainingProgram.findFirst({
+    const program = await prisma.trainingProgram.findFirst({
       where: { id: programId, traineeId: trainee.id, isActive: true },
       include: {
         ...programSectionsInclude,
         coach: true,
       },
     });
+
+    return program ? applyActiveProgramFilters(program) : null;
   } catch {
     return null;
   }
@@ -363,7 +372,7 @@ export async function getCoachTraineeProgramsAction(traineeId: string) {
     });
     await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
 
-    return await prisma.trainingProgram.findMany({
+    const loaded = await prisma.trainingProgram.findMany({
       where: { traineeId, coachId: coach.id, isActive: true },
       include: {
         ...programSectionsInclude,
@@ -371,6 +380,8 @@ export async function getCoachTraineeProgramsAction(traineeId: string) {
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    return loaded.map(applyActiveProgramFilters);
   } catch {
     return [];
   }
@@ -428,26 +439,37 @@ export async function getWorkoutHistoryAction() {
 }
 
 export async function getTraineeProgressExercisesAction() {
+  const trainee = await requireTraineeOnboarded();
   const programs = await getTraineeProgramsAction();
+  const multiplePrograms = programs.length > 1;
 
-  return Promise.all(
-    programs.flatMap((program) =>
-      program.exercises.map(async (ex) => {
-        const data = await getExerciseProgressAction(ex.id);
-        const label = programs.length > 1 ? `${ex.name} (${program.name})` : ex.name;
+  const results = await Promise.all(
+    programs.map(async (program) => {
+      const exercises = await loadProgressExercisesForProgram(program.id, trainee.id);
 
-        return {
-          id: ex.id,
-          name: label,
-          data: data.map((d) => ({
-            date: d.date,
-            weight: d.weight,
-            volume: d.volume,
-          })),
-        };
-      }),
-    ),
+      return Promise.all(
+        exercises.map(async (ex) => {
+          const data = await getExerciseProgressAction(ex.id);
+          if (data.length === 0) return null;
+
+          const baseName = ex.archivedAt ? `${ex.name} (ארכיון)` : ex.name;
+          const label = multiplePrograms ? `${baseName} (${program.name})` : baseName;
+
+          return {
+            id: ex.id,
+            name: label,
+            data: data.map((d) => ({
+              date: d.date,
+              weight: d.weight,
+              volume: d.volume,
+            })),
+          };
+        }),
+      );
+    }),
   );
+
+  return results.flat().filter((item): item is NonNullable<typeof item> => item != null);
 }
 
 export async function getCoachTraineeProgressExercisesAction(traineeId: string) {
@@ -456,51 +478,59 @@ export async function getCoachTraineeProgressExercisesAction(traineeId: string) 
   if (!ownsTrainee) return [];
 
   const programs = await getCoachTraineeProgramsAction(traineeId);
+  const multiplePrograms = programs.length > 1;
 
   const results = await Promise.all(
-    programs.flatMap((program) =>
-      program.exercises.map(async (ex) => {
-        const logs = await prisma.exerciseLog.findMany({
-          where: {
-            exerciseId: ex.id,
-            session: { traineeId },
-          },
-          include: {
-            session: true,
-            exercise: true,
-            setLogs: { orderBy: { setNumber: "asc" } },
-          },
-          orderBy: { session: { completedAt: "asc" } },
-        });
+    programs.map(async (program) => {
+      const exercises = await loadProgressExercisesForProgram(program.id, traineeId);
 
-        const data = logs.map((log) => {
-          const metrics = computeExerciseLogMetrics({
-            weightKg: log.weightKg,
-            repsCompleted: log.repsCompleted,
-            setLogs: log.setLogs,
-            defaultReps: log.exercise.reps,
-            plannedSets: log.exercise.sets,
+      return Promise.all(
+        exercises.map(async (ex) => {
+          const logs = await prisma.exerciseLog.findMany({
+            where: {
+              exerciseId: ex.id,
+              session: { traineeId },
+            },
+            include: {
+              session: true,
+              exercise: true,
+              setLogs: { orderBy: { setNumber: "asc" } },
+            },
+            orderBy: { session: { completedAt: "asc" } },
           });
 
+          if (logs.length === 0) return null;
+
+          const data = logs.map((log) => {
+            const metrics = computeExerciseLogMetrics({
+              weightKg: log.weightKg,
+              repsCompleted: log.repsCompleted,
+              setLogs: log.setLogs,
+              defaultReps: log.exercise.reps,
+              plannedSets: log.exercise.sets,
+            });
+
+            return {
+              date: log.session.completedAt.toISOString(),
+              weight: metrics.averageWeight,
+              volume: metrics.volume,
+            };
+          });
+
+          const baseName = ex.archivedAt ? `${ex.name} (ארכיון)` : ex.name;
+          const label = multiplePrograms ? `${baseName} (${program.name})` : baseName;
+
           return {
-            date: log.session.completedAt.toISOString(),
-            weight: metrics.averageWeight,
-            volume: metrics.volume,
+            id: ex.id,
+            name: label,
+            data,
           };
-        });
-
-        const label = programs.length > 1 ? `${ex.name} (${program.name})` : ex.name;
-
-        return {
-          id: ex.id,
-          name: label,
-          data,
-        };
-      }),
-    ),
+        }),
+      );
+    }),
   );
 
-  return results.filter((item) => item.data.length > 0);
+  return results.flat().filter((item): item is NonNullable<typeof item> => item != null);
 }
 
 export async function getExerciseProgressAction(exerciseId: string) {
