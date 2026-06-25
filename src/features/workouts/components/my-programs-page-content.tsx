@@ -2,18 +2,26 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ExternalLink } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ProgramExercisesBySection,
+  type ProgramExerciseView,
+} from "@/features/programs/components/program-exercises-by-section";
 import {
   TraineeProgramPicker,
   type TraineeProgramPickerItem,
 } from "@/features/workouts/components/trainee-program-picker";
-import { ExerciseDetailText } from "@/features/programs/components/exercise-detail-text";
 import { programTypeLabels } from "@/lib/program-labels";
 import type { ProgramType } from "@/lib/prisma-client";
+
+export type MyProgramSectionItem = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  exercises: ProgramExerciseView[];
+};
 
 export type MyProgramItem = {
   id: string;
@@ -21,16 +29,8 @@ export type MyProgramItem = {
   type: ProgramType;
   description: string | null;
   coachName: string | null;
-  exercises: Array<{
-    id: string;
-    name: string;
-    sets: number;
-    reps: number;
-    restSeconds: number;
-    instructions: string | null;
-    coachNotes: string | null;
-    youtubeUrl: string | null;
-  }>;
+  sections: MyProgramSectionItem[];
+  exercises: ProgramExerciseView[];
 };
 
 type MyProgramsPageContentProps = {
@@ -78,37 +78,24 @@ export function MyProgramsPageContent({ programs }: MyProgramsPageContentProps) 
         <p className="text-muted-foreground text-sm">{program.description}</p>
       )}
 
-      <div className="space-y-4">
-        {program.exercises.map((ex, index) => (
-          <Card key={ex.id}>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {index + 1}. {ex.name}
-              </CardTitle>
-              <CardDescription>
-                {ex.sets} סטים × {ex.reps} חזרות · מנוחה {ex.restSeconds} שנ׳
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <ExerciseDetailText
-                instructions={ex.instructions}
-                coachNotes={ex.coachNotes}
-              />
-              {ex.youtubeUrl && (
-                <a
-                  href={ex.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  צפייה בסרטון
-                  <ExternalLink className="size-3.5" />
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <ProgramExercisesBySection
+        className="space-y-6"
+        sections={program.sections.map((section) => ({
+          id: section.id,
+          name: section.name,
+          sortOrder: section.sortOrder,
+          exercises: section.exercises.map((exercise, index) => ({
+            ...exercise,
+            sortOrder: index,
+            sectionId: section.id,
+          })),
+        }))}
+        exercises={program.exercises.map((exercise, index) => ({
+          ...exercise,
+          sortOrder: index,
+          sectionId: null,
+        }))}
+      />
 
       {programs.length > 1 && (
         <div className="space-y-3 border-t border-border pt-6">

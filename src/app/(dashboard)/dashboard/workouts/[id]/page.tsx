@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, ExternalLink, Pencil } from "lucide-react";
+import { ArrowRight, Pencil } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { requireCoach } from "@/lib/auth";
-import { ExerciseDetailText } from "@/features/programs/components/exercise-detail-text";
+import { ProgramExercisesBySection } from "@/features/programs/components/program-exercises-by-section";
 import { DeleteProgramButton } from "@/features/programs/components/delete-program-button";
 import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
 import { programTypeLabels } from "@/lib/program-labels";
@@ -61,35 +60,38 @@ export default async function ProgramDetailPage({ params }: PageProps) {
 
       <div className="space-y-4">
         <h2 className="font-medium text-base">תרגילים</h2>
-        {program.exercises.map((ex, index) => (
-          <Card key={ex.id}>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {index + 1}. {ex.name}
-              </CardTitle>
-              <CardDescription>
-                {ex.sets} סטים × {ex.reps} חזרות · מנוחה {ex.restSeconds} שנ׳
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <ExerciseDetailText
-                instructions={ex.instructions}
-                coachNotes={ex.coachNotes}
-              />
-              {ex.youtubeUrl && (
-                <a
-                  href={ex.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  צפייה בסרטון YouTube
-                  <ExternalLink className="size-3.5" />
-                </a>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        <ProgramExercisesBySection
+        className="space-y-6"
+        sections={program.sections.map((section) => ({
+          id: section.id,
+          name: section.name,
+          sortOrder: section.sortOrder,
+          exercises: section.exercises.map((exercise) => ({
+            id: exercise.id,
+            name: exercise.name,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            restSeconds: exercise.restSeconds,
+            coachNotes: exercise.coachNotes,
+            youtubeUrl: exercise.youtubeUrl,
+            instructions: exercise.instructions,
+            sortOrder: exercise.sortOrder,
+            sectionId: exercise.sectionId,
+          })),
+        }))}
+        exercises={program.exercises.map((exercise) => ({
+          id: exercise.id,
+          name: exercise.name,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          restSeconds: exercise.restSeconds,
+          coachNotes: exercise.coachNotes,
+          youtubeUrl: exercise.youtubeUrl,
+          instructions: exercise.instructions,
+          sortOrder: exercise.sortOrder,
+          sectionId: exercise.sectionId,
+        }))}
+        />
       </div>
 
       {program.sessions.length > 0 && (

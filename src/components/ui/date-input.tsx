@@ -44,7 +44,7 @@ function DateInput({ className, disabled, id, ...props }: React.ComponentProps<t
       ref={wrapperRef}
       dir="ltr"
       className={cn(
-        "grid w-full max-w-full min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
+        "flex h-8 max-h-8 min-h-8 w-full max-w-full min-w-0 items-stretch overflow-hidden rounded-lg border border-input bg-transparent transition-colors dark:bg-input/30",
         "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         "has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
@@ -56,7 +56,7 @@ function DateInput({ className, disabled, id, ...props }: React.ComponentProps<t
         disabled={disabled}
         aria-label="פתיחת בוחר תאריך"
         onClick={handleIconClick}
-        className="flex cursor-pointer items-center justify-center border-input border-r text-muted-foreground disabled:cursor-not-allowed"
+        className="flex w-8 shrink-0 cursor-pointer items-center justify-center border-input border-r text-muted-foreground disabled:cursor-not-allowed"
       >
         <CalendarDays aria-hidden className="pointer-events-none size-4 shrink-0" />
       </button>
@@ -64,7 +64,7 @@ function DateInput({ className, disabled, id, ...props }: React.ComponentProps<t
         id={inputId}
         type="date"
         disabled={disabled}
-        className="input-date-rtl-field h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0 dark:[color-scheme:dark]"
+        className="input-date-rtl-field h-full min-h-0 flex-1 rounded-none border-0 bg-transparent px-2 py-0 shadow-none focus-visible:ring-0 dark:[color-scheme:dark]"
         {...props}
       />
     </div>

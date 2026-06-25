@@ -14,6 +14,7 @@ import {
   getCoachTraineeProgramsAction,
   getCoachTraineeLogQuotaAction,
 } from "@/server/actions/workouts";
+import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
 
 export const metadata = {
   title: `דיווח אימון למתאמן | ${siteConfig.shortName}`,
@@ -80,14 +81,7 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
     );
   }
 
-  const programOptions = programs.map((p) => ({
-    id: p.id,
-    name: p.name,
-    type: p.type,
-    exerciseCount: p.exercises.length,
-    coachName: p.coach.displayName,
-    exercises: p.exercises,
-  }));
+  const programOptions = programs.map((program) => buildLogWorkoutProgramOption(program));
 
   return (
     <div className="space-y-6">

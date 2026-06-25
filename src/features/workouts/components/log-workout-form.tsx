@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
+import type { LogWorkoutExercise, LogWorkoutSection } from "@/lib/program-sections";
 import {
   applyWorkoutLogDraft,
   buildEmptySetLogs,
@@ -33,13 +34,7 @@ export type WorkoutQuotaInfo = {
   workoutsRemaining: number;
 };
 
-type Exercise = {
-  id: string;
-  name: string;
-  sets: number;
-  reps: number;
-  restSeconds: number;
-};
+type Exercise = LogWorkoutExercise;
 
 function buildLogsFromExercises(
   exercises: Exercise[],
@@ -80,15 +75,93 @@ function buildLogsFromExercises(
 type LogWorkoutFormProps = {
   programId: string;
   exercises: Exercise[];
+  sections?: LogWorkoutSection[];
   traineeId?: string;
   submitAction?: (formData: FormData) => Promise<LogWorkoutActionResult>;
   redirectTo?: string;
   quotaInfo?: WorkoutQuotaInfo | null;
 };
 
+type ExerciseLogCardProps = {
+  exercise: Exercise;
+  exerciseIndex: number;
+  logs: ExerciseLogState[];
+  prefillLoading: boolean;
+  onSetLogChange: (exerciseIndex: number, setIndex: number, field: string, value: string) => void;
+  onNotesChange: (exerciseIndex: number, value: string) => void;
+};
+
+function ExerciseLogCard({
+  exercise,
+  exerciseIndex,
+  logs,
+  prefillLoading,
+  onSetLogChange,
+  onNotesChange,
+}: ExerciseLogCardProps) {
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div>
+        <h3 className="font-medium">{exercise.name}</h3>
+        <p className="text-muted-foreground text-xs">
+          {exercise.sets} סטים × {exercise.reps} חזרות · מנוחה {exercise.restSeconds} שנ׳
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {logs[exerciseIndex]?.setLogs.map((set, setIndex) => (
+          <div
+            key={`${exercise.id}-${set.setNumber}`}
+            className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3 sm:grid-cols-[auto_1fr_1fr]"
+          >
+            <div className="flex items-center">
+              <span className="font-medium text-sm">סט {set.setNumber}</span>
+            </div>
+            <div className="space-y-1">
+              <Label>משקל (ק״ג)</Label>
+              <Input
+                type="number"
+                step="0.5"
+                min={0}
+                value={set.weightKg}
+                onChange={(e) => onSetLogChange(exerciseIndex, setIndex, "weightKg", e.target.value)}
+                placeholder="0"
+                disabled={prefillLoading}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>חזרות בפועל</Label>
+              <Input
+                type="number"
+                min={0}
+                value={set.repsCompleted}
+                onChange={(e) =>
+                  onSetLogChange(exerciseIndex, setIndex, "repsCompleted", e.target.value)
+                }
+                disabled={prefillLoading}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        <Label>הערות לתרגיל</Label>
+        <Textarea
+          value={logs[exerciseIndex]?.notes ?? ""}
+          onChange={(e) => onNotesChange(exerciseIndex, e.target.value)}
+          rows={2}
+          disabled={prefillLoading}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function LogWorkoutForm({
   programId,
   exercises,
+  sections,
   traineeId,
   submitAction = logWorkoutAction,
   redirectTo = "/dashboard",
@@ -100,6 +173,22 @@ export function LogWorkoutForm({
   const baselineRef = useRef<{ logs: ExerciseLogState[]; sessionNotes: string } | null>(null);
   const exercisesRef = useRef(exercises);
   exercisesRef.current = exercises;
+
+  const exerciseIndexById = useMemo(
+    () => new Map(exercises.map((exercise, index) => [exercise.id, index])),
+    [exercises],
+  );
+
+  const displaySections = useMemo<LogWorkoutSection[]>(() => {
+    if (sections?.length) return sections;
+    return [
+      {
+        id: "all",
+        name: "",
+        exercises,
+      },
+    ];
+  }, [sections, exercises]);
 
   const exerciseIds = exercises.map((exercise) => exercise.id);
   const prefillKey = buildWorkoutLogPrefillKey(programId, traineeKey, exerciseIds);
@@ -299,62 +388,29 @@ export function LogWorkoutForm({
           הנתונים נשמרים אוטומטית בטיוטה עד לשמירת האימון.
         </p>
       )}
-      {exercises.map((exercise, exerciseIndex) => (
-        <div key={exercise.id} className="space-y-3 rounded-lg border border-border p-4">
-          <div>
-            <h3 className="font-medium">{exercise.name}</h3>
-            <p className="text-muted-foreground text-xs">
-              {exercise.sets} סטים × {exercise.reps} חזרות · מנוחה {exercise.restSeconds} שנ׳
-            </p>
-          </div>
 
-          <div className="space-y-3">
-            {logs[exerciseIndex]?.setLogs.map((set, setIndex) => (
-              <div
-                key={`${exercise.id}-${set.setNumber}`}
-                className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3 sm:grid-cols-[auto_1fr_1fr]"
-              >
-                <div className="flex items-center">
-                  <span className="font-medium text-sm">סט {set.setNumber}</span>
-                </div>
-                <div className="space-y-1">
-                  <Label>משקל (ק״ג)</Label>
-                  <Input
-                    type="number"
-                    step="0.5"
-                    min={0}
-                    value={set.weightKg}
-                    onChange={(e) =>
-                      updateSetLog(exerciseIndex, setIndex, "weightKg", e.target.value)
-                    }
-                    placeholder="0"
-                    disabled={prefillLoading}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>חזרות בפועל</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={set.repsCompleted}
-                    onChange={(e) =>
-                      updateSetLog(exerciseIndex, setIndex, "repsCompleted", e.target.value)
-                    }
-                    disabled={prefillLoading}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+      {displaySections.map((section) => (
+        <div key={section.id} className="space-y-4">
+          {section.name ? (
+            <h3 className="font-semibold text-base">{section.name}</h3>
+          ) : null}
+          <div className="space-y-4">
+            {section.exercises.map((exercise) => {
+              const exerciseIndex = exerciseIndexById.get(exercise.id);
+              if (exerciseIndex == null) return null;
 
-          <div className="space-y-1">
-            <Label>הערות לתרגיל</Label>
-            <Textarea
-              value={logs[exerciseIndex]?.notes ?? ""}
-              onChange={(e) => updateExerciseNotes(exerciseIndex, e.target.value)}
-              rows={2}
-              disabled={prefillLoading}
-            />
+              return (
+                <ExerciseLogCard
+                  key={exercise.id}
+                  exercise={exercise}
+                  exerciseIndex={exerciseIndex}
+                  logs={logs}
+                  prefillLoading={prefillLoading}
+                  onSetLogChange={updateSetLog}
+                  onNotesChange={updateExerciseNotes}
+                />
+              );
+            })}
           </div>
         </div>
       ))}

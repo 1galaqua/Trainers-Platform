@@ -14,7 +14,7 @@ import {
   type TraineeProgramPickerItem,
 } from "@/features/workouts/components/trainee-program-picker";
 import { programTypeLabels } from "@/lib/program-labels";
-import type { ProgramType } from "@/lib/prisma-client";
+import type { LogWorkoutSection } from "@/lib/program-sections";
 
 type ProgramOption = TraineeProgramPickerItem & {
   exercises: Array<{
@@ -24,6 +24,7 @@ type ProgramOption = TraineeProgramPickerItem & {
     reps: number;
     restSeconds: number;
   }>;
+  sections: LogWorkoutSection[];
 };
 
 type LogWorkoutPageContentProps = {
@@ -136,6 +137,7 @@ export function LogWorkoutPageContent({
             key={program.id}
             programId={program.id}
             exercises={program.exercises}
+            sections={program.sections}
             traineeId={coachTraineeId}
             submitAction={coachTraineeId ? logCoachTraineeWorkoutAction : undefined}
             redirectTo={redirectTo}

@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import {
+  parseCoachingDateInput,
+  serializeCoachingDateForClient,
+} from "@/lib/coaching-period-dates";
 import { prisma } from "@/lib/prisma";
 import {
   CURRENT_ONBOARDING_VERSION_ID,
@@ -102,8 +106,8 @@ export async function getCoachTraineeListAction(): Promise<CoachTraineeListItem[
         workoutQuota: link.workoutQuota,
         workoutsRemaining,
         status,
-        coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
-        coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
+        coachingStartDate: serializeCoachingDateForClient(link.coachingStartDate),
+        coachingEndDate: serializeCoachingDateForClient(link.coachingEndDate),
         hasSignedAgreement: Boolean(t.agreement),
         questionnaireRedoPending: isQuestionnaireRedoPending(
           q,
@@ -177,10 +181,10 @@ export async function updateCoachingPeriodAction(formData: FormData) {
     return { error: "אימונים שבוצעו לא יכולים לעלות על המכסה" };
   }
 
-  const coachingStartDate = new Date(startRaw);
-  const coachingEndDate = new Date(endRaw);
+  const coachingStartDate = parseCoachingDateInput(startRaw);
+  const coachingEndDate = parseCoachingDateInput(endRaw);
 
-  if (Number.isNaN(coachingStartDate.getTime()) || Number.isNaN(coachingEndDate.getTime())) {
+  if (!coachingStartDate || !coachingEndDate) {
     return { error: "תאריכים לא תקינים" };
   }
 
@@ -255,8 +259,8 @@ export async function getTraineeCoachingPeriodAction(traineeId: string) {
     });
 
     return {
-      coachingStartDate: link.coachingStartDate?.toISOString() ?? null,
-      coachingEndDate: link.coachingEndDate?.toISOString() ?? null,
+      coachingStartDate: serializeCoachingDateForClient(link.coachingStartDate),
+      coachingEndDate: serializeCoachingDateForClient(link.coachingEndDate),
       workoutQuota: link.workoutQuota,
       workoutsCompleted: link.workoutsCompleted,
       loggedSessionsCount,

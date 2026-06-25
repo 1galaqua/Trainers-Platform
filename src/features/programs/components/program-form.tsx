@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DEFAULT_PROGRAM_SECTION_NAME } from "@/lib/program-sections";
 import { programTypeLabels } from "@/lib/program-labels";
 import {
   createTrainingProgramAction,
@@ -29,6 +30,13 @@ type ExerciseDraft = {
   instructions: string;
 };
 
+type SectionDraft = {
+  clientId: string;
+  dbId?: string;
+  name: string;
+  exercises: ExerciseDraft[];
+};
+
 function emptyExercise(): ExerciseDraft {
   return {
     clientId: crypto.randomUUID(),
@@ -42,6 +50,14 @@ function emptyExercise(): ExerciseDraft {
   };
 }
 
+function emptySection(name = ""): SectionDraft {
+  return {
+    clientId: crypto.randomUUID(),
+    name,
+    exercises: [emptyExercise()],
+  };
+}
+
 export type ProgramFormInitial = {
   programId: string;
   traineeId: string;
@@ -50,15 +66,19 @@ export type ProgramFormInitial = {
   type: string;
   description: string;
   isActive: boolean;
-  exercises: Array<{
+  sections: Array<{
     id: string;
     name: string;
-    sets: number;
-    reps: number;
-    restSeconds: number;
-    coachNotes: string | null;
-    youtubeUrl: string | null;
-    instructions: string | null;
+    exercises: Array<{
+      id: string;
+      name: string;
+      sets: number;
+      reps: number;
+      restSeconds: number;
+      coachNotes: string | null;
+      youtubeUrl: string | null;
+      instructions: string | null;
+    }>;
   }>;
 };
 
@@ -72,6 +92,127 @@ type ProgramFormProps =
       initial?: undefined;
     }
   | { mode: "edit"; trainees?: undefined; initial: ProgramFormInitial };
+
+function buildInitialSections(initial?: ProgramFormInitial): SectionDraft[] {
+  if (initial?.sections.length) {
+    return initial.sections.map((section) => ({
+      clientId: crypto.randomUUID(),
+      dbId: section.id,
+      name: section.name,
+      exercises: section.exercises.map((exercise) => ({
+        clientId: crypto.randomUUID(),
+        dbId: exercise.id,
+        name: exercise.name,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        restSeconds: exercise.restSeconds,
+        coachNotes: exercise.coachNotes ?? "",
+        youtubeUrl: exercise.youtubeUrl ?? "",
+        instructions: exercise.instructions ?? "",
+      })),
+    }));
+  }
+
+  return [emptySection()];
+}
+
+type ExerciseFieldsProps = {
+  exercise: ExerciseDraft;
+  index: number;
+  onChange: (patch: Partial<ExerciseDraft>) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+};
+
+function ExerciseFields({
+  exercise,
+  index,
+  onChange,
+  onRemove,
+  canRemove,
+}: ExerciseFieldsProps) {
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-sm">תרגיל {index + 1}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label="הסר תרגיל"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1 sm:col-span-2">
+          <Label>שם התרגיל</Label>
+          <Input
+            required
+            value={exercise.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="לדוגמה: סקוואט"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>סטים</Label>
+          <Input
+            type="number"
+            min={1}
+            value={exercise.sets}
+            onChange={(e) => onChange({ sets: Number(e.target.value) })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>חזרות</Label>
+          <Input
+            type="number"
+            min={1}
+            value={exercise.reps}
+            onChange={(e) => onChange({ reps: Number(e.target.value) })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>מנוחה (שניות)</Label>
+          <Input
+            type="number"
+            min={0}
+            value={exercise.restSeconds}
+            onChange={(e) => onChange({ restSeconds: Number(e.target.value) })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>קישור YouTube</Label>
+          <Input
+            type="url"
+            value={exercise.youtubeUrl}
+            onChange={(e) => onChange({ youtubeUrl: e.target.value })}
+            placeholder="https://youtube.com/..."
+            dir="ltr"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label>הערות מאמן</Label>
+          <Textarea
+            value={exercise.coachNotes}
+            onChange={(e) => onChange({ coachNotes: e.target.value })}
+            rows={2}
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label>הסבר לביצוע</Label>
+          <Textarea
+            value={exercise.instructions}
+            onChange={(e) => onChange({ instructions: e.target.value })}
+            rows={2}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ProgramForm(props: ProgramFormProps) {
   const router = useRouter();
@@ -87,35 +228,57 @@ export function ProgramForm(props: ProgramFormProps) {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [exercises, setExercises] = useState<ExerciseDraft[]>(() => {
-    if (initial?.exercises.length) {
-      return initial.exercises.map((ex) => ({
-        clientId: crypto.randomUUID(),
-        dbId: ex.id,
-        name: ex.name,
-        sets: ex.sets,
-        reps: ex.reps,
-        restSeconds: ex.restSeconds,
-        coachNotes: ex.coachNotes ?? "",
-        youtubeUrl: ex.youtubeUrl ?? "",
-        instructions: ex.instructions ?? "",
-      }));
-    }
-    return [emptyExercise()];
-  });
+  const [sections, setSections] = useState<SectionDraft[]>(() => buildInitialSections(initial));
 
-  function updateExercise(clientId: string, patch: Partial<ExerciseDraft>) {
-    setExercises((prev) =>
-      prev.map((ex) => (ex.clientId === clientId ? { ...ex, ...patch } : ex)),
+  function updateSection(clientId: string, patch: Partial<SectionDraft>) {
+    setSections((prev) =>
+      prev.map((section) => (section.clientId === clientId ? { ...section, ...patch } : section)),
     );
   }
 
-  function addExercise() {
-    setExercises((prev) => [...prev, emptyExercise()]);
+  function updateExercise(sectionClientId: string, exerciseClientId: string, patch: Partial<ExerciseDraft>) {
+    setSections((prev) =>
+      prev.map((section) => {
+        if (section.clientId !== sectionClientId) return section;
+        return {
+          ...section,
+          exercises: section.exercises.map((exercise) =>
+            exercise.clientId === exerciseClientId ? { ...exercise, ...patch } : exercise,
+          ),
+        };
+      }),
+    );
   }
 
-  function removeExercise(clientId: string) {
-    setExercises((prev) => (prev.length <= 1 ? prev : prev.filter((ex) => ex.clientId !== clientId)));
+  function addSection() {
+    setSections((prev) => [...prev, emptySection()]);
+  }
+
+  function removeSection(clientId: string) {
+    setSections((prev) => (prev.length <= 1 ? prev : prev.filter((section) => section.clientId !== clientId)));
+  }
+
+  function addExercise(sectionClientId: string) {
+    setSections((prev) =>
+      prev.map((section) =>
+        section.clientId === sectionClientId
+          ? { ...section, exercises: [...section.exercises, emptyExercise()] }
+          : section,
+      ),
+    );
+  }
+
+  function removeExercise(sectionClientId: string, exerciseClientId: string) {
+    setSections((prev) =>
+      prev.map((section) => {
+        if (section.clientId !== sectionClientId) return section;
+        if (section.exercises.length <= 1) return section;
+        return {
+          ...section,
+          exercises: section.exercises.filter((exercise) => exercise.clientId !== exerciseClientId),
+        };
+      }),
+    );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -126,17 +289,23 @@ export function ProgramForm(props: ProgramFormProps) {
     const form = e.currentTarget;
     const formData = new FormData(form);
     formData.set(
-      "exercises",
+      "sections",
       JSON.stringify(
-        exercises.map(({ dbId, name, sets, reps, restSeconds, coachNotes, youtubeUrl, instructions }) => ({
+        sections.map(({ dbId, name, exercises }) => ({
           ...(dbId ? { id: dbId } : {}),
           name,
-          sets,
-          reps,
-          restSeconds,
-          coachNotes,
-          youtubeUrl,
-          instructions,
+          exercises: exercises.map(
+            ({ dbId: exerciseDbId, name: exerciseName, sets, reps, restSeconds, coachNotes, youtubeUrl, instructions }) => ({
+              ...(exerciseDbId ? { id: exerciseDbId } : {}),
+              name: exerciseName,
+              sets,
+              reps,
+              restSeconds,
+              coachNotes,
+              youtubeUrl,
+              instructions,
+            }),
+          ),
         })),
       ),
     );
@@ -248,93 +417,65 @@ export function ProgramForm(props: ProgramFormProps) {
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-sm">תרגילים</h3>
-          <Button type="button" variant="outline" size="sm" onClick={addExercise}>
+          <h3 className="font-medium text-sm">מקטעים ותרגילים</h3>
+          <Button type="button" variant="outline" size="sm" onClick={addSection}>
             <Plus className="size-4" />
-            הוסף תרגיל
+            הוסף מקטע
           </Button>
         </div>
 
-        {exercises.map((ex, index) => (
-          <div key={ex.clientId} className="space-y-3 rounded-lg border border-border p-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">תרגיל {index + 1}</span>
+        {sections.map((section, sectionIndex) => (
+          <div
+            key={section.clientId}
+            className="space-y-4 rounded-xl border border-border bg-muted/10 p-4"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor={`section-name-${section.clientId}`}>קבוצת שרירים</Label>
+                <Input
+                  id={`section-name-${section.clientId}`}
+                  required
+                  value={section.name}
+                  onChange={(e) => updateSection(section.clientId, { name: e.target.value })}
+                  placeholder="לדוגמה: חזה"
+                />
+              </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => removeExercise(ex.clientId)}
-                aria-label="הסר תרגיל"
+                onClick={() => removeSection(section.clientId)}
+                disabled={sections.length <= 1}
+                aria-label="הסר מקטע"
+                className="mt-6 shrink-0"
               >
                 <Trash2 className="size-4" />
               </Button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <Label>שם התרגיל</Label>
-                <Input
-                  required
-                  value={ex.name}
-                  onChange={(e) => updateExercise(ex.clientId, { name: e.target.value })}
-                  placeholder="לדוגמה: סקוואט"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>סטים</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={ex.sets}
-                  onChange={(e) => updateExercise(ex.clientId, { sets: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>חזרות</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={ex.reps}
-                  onChange={(e) => updateExercise(ex.clientId, { reps: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>מנוחה (שניות)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={ex.restSeconds}
-                  onChange={(e) =>
-                    updateExercise(ex.clientId, { restSeconds: Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>קישור YouTube</Label>
-                <Input
-                  type="url"
-                  value={ex.youtubeUrl}
-                  onChange={(e) => updateExercise(ex.clientId, { youtubeUrl: e.target.value })}
-                  placeholder="https://youtube.com/..."
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>הערות מאמן</Label>
-                <Textarea
-                  value={ex.coachNotes}
-                  onChange={(e) => updateExercise(ex.clientId, { coachNotes: e.target.value })}
-                  rows={2}
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>הסבר לביצוע</Label>
-                <Textarea
-                  value={ex.instructions}
-                  onChange={(e) => updateExercise(ex.clientId, { instructions: e.target.value })}
-                  rows={2}
-                />
-              </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground text-xs">מקטע {sectionIndex + 1}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addExercise(section.clientId)}
+              >
+                <Plus className="size-4" />
+                הוסף תרגיל
+              </Button>
             </div>
+
+            {section.exercises.map((exercise, exerciseIndex) => (
+              <ExerciseFields
+                key={exercise.clientId}
+                exercise={exercise}
+                index={exerciseIndex}
+                onChange={(patch) => updateExercise(section.clientId, exercise.clientId, patch)}
+                onRemove={() => removeExercise(section.clientId, exercise.clientId)}
+                canRemove={section.exercises.length > 1}
+              />
+            ))}
           </div>
         ))}
       </div>

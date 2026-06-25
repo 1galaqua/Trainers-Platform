@@ -11,6 +11,8 @@ import {
   buildWorkoutSessionCreateData,
   getNextWorkoutsCompletedValue,
 } from "@/lib/workout-session-create";
+import { ensureLegacyProgramSections, programSectionsInclude } from "@/lib/program-sections-persistence";
+import { workoutSessionLogInclude } from "@/lib/workout-session-display";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
@@ -157,10 +159,18 @@ export async function getTraineeProgramsAction() {
   const trainee = await requireTraineeOnboarded();
 
   try {
+    const programs = await prisma.trainingProgram.findMany({
+      where: { traineeId: trainee.id, isActive: true },
+      select: { id: true },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
+
     return await prisma.trainingProgram.findMany({
       where: { traineeId: trainee.id, isActive: true },
       include: {
-        exercises: { orderBy: { sortOrder: "asc" } },
+        ...programSectionsInclude,
         coach: true,
       },
       orderBy: { updatedAt: "desc" },
@@ -174,10 +184,12 @@ export async function getTraineeProgramByIdAction(programId: string) {
   const trainee = await requireTraineeOnboarded();
 
   try {
+    await ensureLegacyProgramSections(programId);
+
     return await prisma.trainingProgram.findFirst({
       where: { id: programId, traineeId: trainee.id, isActive: true },
       include: {
-        exercises: { orderBy: { sortOrder: "asc" } },
+        ...programSectionsInclude,
         coach: true,
       },
     });
@@ -345,10 +357,16 @@ export async function getCoachTraineeProgramsAction(traineeId: string) {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
     if (!ownsTrainee) return [];
 
+    const programs = await prisma.trainingProgram.findMany({
+      where: { traineeId, coachId: coach.id, isActive: true },
+      select: { id: true },
+    });
+    await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
+
     return await prisma.trainingProgram.findMany({
       where: { traineeId, coachId: coach.id, isActive: true },
       include: {
-        exercises: { orderBy: { sortOrder: "asc" } },
+        ...programSectionsInclude,
         coach: true,
       },
       orderBy: { updatedAt: "desc" },
@@ -399,10 +417,7 @@ export async function getWorkoutHistoryAction() {
       include: {
         program: true,
         logs: {
-          include: {
-            exercise: true,
-            setLogs: { orderBy: { setNumber: "asc" } },
-          },
+          include: workoutSessionLogInclude,
         },
       },
       orderBy: { completedAt: "desc" },
@@ -539,10 +554,7 @@ export async function getCoachTraineeProgressAction(traineeId: string) {
       include: {
         program: true,
         logs: {
-          include: {
-            exercise: true,
-            setLogs: { orderBy: { setNumber: "asc" } },
-          },
+          include: workoutSessionLogInclude,
         },
       },
       orderBy: { completedAt: "desc" },

@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  formatCoachingDisplayDate,
+  toCoachingDateInputValue,
+} from "@/lib/coaching-period-dates";
 import { getEffectiveWorkoutsCompleted } from "@/lib/trainee-status";
 import { updateCoachingPeriodAction } from "@/server/actions/trainees";
 
@@ -43,20 +47,6 @@ type CoachingPeriodFormProps = {
   compact?: boolean;
 };
 
-function toDateInputValue(iso: string | null) {
-  if (!iso) return "";
-  return iso.slice(0, 10);
-}
-
-function formatDisplayDate(iso: string | null) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 export function CoachingPeriodForm({
   traineeId,
   coachingStartDate,
@@ -72,12 +62,27 @@ export function CoachingPeriodForm({
     loggedSessionsCount,
   );
 
-  const [start, setStart] = useState(toDateInputValue(coachingStartDate));
-  const [end, setEnd] = useState(toDateInputValue(coachingEndDate));
+  const [start, setStart] = useState(toCoachingDateInputValue(coachingStartDate));
+  const [end, setEnd] = useState(toCoachingDateInputValue(coachingEndDate));
   const [quota, setQuota] = useState(workoutQuota != null ? String(workoutQuota) : "");
   const [completed, setCompleted] = useState(String(effectiveCompleted));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setStart(toCoachingDateInputValue(coachingStartDate));
+    setEnd(toCoachingDateInputValue(coachingEndDate));
+  }, [coachingStartDate, coachingEndDate]);
+
+  useEffect(() => {
+    setQuota(workoutQuota != null ? String(workoutQuota) : "");
+  }, [workoutQuota]);
+
+  useEffect(() => {
+    setCompleted(
+      String(getEffectiveWorkoutsCompleted(workoutsCompleted, loggedSessionsCount)),
+    );
+  }, [workoutsCompleted, loggedSessionsCount]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,14 +115,15 @@ export function CoachingPeriodForm({
     workoutsCompleted != null;
 
   const fieldGridClass = compact
-    ? "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
-    : "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2";
+    ? "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"
+    : "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4";
 
   return (
     <form onSubmit={handleSubmit} className="min-w-0 space-y-3 text-right">
       {hasPeriod && (
         <p className="break-words text-muted-foreground text-sm leading-relaxed">
-          ליווי: {formatDisplayDate(coachingStartDate)} — {formatDisplayDate(coachingEndDate)}
+          ליווי: {formatCoachingDisplayDate(coachingStartDate)} —{" "}
+          {formatCoachingDisplayDate(coachingEndDate)}
           {workoutQuota != null && (
             <>
               {" "}
@@ -141,7 +147,9 @@ export function CoachingPeriodForm({
           onChange={setEnd}
         />
         <div className="min-w-0 w-full space-y-1">
-          <Label className="block w-full text-right" htmlFor={`quota-${traineeId}`}>מכסת אימונים</Label>
+          <Label className="block w-full text-right" htmlFor={`quota-${traineeId}`}>
+            מכסת אימונים
+          </Label>
           <Input
             id={`quota-${traineeId}`}
             type="number"
@@ -156,7 +164,9 @@ export function CoachingPeriodForm({
           />
         </div>
         <div className="min-w-0 w-full space-y-1">
-          <Label className="block w-full text-right" htmlFor={`completed-${traineeId}`}>אימונים שבוצעו</Label>
+          <Label className="block w-full text-right" htmlFor={`completed-${traineeId}`}>
+            אימונים שבוצעו
+          </Label>
           <Input
             id={`completed-${traineeId}`}
             type="number"

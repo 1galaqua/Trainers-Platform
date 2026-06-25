@@ -5,18 +5,143 @@ import type { ProgramType } from "@/lib/prisma-client";
 
 import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import {
+  assignGlobalExerciseSortOrders,
+  buildProgramSectionSyncPlan,
+  getProgramSectionSyncError,
+  parseProgramSectionsPayload,
+  validateProgramSections,
+  type ProgramExerciseInput,
+  type ProgramSectionInput,
+} from "@/lib/program-sections";
+import {
+  ensureLegacyProgramSections,
+  programSectionsInclude,
+} from "@/lib/program-sections-persistence";
+import { workoutSessionLogInclude } from "@/lib/workout-session-display";
 import { prisma } from "@/lib/prisma";
 
-export type ExerciseInput = {
-  id?: string;
-  name: string;
-  sets: number;
-  reps: number;
-  restSeconds: number;
-  coachNotes?: string;
-  youtubeUrl?: string;
-  instructions?: string;
-};
+export type ExerciseInput = ProgramExerciseInput;
+export type SectionInput = ProgramSectionInput;
+
+function readSectionsFromForm(formData: FormData) {
+  const sectionsJson = String(formData.get("sections") ?? "");
+  const legacyExercisesJson = String(formData.get("exercises") ?? "");
+  return parseProgramSectionsPayload(
+    sectionsJson,
+    legacyExercisesJson || undefined,
+  );
+}
+
+function exercisePayload(exercise: ProgramExerciseInput & { sortOrder: number }) {
+  return {
+    name: exercise.name.trim(),
+    sets: exercise.sets,
+    reps: exercise.reps,
+    restSeconds: exercise.restSeconds,
+    coachNotes: exercise.coachNotes?.trim() || null,
+    youtubeUrl: exercise.youtubeUrl?.trim() || null,
+    instructions: exercise.instructions?.trim() || null,
+    sortOrder: exercise.sortOrder,
+  };
+}
+
+async function syncProgramSections(
+  programId: string,
+  submittedSections: ProgramSectionInput[],
+  existingSections: Array<{
+    id: string;
+    name: string;
+    sortOrder: number;
+    exercises: Array<{ id: string; name: string; _count: { logs: number } }>;
+  }>,
+) {
+  const syncPlan = buildProgramSectionSyncPlan(
+    existingSections.map((section) => ({
+      id: section.id,
+      name: section.name,
+      sortOrder: section.sortOrder,
+      exercises: section.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        logCount: exercise._count.logs,
+      })),
+    })),
+    submittedSections,
+  );
+
+  const syncError = getProgramSectionSyncError(syncPlan);
+  if (syncError) return syncError;
+
+  if (syncPlan.exercisesToDelete.length > 0) {
+    await prisma.programExercise.deleteMany({
+      where: { id: { in: syncPlan.exercisesToDelete }, programId },
+    });
+  }
+
+  if (syncPlan.sectionsToDelete.length > 0) {
+    await prisma.programSection.deleteMany({
+      where: { id: { in: syncPlan.sectionsToDelete }, programId },
+    });
+  }
+
+  const orderedSections = assignGlobalExerciseSortOrders(submittedSections);
+
+  for (const [sectionIndex, section] of orderedSections.entries()) {
+    const sectionPayload = {
+      name: section.name.trim(),
+      sortOrder: sectionIndex,
+    };
+
+    let sectionId = section.id;
+
+    if (section.id) {
+      const belongs = existingSections.some((existing) => existing.id === section.id);
+      if (belongs) {
+        await prisma.programSection.update({
+          where: { id: section.id },
+          data: sectionPayload,
+        });
+      } else {
+        sectionId = undefined;
+      }
+    }
+
+    if (!sectionId) {
+      const createdSection = await prisma.programSection.create({
+        data: { programId, ...sectionPayload },
+      });
+      sectionId = createdSection.id;
+    }
+
+    for (const exercise of section.exercises) {
+      const payload = exercisePayload(exercise);
+
+      if (exercise.id) {
+        const belongs = existingSections.some((existingSection) =>
+          existingSection.exercises.some((existingExercise) => existingExercise.id === exercise.id),
+        );
+        if (belongs) {
+          await prisma.programExercise.update({
+            where: { id: exercise.id },
+            data: { ...payload, sectionId },
+          });
+          continue;
+        }
+      }
+
+      await prisma.programExercise.create({
+        data: {
+          programId,
+          sectionId,
+          ...payload,
+        },
+      });
+    }
+  }
+
+  return null;
+}
 
 export async function createTrainingProgramAction(formData: FormData) {
   const coach = await requireCoach();
@@ -30,17 +155,11 @@ export async function createTrainingProgramAction(formData: FormData) {
     return { error: "יש לבחור מתאמן ולהזין שם לתוכנית" };
   }
 
-  const exercisesJson = String(formData.get("exercises") ?? "[]");
-  let exercises: ExerciseInput[] = [];
-  try {
-    exercises = JSON.parse(exercisesJson) as ExerciseInput[];
-  } catch {
-    return { error: "נתוני תרגילים לא תקינים" };
-  }
+  const parsed = readSectionsFromForm(formData);
+  if ("error" in parsed) return { error: parsed.error };
 
-  if (exercises.length === 0) {
-    return { error: "יש להוסיף לפחות תרגיל אחד" };
-  }
+  const validationError = validateProgramSections(parsed.sections);
+  if (validationError) return { error: validationError };
 
   try {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
@@ -55,20 +174,14 @@ export async function createTrainingProgramAction(formData: FormData) {
         name,
         type,
         description,
-        exercises: {
-          create: exercises.map((ex, index) => ({
-            name: ex.name,
-            sets: ex.sets,
-            reps: ex.reps,
-            restSeconds: ex.restSeconds,
-            coachNotes: ex.coachNotes || null,
-            youtubeUrl: ex.youtubeUrl || null,
-            instructions: ex.instructions || null,
-            sortOrder: index,
-          })),
-        },
       },
     });
+
+    const syncError = await syncProgramSections(program.id, parsed.sections, []);
+    if (syncError) {
+      await prisma.trainingProgram.delete({ where: { id: program.id } });
+      return { error: syncError };
+    }
 
     revalidatePath("/dashboard/workouts");
     revalidatePath("/dashboard/trainees");
@@ -93,23 +206,26 @@ export async function updateTrainingProgramAction(formData: FormData) {
     return { error: "תוכנית לא נמצאה או חסר שם" };
   }
 
-  const exercisesJson = String(formData.get("exercises") ?? "[]");
-  let exercises: ExerciseInput[] = [];
-  try {
-    exercises = JSON.parse(exercisesJson) as ExerciseInput[];
-  } catch {
-    return { error: "נתוני תרגילים לא תקינים" };
-  }
+  const parsed = readSectionsFromForm(formData);
+  if ("error" in parsed) return { error: parsed.error };
 
-  if (exercises.length === 0) {
-    return { error: "יש להוסיף לפחות תרגיל אחד" };
-  }
+  const validationError = validateProgramSections(parsed.sections);
+  if (validationError) return { error: validationError };
 
   try {
+    await ensureLegacyProgramSections(programId);
+
     const program = await prisma.trainingProgram.findFirst({
       where: { id: programId, coachId: coach.id },
       include: {
-        exercises: { include: { _count: { select: { logs: true } } } },
+        sections: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            exercises: {
+              include: { _count: { select: { logs: true } } },
+            },
+          },
+        },
       },
     });
 
@@ -120,45 +236,8 @@ export async function updateTrainingProgramAction(formData: FormData) {
       data: { name, type, description, isActive },
     });
 
-    const submittedIds = new Set(
-      exercises.map((ex) => ex.id).filter((id): id is string => Boolean(id)),
-    );
-
-    for (const existing of program.exercises) {
-      if (submittedIds.has(existing.id)) continue;
-      if (existing._count.logs > 0) {
-        return {
-          error: `לא ניתן להסיר את התרגיל "${existing.name}" — קיימים דיווחי אימון`,
-        };
-      }
-      await prisma.programExercise.delete({ where: { id: existing.id } });
-    }
-
-    for (const [index, ex] of exercises.entries()) {
-      const payload = {
-        name: ex.name,
-        sets: ex.sets,
-        reps: ex.reps,
-        restSeconds: ex.restSeconds,
-        coachNotes: ex.coachNotes || null,
-        youtubeUrl: ex.youtubeUrl || null,
-        instructions: ex.instructions || null,
-        sortOrder: index,
-      };
-
-      if (ex.id) {
-        const belongs = program.exercises.some((e) => e.id === ex.id);
-        if (!belongs) continue;
-        await prisma.programExercise.update({
-          where: { id: ex.id },
-          data: payload,
-        });
-      } else {
-        await prisma.programExercise.create({
-          data: { programId, ...payload },
-        });
-      }
-    }
+    const syncError = await syncProgramSections(programId, parsed.sections, program.sections);
+    if (syncError) return { error: syncError };
 
     revalidatePath("/dashboard/workouts");
     revalidatePath(`/dashboard/workouts/${programId}`);
@@ -241,6 +320,10 @@ export async function deleteTrainingProgramAction(programId: string) {
       });
     }
 
+    await prisma.programSection.deleteMany({
+      where: { programId },
+    });
+
     await prisma.trainingProgram.delete({
       where: { id: programId },
     });
@@ -305,20 +388,19 @@ export async function getProgramByIdAction(programId: string) {
   const coach = await requireCoach();
 
   try {
-    return await prisma.trainingProgram.findFirst({
+    await ensureLegacyProgramSections(programId);
+
+    return prisma.trainingProgram.findFirst({
       where: { id: programId, coachId: coach.id },
       include: {
         trainee: true,
         coach: true,
-        exercises: { orderBy: { sortOrder: "asc" } },
+        ...programSectionsInclude,
         sessions: {
           orderBy: { completedAt: "desc" },
           include: {
             logs: {
-              include: {
-                exercise: true,
-                setLogs: { orderBy: { setNumber: "asc" } },
-              },
+              include: workoutSessionLogInclude,
             },
           },
           take: 10,

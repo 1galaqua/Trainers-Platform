@@ -6,6 +6,7 @@ import { siteConfig } from "@/config/site";
 import { LogWorkoutPageContent } from "@/features/workouts/components/log-workout-page-content";
 import { requireTraineeOnboarded } from "@/lib/auth";
 import { getTraineeProgramsAction, getTraineeLogQuotaAction } from "@/server/actions/workouts";
+import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
 
 export const metadata = {
   title: `דיווח אימון | ${siteConfig.shortName}`,
@@ -43,14 +44,7 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
     );
   }
 
-  const programOptions = programs.map((p) => ({
-    id: p.id,
-    name: p.name,
-    type: p.type,
-    exerciseCount: p.exercises.length,
-    coachName: p.coach.displayName,
-    exercises: p.exercises,
-  }));
+  const programOptions = programs.map((program) => buildLogWorkoutProgramOption(program));
 
   return (
     <div className="space-y-6">

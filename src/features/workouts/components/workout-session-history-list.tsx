@@ -3,6 +3,10 @@ import { DeleteWorkoutSessionButton } from "@/features/workouts/components/delet
 import { ExerciseLogLine } from "@/features/workouts/components/exercise-log-line";
 import { formatWorkoutSessionLogMeta } from "@/lib/format-workout-session-meta";
 import type { UserRole, WorkoutLogKind } from "@/lib/prisma-client";
+import {
+  groupSessionLogsBySection,
+  type SessionLogForGrouping,
+} from "@/lib/workout-session-display";
 
 export type WorkoutSessionHistoryItem = {
   id: string;
@@ -11,17 +15,7 @@ export type WorkoutSessionHistoryItem = {
   loggedByRole?: UserRole | null;
   logKind?: WorkoutLogKind | null;
   program: { name: string };
-  logs: Array<{
-    id: string;
-    weightKg: number | null;
-    repsCompleted: number | null;
-    exercise: { name: string };
-    setLogs: Array<{
-      setNumber: number;
-      weightKg: number | null;
-      repsCompleted: number | null;
-    }>;
-  }>;
+  logs: SessionLogForGrouping[];
 };
 
 type WorkoutSessionHistoryListProps = {
@@ -50,6 +44,7 @@ export function WorkoutSessionHistoryList({
       {sessions.map((session) => {
         const sessionLabel = `${formatDate(new Date(session.completedAt))} — ${session.program.name}`;
         const logMeta = formatWorkoutSessionLogMeta(session.logKind, session.loggedByRole);
+        const sectionGroups = groupSessionLogsBySection(session.logs);
 
         return (
           <Card key={session.id}>
@@ -73,21 +68,28 @@ export function WorkoutSessionHistoryList({
                 />
               )}
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-4 text-sm">
               {session.notes?.trim() && (
                 <p className="text-muted-foreground text-xs">{session.notes.trim()}</p>
               )}
               {session.logs.length === 0 ? (
                 <p className="text-muted-foreground text-xs">ללא פירוט תרגילים</p>
               ) : (
-                session.logs.map((log) => (
-                  <ExerciseLogLine
-                    key={log.id}
-                    exerciseName={log.exercise.name}
-                    weightKg={log.weightKg}
-                    repsCompleted={log.repsCompleted}
-                    setLogs={log.setLogs}
-                  />
+                sectionGroups.map((section) => (
+                  <div key={`${session.id}-${section.id}`} className="space-y-2">
+                    <h4 className="font-semibold text-sm">{section.name}</h4>
+                    <div className="space-y-2">
+                      {section.logs.map((log) => (
+                        <ExerciseLogLine
+                          key={log.id}
+                          exerciseName={log.exercise.name}
+                          weightKg={log.weightKg}
+                          repsCompleted={log.repsCompleted}
+                          setLogs={log.setLogs}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))
               )}
             </CardContent>

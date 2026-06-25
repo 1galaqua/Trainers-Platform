@@ -52,7 +52,7 @@ describe("DateInput and TimeInput mobile layout", () => {
     expect(dateInput.className).toContain("input-date-rtl-field");
     expect(container.querySelector("svg.lucide-calendar-days")).toBeTruthy();
 
-    const dateWrapper = dateInput.closest(".grid");
+    const dateWrapper = dateInput.closest(".flex");
     expect(dateWrapper).toBeTruthy();
 
     const iconButton = container.querySelector('button[aria-label="פתיחת בוחר תאריך"]');

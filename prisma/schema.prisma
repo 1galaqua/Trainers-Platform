@@ -169,6 +169,7 @@ model TrainingProgram {
   isActive    Boolean     @default(true)
   coach       User        @relation("ProgramCoach", fields: [coachId], references: [id])
   trainee     User        @relation("ProgramTrainee", fields: [traineeId], references: [id])
+  sections    ProgramSection[]
   exercises   ProgramExercise[]
   sessions    WorkoutSession[]
   scheduledWorkouts ScheduledWorkout[]
@@ -176,9 +177,19 @@ model TrainingProgram {
   updatedAt   DateTime    @updatedAt
 }
 
+model ProgramSection {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  programId String            @db.ObjectId
+  name      String
+  sortOrder Int               @default(0)
+  program   TrainingProgram   @relation(fields: [programId], references: [id])
+  exercises ProgramExercise[]
+}
+
 model ProgramExercise {
   id           String          @id @default(auto()) @map("_id") @db.ObjectId
   programId    String          @db.ObjectId
+  sectionId    String?         @db.ObjectId
   name         String
   sets         Int
   reps         Int
@@ -189,6 +200,7 @@ model ProgramExercise {
   instructions String?
   sortOrder    Int             @default(0)
   program      TrainingProgram @relation(fields: [programId], references: [id])
+  section      ProgramSection? @relation(fields: [sectionId], references: [id])
   logs         ExerciseLog[]
 }
 

@@ -7,6 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { ProgramForm } from "@/features/programs/components/program-form";
 import { requireCoach } from "@/lib/auth";
+import {
+  buildProgramSectionDisplay,
+  sectionsToFormSections,
+} from "@/lib/program-sections";
 import { getProgramByIdAction } from "@/server/actions/programs";
 
 export const metadata = {
@@ -23,6 +27,40 @@ export default async function EditProgramPage({ params }: PageProps) {
   const program = await getProgramByIdAction(id);
 
   if (!program) notFound();
+
+  const formSections = sectionsToFormSections(
+    buildProgramSectionDisplay(
+      program.sections.map((section) => ({
+        id: section.id,
+        name: section.name,
+        sortOrder: section.sortOrder,
+        exercises: section.exercises.map((exercise) => ({
+          id: exercise.id,
+          name: exercise.name,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          restSeconds: exercise.restSeconds,
+          coachNotes: exercise.coachNotes,
+          youtubeUrl: exercise.youtubeUrl,
+          instructions: exercise.instructions,
+          sortOrder: exercise.sortOrder,
+          sectionId: exercise.sectionId,
+        })),
+      })),
+      program.exercises.map((exercise) => ({
+        id: exercise.id,
+        name: exercise.name,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        restSeconds: exercise.restSeconds,
+        coachNotes: exercise.coachNotes,
+        youtubeUrl: exercise.youtubeUrl,
+        instructions: exercise.instructions,
+        sortOrder: exercise.sortOrder,
+        sectionId: exercise.sectionId,
+      })),
+    ),
+  );
 
   return (
     <div className="space-y-6">
@@ -55,15 +93,19 @@ export default async function EditProgramPage({ params }: PageProps) {
               type: program.type,
               description: program.description ?? "",
               isActive: program.isActive,
-              exercises: program.exercises.map((ex) => ({
-                id: ex.id,
-                name: ex.name,
-                sets: ex.sets,
-                reps: ex.reps,
-                restSeconds: ex.restSeconds,
-                coachNotes: ex.coachNotes,
-                youtubeUrl: ex.youtubeUrl,
-                instructions: ex.instructions,
+              sections: formSections.map((section) => ({
+                id: section.id ?? "",
+                name: section.name,
+                exercises: section.exercises.map((exercise) => ({
+                  id: exercise.id ?? "",
+                  name: exercise.name,
+                  sets: exercise.sets,
+                  reps: exercise.reps,
+                  restSeconds: exercise.restSeconds,
+                  coachNotes: exercise.coachNotes ?? null,
+                  youtubeUrl: exercise.youtubeUrl ?? null,
+                  instructions: exercise.instructions ?? null,
+                })),
               })),
             }}
           />
