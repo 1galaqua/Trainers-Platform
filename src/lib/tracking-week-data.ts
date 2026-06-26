@@ -56,9 +56,16 @@ function formatSleepHours(value: number) {
   return `${value.toFixed(1)} ש'`;
 }
 
-function formatLitersFromMl(ml: number) {
-  const liters = mlToLitersInput(ml);
-  return `${liters.toLocaleString("he-IL")} ל'`;
+function formatWaterMl(value: number) {
+  return `${value.toLocaleString("he-IL")} מ"ל`;
+}
+
+function formatWaterLitersAverage(liters: number) {
+  const hasFraction = Math.round(liters * 10) % 10 !== 0;
+  const text = hasFraction
+    ? liters.toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : liters.toLocaleString("he-IL");
+  return `${text} ל'`;
 }
 
 function formatMeasurementCm(value: number) {
@@ -184,7 +191,7 @@ export function buildDailyTrackingWeekGrid(
       label: "שתייה",
       kind: "water",
       getValue: (date) => raw.waterMlByDay.get(date) ?? null,
-      format: (value) => formatLitersFromMl(value),
+      format: (value) => formatWaterMl(value),
       averageDecimals: 1,
     },
     {
@@ -233,7 +240,7 @@ export function buildDailyTrackingWeekGrid(
       avgRaw == null
         ? emptyDisplay()
         : rowDef.kind === "water"
-          ? `${avgRaw.toLocaleString("he-IL")} ל'`
+          ? formatWaterLitersAverage(avgRaw)
           : rowDef.kind === "steps"
             ? formatStepsDisplay(avgRaw)
             : rowDef.kind === "calories"

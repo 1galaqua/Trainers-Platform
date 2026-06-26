@@ -56,6 +56,30 @@ describe("buildDailyTrackingWeekGrid", () => {
     expect(grid.rows[4]?.weeklyAverage.raw).toBe(2000);
   });
 
+  it("formats water cells in ml and weekly average in liters with decimals", () => {
+    const raw = buildTrackingWeekRawLogs({
+      bodyWeightLogs: [],
+      sleepLogs: [],
+      waterLogs: [
+        { recordedDay: "2026-06-21", amountMl: 2000 },
+        { recordedDay: "2026-06-22", amountMl: 3000 },
+      ],
+      stepsLogs: [],
+      caloriesLogs: [],
+      measurementsLogs: [],
+    });
+
+    const grid = buildDailyTrackingWeekGrid(WEEK_START, raw, true);
+    const waterRow = grid.rows.find((row) => row.id === "water");
+
+    expect(waterRow?.cells[0]?.display).toContain('מ"ל');
+    expect(waterRow?.cells[0]?.display).toContain("2");
+    expect(waterRow?.cells[1]?.display).toContain("3");
+    expect(waterRow?.weeklyAverage.raw).toBe(2.5);
+    expect(waterRow?.weeklyAverage.display).toContain("2.5");
+    expect(waterRow?.weeklyAverage.display).toContain("ל'");
+  });
+
   it("marks future days as not editable", () => {
     const today = "2026-06-22";
     const weekStart = getWeekStartDateString(today);

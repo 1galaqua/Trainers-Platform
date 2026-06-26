@@ -10,7 +10,11 @@ import { sleepHoursToRange } from "@/lib/sleep-validation";
 import { STEPS_MAX, STEPS_MIN } from "@/lib/steps-validation";
 import { CALORIES_MAX, CALORIES_MIN } from "@/lib/calories-validation";
 import type { TrackingWeekCell } from "@/lib/tracking-week-data";
-import { litersToMl, mlToLitersInput } from "@/lib/water-validation";
+import {
+  parseWaterAmountMl,
+  WATER_MAX_ML,
+  WATER_MIN_ML,
+} from "@/lib/water-validation";
 import {
   clearTrackingCellAction,
   upsertTrackingBodyWeightAction,
@@ -30,7 +34,7 @@ function getEditValue(cell: TrackingWeekCell) {
   if (cell.raw == null) return "";
   switch (cell.kind) {
     case "water":
-      return String(mlToLitersInput(cell.raw));
+      return String(cell.raw);
     case "steps":
       return String(Math.round(cell.raw));
     case "calories":
@@ -47,8 +51,10 @@ function valuesEqual(cell: TrackingWeekCell, draft: string) {
   if (!Number.isFinite(parsed)) return false;
 
   switch (cell.kind) {
-    case "water":
-      return litersToMl(parsed) === cell.raw;
+    case "water": {
+      const amountMl = parseWaterAmountMl(trimmed);
+      return amountMl !== null && amountMl === cell.raw;
+    }
     case "steps":
       return Math.round(parsed) === cell.raw;
     case "calories":
@@ -84,7 +90,7 @@ async function saveCell(traineeId: string, cell: TrackingWeekCell, draft: string
       return upsertTrackingSleepAction(traineeId, formData);
     }
     case "water":
-      formData.set("liters", trimmed);
+      formData.set("amountMl", trimmed);
       return upsertTrackingWaterAction(traineeId, formData);
     case "steps":
       formData.set("steps", trimmed);
@@ -104,12 +110,11 @@ async function saveCell(traineeId: string, cell: TrackingWeekCell, draft: string
 function inputModeForKind(kind: TrackingWeekCell["kind"]) {
   switch (kind) {
     case "steps":
-      return "numeric";
     case "calories":
+    case "water":
       return "numeric";
     case "body-weight":
     case "sleep":
-    case "water":
     case "measurement":
       return "decimal";
     default:
@@ -120,9 +125,10 @@ function inputModeForKind(kind: TrackingWeekCell["kind"]) {
 function stepForKind(kind: TrackingWeekCell["kind"]) {
   switch (kind) {
     case "steps":
-      return "1";
     case "calories":
       return "1";
+    case "water":
+      return "50";
     case "sleep":
       return "0.5";
     default:
@@ -140,6 +146,8 @@ function minForKind(kind: TrackingWeekCell["kind"]) {
       return STEPS_MIN;
     case "calories":
       return CALORIES_MIN;
+    case "water":
+      return WATER_MIN_ML;
     default:
       return 0;
   }
@@ -158,7 +166,7 @@ function maxForKind(kind: TrackingWeekCell["kind"]) {
     case "sleep":
       return 24;
     case "water":
-      return 20;
+      return WATER_MAX_ML;
     default:
       return undefined;
   }
@@ -217,7 +225,13 @@ export function TrackingGridCell({ traineeId, cell }: TrackingGridCellProps) {
       value={draft}
       disabled={saving}
       placeholder="—"
-      aria-label={cell.display === "—" ? "הזנת ערך" : cell.display}
+      aria-label={
+        cell.display === "—"
+          ? cell.kind === "water"
+            ? 'הזנת שתייה במ"ל'
+            : "הזנת ערך"
+          : cell.display
+      }
       title={error ? "שמירה נכשלה — נסה/י שוב" : undefined}
       onChange={(event) => {
         setDraft(event.target.value);
