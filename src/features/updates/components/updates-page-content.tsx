@@ -11,12 +11,24 @@ import { PushNotificationSettings } from "@/features/push/components/push-notifi
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
 import { buildCalendarWorkoutUrl } from "@/lib/calendar-navigation";
 import { isNotificationUnread } from "@/lib/notification-prisma-filters";
+import type { AppNotificationType } from "@/lib/prisma-client";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
   type NotificationItem,
 } from "@/server/actions/notifications";
 import { cn } from "@/lib/utils";
+
+const TRACKING_PAGE_URL = "/dashboard/tracking";
+
+const TRACKING_REMINDER_LINK_LABELS: Partial<Record<AppNotificationType, string>> = {
+  BODY_WEIGHT_REMINDER: "עדכון משקל",
+  SLEEP_REMINDER: "עדכון שעות שינה",
+  WATER_REMINDER: "עדכון שתייה",
+  STEPS_REMINDER: "עדכון צעדים",
+  MEASUREMENTS_REMINDER: "עדכון היקפים",
+  CALORIES_REMINDER: "עדכון קלוריות",
+};
 
 type UpdatesPageContentProps = {
   notifications: NotificationItem[];
@@ -94,6 +106,7 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
         <ul className="space-y-3">
           {notifications.map((notification) => {
             const unread = isUnread(notification);
+            const trackingLinkLabel = TRACKING_REMINDER_LINK_LABELS[notification.type];
 
             return (
               <li key={notification.id}>
@@ -141,9 +154,9 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                       <p className="text-muted-foreground text-xs">
                         {formatWorkoutDateTime(new Date(notification.createdAt))}
                       </p>
-                      {notification.type === "BODY_WEIGHT_REMINDER" && (
+                      {trackingLinkLabel && (
                         <Button
-                          render={<Link href="/dashboard/body-weight?log=1" />}
+                          render={<Link href={TRACKING_PAGE_URL} />}
                           variant="link"
                           size="sm"
                           className="h-auto p-0 text-xs"
@@ -154,7 +167,7 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                             }
                           }}
                         >
-                          עדכון משקל
+                          {trackingLinkLabel}
                         </Button>
                       )}
                       {notification.workoutId && (
