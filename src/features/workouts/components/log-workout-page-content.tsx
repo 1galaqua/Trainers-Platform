@@ -14,9 +14,12 @@ import {
   type TraineeProgramPickerItem,
 } from "@/features/workouts/components/trainee-program-picker";
 import { programTypeLabels } from "@/lib/program-labels";
+import type { LogWorkoutProgramSummary } from "@/lib/log-workout-page-data";
 import type { LogWorkoutSection } from "@/lib/program-sections";
 
-type ProgramOption = TraineeProgramPickerItem & {
+type ActiveProgram = {
+  id: string;
+  name: string;
   exercises: Array<{
     id: string;
     name: string;
@@ -28,7 +31,8 @@ type ProgramOption = TraineeProgramPickerItem & {
 };
 
 type LogWorkoutPageContentProps = {
-  programs: ProgramOption[];
+  programSummaries: LogWorkoutProgramSummary[];
+  activeProgram: ActiveProgram | null;
   initialProgramId?: string;
   logBasePath?: string;
   emptyBackHref?: string;
@@ -38,13 +42,16 @@ type LogWorkoutPageContentProps = {
   quotaInfo?: WorkoutQuotaInfo | null;
 };
 
-function resolveSelectedId(programs: ProgramOption[], preferredId?: string) {
-  if (preferredId && programs.some((p) => p.id === preferredId)) return preferredId;
-  return programs[0]?.id ?? "";
+function resolveSelectedId(summaries: LogWorkoutProgramSummary[], preferredId?: string) {
+  if (preferredId && summaries.some((summary) => summary.id === preferredId)) {
+    return preferredId;
+  }
+  return summaries[0]?.id ?? "";
 }
 
 export function LogWorkoutPageContent({
-  programs,
+  programSummaries,
+  activeProgram,
   initialProgramId,
   logBasePath = "/dashboard/workouts/log",
   emptyBackHref = "/dashboard/my-program",
@@ -56,19 +63,17 @@ export function LogWorkoutPageContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState(() =>
-    resolveSelectedId(programs, initialProgramId),
+    resolveSelectedId(programSummaries, initialProgramId),
   );
 
   const programFromUrl = searchParams.get("program") ?? "";
-  const programIdsKey = programs.map((program) => program.id).join(",");
-  const programsRef = useRef(programs);
-  programsRef.current = programs;
+  const summaryIdsKey = programSummaries.map((summary) => summary.id).join(",");
+  const summariesRef = useRef(programSummaries);
+  summariesRef.current = programSummaries;
 
   useEffect(() => {
-    setSelectedId(
-      resolveSelectedId(programsRef.current, programFromUrl || initialProgramId),
-    );
-  }, [programFromUrl, initialProgramId, programIdsKey]);
+    setSelectedId(resolveSelectedId(summariesRef.current, programFromUrl || initialProgramId));
+  }, [programFromUrl, initialProgramId, summaryIdsKey]);
 
   const selectProgram = useCallback(
     (programId: string) => {
@@ -78,9 +83,22 @@ export function LogWorkoutPageContent({
     [router, logBasePath],
   );
 
-  const program = programs.find((p) => p.id === selectedId) ?? programs[0];
+  const pickerPrograms: TraineeProgramPickerItem[] = programSummaries.map(
+    ({ id, name, type, exerciseCount, coachName }) => ({
+      id,
+      name,
+      type,
+      exerciseCount,
+      coachName,
+    }),
+  );
 
-  if (programs.length === 0) {
+  const selectedSummary =
+    programSummaries.find((summary) => summary.id === selectedId) ?? programSummaries[0];
+  const program =
+    activeProgram && activeProgram.id === selectedId ? activeProgram : null;
+
+  if (programSummaries.length === 0) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground text-sm">
@@ -93,23 +111,13 @@ export function LogWorkoutPageContent({
     );
   }
 
-  if (!program) return null;
-
-  const pickerPrograms: TraineeProgramPickerItem[] = programs.map(
-    ({ id, name, type, exerciseCount, coachName }) => ({
-      id,
-      name,
-      type,
-      exerciseCount,
-      coachName,
-    }),
-  );
+  if (!selectedSummary) return null;
 
   return (
     <div className="space-y-6">
       <TraineeProgramPicker
         programs={pickerPrograms}
-        selectedId={program.id}
+        selectedId={selectedSummary.id}
         onSelect={selectProgram}
       />
 
@@ -117,12 +125,12 @@ export function LogWorkoutPageContent({
         <Label htmlFor="log-program-mobile">או בחר מהרשימה</Label>
         <Select
           id="log-program-mobile"
-          value={program.id}
+          value={selectedSummary.id}
           onChange={(e) => selectProgram(e.target.value)}
         >
-          {programs.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({programTypeLabels[p.type]})
+          {programSummaries.map((summary) => (
+            <option key={summary.id} value={summary.id}>
+              {summary.name} ({programTypeLabels[summary.type]})
             </option>
           ))}
         </Select>
@@ -130,19 +138,23 @@ export function LogWorkoutPageContent({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">עדכון ביצוע — {program.name}</CardTitle>
+          <CardTitle className="text-base">עדכון ביצוע — {selectedSummary.name}</CardTitle>
         </CardHeader>
         <CardContent>
-          <LogWorkoutForm
-            key={program.id}
-            programId={program.id}
-            exercises={program.exercises}
-            sections={program.sections}
-            traineeId={coachTraineeId}
-            submitAction={coachTraineeId ? logCoachTraineeWorkoutAction : undefined}
-            redirectTo={redirectTo}
-            quotaInfo={quotaInfo}
-          />
+          {program ? (
+            <LogWorkoutForm
+              key={program.id}
+              programId={program.id}
+              exercises={program.exercises}
+              sections={program.sections}
+              traineeId={coachTraineeId}
+              submitAction={coachTraineeId ? logCoachTraineeWorkoutAction : undefined}
+              redirectTo={redirectTo}
+              quotaInfo={quotaInfo}
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm">טוען תוכנית...</p>
+          )}
         </CardContent>
       </Card>
     </div>

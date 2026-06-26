@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { LogWorkoutPageContent } from "@/features/workouts/components/log-workout-page-content";
-import { requireTraineeOnboarded } from "@/lib/auth";
-import { getTraineeProgramsAction, getTraineeLogQuotaAction } from "@/server/actions/workouts";
-import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
+import { getLogWorkoutPageDataAction } from "@/server/actions/workouts";
 
 export const metadata = {
   title: `דיווח אימון | ${siteConfig.shortName}`,
@@ -16,19 +13,12 @@ type PageProps = {
   searchParams: Promise<{ program?: string }>;
 };
 
-function LogWorkoutFallback() {
-  return <p className="text-muted-foreground text-sm">טוען...</p>;
-}
-
 export default async function LogWorkoutPage({ searchParams }: PageProps) {
-  await requireTraineeOnboarded();
   const { program: programParam } = await searchParams;
-  const [programs, quotaInfo] = await Promise.all([
-    getTraineeProgramsAction(),
-    getTraineeLogQuotaAction(),
-  ]);
+  const { programSummaries, activeProgram, quotaInfo } =
+    await getLogWorkoutPageDataAction(programParam);
 
-  if (programs.length === 0) {
+  if (programSummaries.length === 0) {
     return (
       <div className="space-y-4">
         <h1 className="font-semibold text-2xl tracking-tight">דיווח אימון</h1>
@@ -44,8 +34,6 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
     );
   }
 
-  const programOptions = programs.map((program) => buildLogWorkoutProgramOption(program));
-
   return (
     <div className="space-y-6">
       <div>
@@ -55,13 +43,12 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <Suspense fallback={<LogWorkoutFallback />}>
-        <LogWorkoutPageContent
-          programs={programOptions}
-          initialProgramId={programParam}
-          quotaInfo={quotaInfo}
-        />
-      </Suspense>
+      <LogWorkoutPageContent
+        programSummaries={programSummaries}
+        activeProgram={activeProgram}
+        initialProgramId={programParam}
+        quotaInfo={quotaInfo}
+      />
     </div>
   );
 }

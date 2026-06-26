@@ -6,6 +6,11 @@ import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/aut
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { safeRevalidatePaths } from "@/lib/safe-revalidate";
 import { getTraineeQuotaSnapshot, type TraineeQuotaSnapshot } from "@/lib/trainee-quota";
+import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
+import {
+  resolveLogWorkoutSelectedProgramId,
+  type LogWorkoutProgramSummary,
+} from "@/lib/log-workout-page-data";
 import { computeExerciseLogMetrics } from "@/lib/workout-log-metrics";
 import {
   buildWorkoutSessionCreateData,
@@ -14,6 +19,7 @@ import {
 import {
   applyActiveProgramFilters,
   ensureLegacyProgramSections,
+  filterActiveProgramExercises,
   loadProgressExercisesForProgram,
   programSectionsInclude,
 } from "@/lib/program-sections-persistence";
@@ -57,12 +63,18 @@ async function persistWorkoutSession(
 
   const coachLink = await prisma.coachTrainee.findUnique({
     where: { traineeId },
-    include: {
+    select: {
+      coachId: true,
+      workoutsCompleted: true,
+      workoutQuota: true,
+      coachingStartDate: true,
+      coachingEndDate: true,
       trainee: {
-        include: {
-          workoutSessions: {
-            where: { program: { coachId: program.coachId } },
-            select: { id: true },
+        select: {
+          _count: {
+            select: {
+              workoutSessions: { where: { program: { coachId: program.coachId } } },
+            },
           },
         },
       },
@@ -75,7 +87,7 @@ async function persistWorkoutSession(
     return { error: "אין הרשאה למתאמן זה" };
   }
 
-  const loggedSessionsCount = coachLink.trainee.workoutSessions.length;
+  const loggedSessionsCount = coachLink.trainee._count.workoutSessions;
   const completedCount = getEffectiveWorkoutsCompleted(
     coachLink.workoutsCompleted,
     loggedSessionsCount,
@@ -158,6 +170,155 @@ function parseWorkoutLogFormData(formData: FormData): ParsedWorkoutLogFormData {
   if (!programId) return { error: "תוכנית לא נמצאה" };
 
   return { programId, sessionNotes, logs, consumeQuota };
+}
+
+async function loadLogWorkoutProgramSummaries(params: {
+  traineeId: string;
+  coachId?: string;
+}): Promise<LogWorkoutProgramSummary[]> {
+  const programs = await prisma.trainingProgram.findMany({
+    where: {
+      traineeId: params.traineeId,
+      isActive: true,
+      ...(params.coachId ? { coachId: params.coachId } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      coach: { select: { displayName: true } },
+      exercises: { select: { archivedAt: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return programs.map((program) => ({
+    id: program.id,
+    name: program.name,
+    type: program.type,
+    coachName: program.coach.displayName,
+    exerciseCount: filterActiveProgramExercises(program.exercises).length,
+  }));
+}
+
+async function loadLogWorkoutProgramDetail(params: {
+  traineeId: string;
+  programId: string;
+  coachId?: string;
+}) {
+  await ensureLegacyProgramSections(params.programId);
+
+  const program = await prisma.trainingProgram.findFirst({
+    where: {
+      id: params.programId,
+      traineeId: params.traineeId,
+      isActive: true,
+      ...(params.coachId ? { coachId: params.coachId } : {}),
+    },
+    include: {
+      ...programSectionsInclude,
+      coach: true,
+    },
+  });
+
+  return program ? applyActiveProgramFilters(program) : null;
+}
+
+export type LogWorkoutPageData = {
+  programSummaries: LogWorkoutProgramSummary[];
+  activeProgram: ReturnType<typeof buildLogWorkoutProgramOption> | null;
+  quotaInfo: TraineeQuotaSnapshot | null;
+};
+
+export async function getLogWorkoutPageDataAction(
+  selectedProgramParam?: string,
+): Promise<LogWorkoutPageData> {
+  const trainee = await requireTraineeOnboarded();
+
+  try {
+    const programSummaries = await loadLogWorkoutProgramSummaries({ traineeId: trainee.id });
+    if (programSummaries.length === 0) {
+      return { programSummaries: [], activeProgram: null, quotaInfo: null };
+    }
+
+    const selectedProgramId = resolveLogWorkoutSelectedProgramId(
+      programSummaries,
+      selectedProgramParam,
+    );
+    if (!selectedProgramId) {
+      return { programSummaries, activeProgram: null, quotaInfo: null };
+    }
+
+    const coachLink = await prisma.coachTrainee.findUnique({
+      where: { traineeId: trainee.id },
+      select: { coachId: true },
+    });
+
+    const [programRaw, quotaInfo] = await Promise.all([
+      loadLogWorkoutProgramDetail({
+        traineeId: trainee.id,
+        programId: selectedProgramId,
+      }),
+      coachLink
+        ? getTraineeQuotaSnapshot(trainee.id, coachLink.coachId)
+        : Promise.resolve(null),
+    ]);
+
+    return {
+      programSummaries,
+      activeProgram: programRaw ? buildLogWorkoutProgramOption(programRaw) : null,
+      quotaInfo,
+    };
+  } catch {
+    return { programSummaries: [], activeProgram: null, quotaInfo: null };
+  }
+}
+
+export async function getCoachLogWorkoutPageDataAction(
+  traineeId: string,
+  selectedProgramParam?: string,
+): Promise<LogWorkoutPageData> {
+  const coach = await requireCoach();
+
+  try {
+    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+    if (!ownsTrainee) {
+      return { programSummaries: [], activeProgram: null, quotaInfo: null };
+    }
+
+    const programSummaries = await loadLogWorkoutProgramSummaries({
+      traineeId,
+      coachId: coach.id,
+    });
+    if (programSummaries.length === 0) {
+      return { programSummaries: [], activeProgram: null, quotaInfo: null };
+    }
+
+    const selectedProgramId = resolveLogWorkoutSelectedProgramId(
+      programSummaries,
+      selectedProgramParam,
+    );
+    if (!selectedProgramId) {
+      return { programSummaries, activeProgram: null, quotaInfo: null };
+    }
+
+    const [programRaw, quotaInfo] = await Promise.all([
+      loadLogWorkoutProgramDetail({
+        traineeId,
+        programId: selectedProgramId,
+        coachId: coach.id,
+      }),
+      getTraineeQuotaSnapshot(traineeId, coach.id),
+    ]);
+
+    return {
+      programSummaries,
+      activeProgram: programRaw ? buildLogWorkoutProgramOption(programRaw) : null,
+      quotaInfo,
+    };
+  } catch {
+    return { programSummaries: [], activeProgram: null, quotaInfo: null };
+  }
 }
 
 export async function getTraineeProgramsAction() {

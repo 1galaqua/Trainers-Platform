@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,10 +10,8 @@ import { requireCoach } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { prisma } from "@/lib/prisma";
 import {
-  getCoachTraineeProgramsAction,
-  getCoachTraineeLogQuotaAction,
+  getCoachLogWorkoutPageDataAction,
 } from "@/server/actions/workouts";
-import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
 
 export const metadata = {
   title: `דיווח אימון למתאמן | ${siteConfig.shortName}`,
@@ -24,10 +21,6 @@ type PageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ program?: string }>;
 };
-
-function LogWorkoutFallback() {
-  return <p className="text-muted-foreground text-sm">טוען...</p>;
-}
 
 export default async function CoachLogTraineeWorkoutPage({ params, searchParams }: PageProps) {
   const coach = await requireCoach();
@@ -49,14 +42,12 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
 
   if (!trainee || trainee.role !== "TRAINEE") notFound();
 
-  const [programs, quotaInfo] = await Promise.all([
-    getCoachTraineeProgramsAction(traineeId),
-    getCoachTraineeLogQuotaAction(traineeId),
-  ]);
+  const { programSummaries, activeProgram, quotaInfo } =
+    await getCoachLogWorkoutPageDataAction(traineeId, programParam);
   const name = trainee.displayName ?? "מתאמן";
   const logBasePath = `/dashboard/trainees/${traineeId}/log`;
 
-  if (programs.length === 0) {
+  if (programSummaries.length === 0) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -81,8 +72,6 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
     );
   }
 
-  const programOptions = programs.map((program) => buildLogWorkoutProgramOption(program));
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -101,18 +90,17 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
         </div>
       </div>
 
-      <Suspense fallback={<LogWorkoutFallback />}>
-        <LogWorkoutPageContent
-          programs={programOptions}
-          initialProgramId={programParam}
-          logBasePath={logBasePath}
-          emptyBackHref={`/dashboard/trainees/${traineeId}`}
-          emptyBackLabel="חזרה למתאמן"
-          coachTraineeId={traineeId}
-          redirectTo={`/dashboard/trainees/${traineeId}`}
-          quotaInfo={quotaInfo}
-        />
-      </Suspense>
+      <LogWorkoutPageContent
+        programSummaries={programSummaries}
+        activeProgram={activeProgram}
+        initialProgramId={programParam}
+        logBasePath={logBasePath}
+        emptyBackHref={`/dashboard/trainees/${traineeId}`}
+        emptyBackLabel="חזרה למתאמן"
+        coachTraineeId={traineeId}
+        redirectTo={`/dashboard/trainees/${traineeId}`}
+        quotaInfo={quotaInfo}
+      />
     </div>
   );
 }

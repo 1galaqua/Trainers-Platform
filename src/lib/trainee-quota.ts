@@ -10,15 +10,29 @@ export type TraineeQuotaSnapshot = {
   workoutsRemaining: number;
 };
 
-async function getCoachTraineeWithSessions(traineeId: string, coachId: string) {
+type CoachTraineeQuotaLink = {
+  coachId: string;
+  workoutsCompleted: number | null;
+  workoutQuota: number | null;
+  loggedSessionsCount: number;
+};
+
+async function getCoachTraineeQuotaLink(
+  traineeId: string,
+  coachId: string,
+): Promise<CoachTraineeQuotaLink | null> {
   const link = await prisma.coachTrainee.findUnique({
     where: { traineeId },
-    include: {
+    select: {
+      coachId: true,
+      workoutsCompleted: true,
+      workoutQuota: true,
       trainee: {
-        include: {
-          workoutSessions: {
-            where: { program: { coachId } },
-            select: { id: true },
+        select: {
+          _count: {
+            select: {
+              workoutSessions: { where: { program: { coachId } } },
+            },
           },
         },
       },
@@ -29,20 +43,24 @@ async function getCoachTraineeWithSessions(traineeId: string, coachId: string) {
     return null;
   }
 
-  return link;
+  return {
+    coachId: link.coachId,
+    workoutsCompleted: link.workoutsCompleted,
+    workoutQuota: link.workoutQuota,
+    loggedSessionsCount: link.trainee._count.workoutSessions,
+  };
 }
 
 export async function getTraineeQuotaSnapshot(
   traineeId: string,
   coachId: string,
 ): Promise<TraineeQuotaSnapshot | null> {
-  const link = await getCoachTraineeWithSessions(traineeId, coachId);
+  const link = await getCoachTraineeQuotaLink(traineeId, coachId);
   if (!link) return null;
 
-  const loggedSessionsCount = link.trainee.workoutSessions.length;
   const completedCount = getEffectiveWorkoutsCompleted(
     link.workoutsCompleted,
-    loggedSessionsCount,
+    link.loggedSessionsCount,
   );
 
   return {
@@ -55,15 +73,14 @@ export async function validateTraineeQuotaAvailability(
   traineeId: string,
   coachId: string,
 ): Promise<{ error?: string }> {
-  const link = await getCoachTraineeWithSessions(traineeId, coachId);
+  const link = await getCoachTraineeQuotaLink(traineeId, coachId);
   if (!link) {
     return { error: "לא נמצא קשר מאמן-מתאמן" };
   }
 
-  const loggedSessionsCount = link.trainee.workoutSessions.length;
   const completedCount = getEffectiveWorkoutsCompleted(
     link.workoutsCompleted,
-    loggedSessionsCount,
+    link.loggedSessionsCount,
   );
   const remaining = getWorkoutsRemaining(link.workoutQuota, completedCount);
   const blockMessage = getQuotaBlockMessage(link.workoutQuota, remaining);
@@ -84,15 +101,14 @@ export async function consumeTraineeQuota(
     return validation;
   }
 
-  const link = await getCoachTraineeWithSessions(traineeId, coachId);
+  const link = await getCoachTraineeQuotaLink(traineeId, coachId);
   if (!link || link.workoutQuota == null) {
     return {};
   }
 
-  const loggedSessionsCount = link.trainee.workoutSessions.length;
   const completedCount = getEffectiveWorkoutsCompleted(
     link.workoutsCompleted,
-    loggedSessionsCount,
+    link.loggedSessionsCount,
   );
 
   const nextCompleted =
