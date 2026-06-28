@@ -26,12 +26,26 @@ export async function loadTraineeHomeData(traineeId: string) {
 
 export type TraineeHomeData = Awaited<ReturnType<typeof loadTraineeHomeData>>;
 
+function reviveWorkoutSessionDates<T extends { completedAt: Date | string }>(
+  sessions: T[],
+): Array<Omit<T, "completedAt"> & { completedAt: Date }> {
+  return sessions.map((session) => ({
+    ...session,
+    completedAt: new Date(session.completedAt),
+  }));
+}
+
 export async function getCachedTraineeHomeData(traineeId: string): Promise<TraineeHomeData> {
-  return unstable_cache(
+  const cached = await unstable_cache(
     async () => loadTraineeHomeData(traineeId),
     ["trainee-home", traineeId],
     { tags: [traineeDetailTag(traineeId)] },
   )();
+
+  return {
+    ...cached,
+    sessions: reviveWorkoutSessionDates(cached.sessions),
+  };
 }
 
 export type TraineeCoachingPeriodData = {
@@ -143,11 +157,18 @@ async function getCachedTraineeDetailWorkoutData(
   coachId: string,
   traineeId: string,
 ): Promise<TraineeDetailWorkoutPayload | null> {
-  return unstable_cache(
+  const cached = await unstable_cache(
     async () => loadTraineeDetailWorkoutPayload(coachId, traineeId),
     ["trainee-detail-workouts", coachId, traineeId],
     { tags: [traineeDetailTag(traineeId)] },
   )();
+
+  if (!cached) return null;
+
+  return {
+    ...cached,
+    sessions: reviveWorkoutSessionDates(cached.sessions),
+  };
 }
 
 export async function getCachedTraineeDetailCoreData(

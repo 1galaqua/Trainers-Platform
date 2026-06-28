@@ -13,7 +13,7 @@ type TraineeDashboardHomeProps = {
 export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHomeProps) {
   const { sessions, progressExercises } = await getTraineeHomeDataAction();
 
-  const sessionDates = sessions.map((session) => session.completedAt.toISOString());
+  const sessionDates = sessions.map((session) => new Date(session.completedAt).toISOString());
 
   return (
     <div className="min-w-0 space-y-8">
