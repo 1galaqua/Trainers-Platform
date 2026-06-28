@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PushNotificationSettings } from "@/features/push/components/push-notification-settings";
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
-import { buildCalendarWorkoutUrl } from "@/lib/calendar-navigation";
+import { buildCalendarEventUrl, buildCalendarWorkoutUrl } from "@/lib/calendar-navigation";
 import { isNotificationUnread } from "@/lib/notification-prisma-filters";
 import type { AppNotificationType } from "@/lib/prisma-client";
+import type { NotificationItem } from "@/lib/notification-items";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
-  type NotificationItem,
 } from "@/server/actions/notifications";
 import { cn } from "@/lib/utils";
 
@@ -170,10 +170,16 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                           {trackingLinkLabel}
                         </Button>
                       )}
-                      {notification.workoutId && (
+                      {(notification.workoutId || notification.eventId) && (
                         <Button
                           render={
-                            <Link href={buildCalendarWorkoutUrl(notification.workoutId)} />
+                            <Link
+                              href={
+                                notification.eventId
+                                  ? buildCalendarEventUrl(notification.eventId)
+                                  : buildCalendarWorkoutUrl(notification.workoutId!)
+                              }
+                            />
                           }
                           variant="link"
                           size="sm"

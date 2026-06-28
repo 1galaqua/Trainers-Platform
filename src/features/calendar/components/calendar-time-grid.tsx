@@ -17,58 +17,56 @@ import {
   mergeHourHeights,
 } from "@/lib/calendar-time-grid";
 import type { UserRole } from "@/lib/prisma-client";
-import type {
-  CalendarTraineeOption,
-  CalendarWorkoutItem,
-} from "@/server/actions/calendar";
+import type { CalendarTraineeOption } from "@/server/actions/calendar";
+import type { CalendarScheduleItem } from "@/server/actions/calendar-types";
 import { cn } from "@/lib/utils";
 
-import { CalendarWorkoutCard } from "./calendar-workout-card";
+import { CalendarScheduleCard } from "./calendar-schedule-card";
 
 type CalendarTimeGridProps = {
   dates: string[];
-  workoutsByDate: Map<string, CalendarWorkoutItem[]>;
+  itemsByDate: Map<string, CalendarScheduleItem[]>;
   userRole: UserRole;
   trainees?: CalendarTraineeOption[];
   today?: string;
   historyStart?: string;
-  scrollToWorkoutId?: string | null;
+  scrollToItemId?: string | null;
 };
 
 export function CalendarTimeGrid({
   dates,
-  workoutsByDate,
+  itemsByDate,
   userRole,
   trainees = [],
   today,
   historyStart,
-  scrollToWorkoutId = null,
+  scrollToItemId = null,
 }: CalendarTimeGridProps) {
   const hours = getCalendarGridHours();
   const [contentHeights, setContentHeights] = useState<Record<string, number>>({});
 
   const datesKey = dates.join(",");
 
-  const visibleWorkoutIdsKey = useMemo(() => {
+  const visibleItemIdsKey = useMemo(() => {
     return dates
-      .flatMap((dateStr) => (workoutsByDate.get(dateStr) ?? []).map((workout) => workout.id))
+      .flatMap((dateStr) => (itemsByDate.get(dateStr) ?? []).map((item) => item.id))
       .sort()
       .join(",");
-  }, [dates, workoutsByDate]);
+  }, [dates, itemsByDate]);
 
   useLayoutEffect(() => {
     setContentHeights((current) => {
-      if (visibleWorkoutIdsKey.length === 0) {
+      if (visibleItemIdsKey.length === 0) {
         return Object.keys(current).length === 0 ? current : {};
       }
 
-      const visibleIds = new Set(visibleWorkoutIdsKey.split(","));
+      const visibleIds = new Set(visibleItemIdsKey.split(","));
       const next: Record<string, number> = {};
       let changed = false;
 
-      for (const [workoutId, height] of Object.entries(current)) {
-        if (visibleIds.has(workoutId)) {
-          next[workoutId] = height;
+      for (const [itemId, height] of Object.entries(current)) {
+        if (visibleIds.has(itemId)) {
+          next[itemId] = height;
         } else {
           changed = true;
         }
@@ -80,37 +78,37 @@ export function CalendarTimeGrid({
 
       return next;
     });
-  }, [visibleWorkoutIdsKey]);
+  }, [visibleItemIdsKey]);
 
-  const handleContentHeight = useCallback((workoutId: string, height: number) => {
+  const handleContentHeight = useCallback((itemId: string, height: number) => {
     setContentHeights((current) => {
-      if (current[workoutId] === height) return current;
-      return { ...current, [workoutId]: height };
+      if (current[itemId] === height) return current;
+      return { ...current, [itemId]: height };
     });
   }, []);
 
   const globalHourHeights = useMemo(() => {
     const perDay = dates.map((dateStr) =>
       computeHourHeightsForWorkouts(
-        workoutsByDate.get(dateStr) ?? [],
+        itemsByDate.get(dateStr) ?? [],
         contentHeights,
       ),
     );
     return mergeHourHeights(perDay);
-  }, [dates, workoutsByDate, contentHeights]);
+  }, [dates, itemsByDate, contentHeights]);
 
   const gridHeight = getCalendarGridHeightPx(globalHourHeights);
   const hourLineOffsets = getHourLineOffsets(globalHourHeights);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!scrollToWorkoutId) return;
-    if (contentHeights[scrollToWorkoutId] == null) return;
+    if (!scrollToItemId) return;
+    if (contentHeights[scrollToItemId] == null) return;
 
     const frame = window.requestAnimationFrame(() => {
       const container = scrollContainerRef.current;
       const element = container?.querySelector(
-        `[data-workout-id="${CSS.escape(scrollToWorkoutId)}"]`,
+        `[data-schedule-item-id="${CSS.escape(scrollToItemId)}"]`,
       ) as HTMLElement | null;
       if (!element || !container) return;
 
@@ -129,7 +127,7 @@ export function CalendarTimeGrid({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [scrollToWorkoutId, contentHeights, datesKey]);
+  }, [scrollToItemId, contentHeights, datesKey]);
 
   const columnTemplate = getCalendarGridColumnTemplate(dates.length);
   const gridMinWidth = getCalendarGridMinWidth(dates.length);
@@ -188,7 +186,7 @@ export function CalendarTimeGrid({
           {dates.map((dateStr) => (
             <CalendarTimeGridDayColumn
               key={dateStr}
-              workouts={workoutsByDate.get(dateStr) ?? []}
+              items={itemsByDate.get(dateStr) ?? []}
               userRole={userRole}
               trainees={trainees}
               hours={hours}
@@ -205,18 +203,18 @@ export function CalendarTimeGrid({
 }
 
 type CalendarTimeGridDayColumnProps = {
-  workouts: CalendarWorkoutItem[];
+  items: CalendarScheduleItem[];
   userRole: UserRole;
   trainees: CalendarTraineeOption[];
   hours: number[];
   hourHeights: number[];
   hourLineOffsets: number[];
   gridHeight: number;
-  onContentHeight: (workoutId: string, height: number) => void;
+  onContentHeight: (itemId: string, height: number) => void;
 };
 
 function CalendarTimeGridDayColumn({
-  workouts,
+  items,
   userRole,
   trainees,
   hours,
@@ -242,18 +240,18 @@ function CalendarTimeGridDayColumn({
         style={{ top: gridHeight }}
       />
 
-      {workouts.map((workout) => {
+      {items.map((item) => {
         const position = getWorkoutGridPosition(
-          workout.startsAt,
-          workout.durationMinutes,
+          item.startsAt,
+          item.durationMinutes,
           hourHeights,
         );
         if (!position) return null;
 
         return (
-          <CalendarTimeGridWorkoutBlock
-            key={workout.id}
-            workout={workout}
+          <CalendarTimeGridScheduleBlock
+            key={item.id}
+            item={item}
             userRole={userRole}
             trainees={trainees}
             top={position.top}
@@ -266,23 +264,23 @@ function CalendarTimeGridDayColumn({
   );
 }
 
-type CalendarTimeGridWorkoutBlockProps = {
-  workout: CalendarWorkoutItem;
+type CalendarTimeGridScheduleBlockProps = {
+  item: CalendarScheduleItem;
   userRole: UserRole;
   trainees: CalendarTraineeOption[];
   top: number;
   minHeight: number;
-  onContentHeight: (workoutId: string, height: number) => void;
+  onContentHeight: (itemId: string, height: number) => void;
 };
 
-function CalendarTimeGridWorkoutBlock({
-  workout,
+function CalendarTimeGridScheduleBlock({
+  item,
   userRole,
   trainees,
   top,
   minHeight,
   onContentHeight,
-}: CalendarTimeGridWorkoutBlockProps) {
+}: CalendarTimeGridScheduleBlockProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -290,7 +288,7 @@ function CalendarTimeGridWorkoutBlock({
     if (!element) return;
 
     const report = () => {
-      onContentHeight(workout.id, element.offsetHeight);
+      onContentHeight(item.id, element.offsetHeight);
     };
 
     report();
@@ -298,18 +296,18 @@ function CalendarTimeGridWorkoutBlock({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [workout.id, onContentHeight, userRole, trainees, workout]);
+  }, [item.id, onContentHeight, userRole, trainees, item]);
 
   return (
     <div
-      data-calendar-workout
-      data-workout-id={workout.id}
+      data-calendar-schedule-item
+      data-schedule-item-id={item.id}
       className="absolute right-0.5 left-0.5 z-10 overflow-hidden"
       style={{ top, minHeight }}
     >
       <div ref={contentRef} className="w-full min-w-0">
-        <CalendarWorkoutCard
-          workout={workout}
+        <CalendarScheduleCard
+          item={item}
           userRole={userRole}
           trainees={trainees}
           compact

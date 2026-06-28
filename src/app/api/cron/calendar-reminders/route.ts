@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { cleanupOldNotifications } from "@/lib/cleanup-old-notifications";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { processDueCalendarReminders } from "@/lib/process-calendar-reminders";
+import { processDueUserCalendarEventReminders } from "@/lib/process-user-calendar-event-reminders";
 import { processDueUserWorkoutReminders } from "@/lib/process-user-workout-reminders";
 
 export const runtime = "nodejs";
@@ -14,12 +15,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [groupSpots, userReminders, oldNotifications] = await Promise.all([
+    const [groupSpots, userReminders, eventReminders, oldNotifications] = await Promise.all([
       processDueCalendarReminders(),
       processDueUserWorkoutReminders(),
+      processDueUserCalendarEventReminders(),
       cleanupOldNotifications(),
     ]);
-    return NextResponse.json({ ok: true, groupSpots, userReminders, oldNotifications });
+    return NextResponse.json({ ok: true, groupSpots, userReminders, eventReminders, oldNotifications });
   } catch (error) {
     console.error("GET /api/cron/calendar-reminders:", error);
     return NextResponse.json({ error: "Failed to process reminders" }, { status: 500 });

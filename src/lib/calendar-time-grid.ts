@@ -4,7 +4,7 @@ import {
   CALENDAR_HOUR_HEIGHT_PX,
 } from "@/lib/calendar-config";
 import { getIsraelHourMinuteFromInstant } from "@/lib/calendar-datetime";
-import type { CalendarWorkoutItem } from "@/server/actions/calendar";
+import type { CalendarTimedItem } from "@/server/actions/calendar-types";
 
 export type WorkoutGridPosition = {
   top: number;
@@ -86,17 +86,17 @@ function getBaseSpanHeight(startTotalMinutes: number, endTotalMinutes: number): 
 }
 
 export function computeHourHeightsForWorkouts(
-  workouts: CalendarWorkoutItem[],
+  items: CalendarTimedItem[],
   contentHeights: Readonly<Record<string, number>>,
 ): number[] {
   const hourHeights = createBaseHourHeights();
 
-  for (const workout of workouts) {
-    const { hour, minute } = getIsraelHourMinuteFromInstant(new Date(workout.startsAt));
-    const range = clampWorkoutToGrid(hour, minute, workout.durationMinutes);
+  for (const item of items) {
+    const { hour, minute } = getIsraelHourMinuteFromInstant(new Date(item.startsAt));
+    const range = clampWorkoutToGrid(hour, minute, item.durationMinutes);
     if (!range) continue;
 
-    const contentHeight = contentHeights[workout.id];
+    const contentHeight = contentHeights[item.id];
     if (!contentHeight) continue;
 
     const baseSpan = getBaseSpanHeight(range.startTotalMinutes, range.endTotalMinutes);

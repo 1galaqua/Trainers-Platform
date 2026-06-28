@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { siteConfig } from "@/config/site";
 import { UpdatesPageContent } from "@/features/updates/components/updates-page-content";
 import { requireTraineeOnboarded, requireUser } from "@/lib/auth";
-import { getUserNotificationsAction } from "@/server/actions/notifications";
+import { loadUserNotifications } from "@/lib/notification-items";
 
 export const metadata = {
   title: `עדכונים | ${siteConfig.shortName}`,
@@ -22,7 +22,7 @@ export default async function UpdatesPage() {
     await requireTraineeOnboarded();
   }
 
-  const notifications = await getUserNotificationsAction();
+  const notifications = await loadUserNotifications(user.id);
 
   return <UpdatesPageContent notifications={notifications} />;
 }

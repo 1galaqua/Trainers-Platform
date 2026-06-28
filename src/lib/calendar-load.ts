@@ -5,7 +5,7 @@ import { getCalendarVisibleRange } from "@/lib/calendar-range";
 import { notCancelledWhere } from "@/lib/calendar-prisma-filters";
 import { reminderNotSentWhere } from "@/lib/user-workout-reminders";
 import { prisma } from "@/lib/prisma";
-import type { CalendarWorkoutItem } from "@/server/actions/calendar";
+import type { CalendarScheduleItem } from "@/server/actions/calendar-types";
 import type { UserRole } from "@/lib/prisma-client";
 
 async function getCoachIdForUser(userId: string, role: UserRole) {
@@ -19,10 +19,10 @@ async function getCoachIdForUser(userId: string, role: UserRole) {
   return link?.coachId ?? null;
 }
 
-export async function loadCalendarWorkouts(
+export async function loadCalendarSchedule(
   userId: string,
   role: UserRole,
-): Promise<CalendarWorkoutItem[]> {
+): Promise<CalendarScheduleItem[]> {
   const { start, end } = getCalendarVisibleRange();
 
   if (role === "ADMIN") return [];
@@ -30,62 +30,98 @@ export async function loadCalendarWorkouts(
   const coachId = await getCoachIdForUser(userId, role);
   if (!coachId) return [];
 
-  const workouts = await prisma.scheduledWorkout.findMany({
-    where: {
-      coachId,
-      startsAt: { gte: start, lte: end },
-      AND: [
-        notCancelledWhere,
-        ...(role === "TRAINEE"
-          ? [
-              {
-                OR: [
-                  { type: "GROUP" as const },
-                  { type: "PERSONAL" as const, traineeId: userId },
-                ],
-              },
-            ]
-          : []),
-      ],
-    },
-    orderBy: { startsAt: "asc" },
-    include: {
-      trainee: { select: { displayName: true } },
-      program: { select: { name: true } },
-      registrations: {
-        where: notCancelledWhere,
-        select: {
-          traineeId: true,
-          trainee: {
-            select: { id: true, displayName: true, email: true },
+  const [workouts, events] = await Promise.all([
+    prisma.scheduledWorkout.findMany({
+      where: {
+        coachId,
+        startsAt: { gte: start, lte: end },
+        AND: [
+          notCancelledWhere,
+          ...(role === "TRAINEE"
+            ? [
+                {
+                  OR: [
+                    { type: "GROUP" as const },
+                    { type: "PERSONAL" as const, traineeId: userId },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      },
+      orderBy: { startsAt: "asc" },
+      include: {
+        trainee: { select: { displayName: true } },
+        program: { select: { name: true } },
+        registrations: {
+          where: notCancelledWhere,
+          select: {
+            traineeId: true,
+            trainee: {
+              select: { id: true, displayName: true, email: true },
+            },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.calendarEvent.findMany({
+      where: {
+        coachId,
+        startsAt: { gte: start, lte: end },
+        AND: [
+          notCancelledWhere,
+          ...(role === "TRAINEE" ? [{ traineeId: userId }] : []),
+        ],
+      },
+      orderBy: { startsAt: "asc" },
+      include: {
+        trainee: { select: { displayName: true } },
+      },
+    }),
+  ]);
 
   const workoutIds = workouts.map((workout) => workout.id);
-  const userReminders = await prisma.userWorkoutReminder.findMany({
-    where: {
-      userId,
-      workoutId: { in: workoutIds },
-      ...reminderNotSentWhere,
-    },
-    select: {
-      workoutId: true,
-      kind: true,
-      scheduledFor: true,
-    },
-  });
+  const eventIds = events.map((event) => event.id);
 
-  const reminderByWorkoutId = new Map(
-    userReminders.map((reminder) => [reminder.workoutId, reminder]),
+  const [workoutReminders, eventReminders] = await Promise.all([
+    prisma.userWorkoutReminder.findMany({
+      where: {
+        userId,
+        workoutId: { in: workoutIds },
+        ...reminderNotSentWhere,
+      },
+      select: {
+        workoutId: true,
+        kind: true,
+        scheduledFor: true,
+      },
+    }),
+    prisma.userCalendarEventReminder.findMany({
+      where: {
+        userId,
+        eventId: { in: eventIds },
+        ...reminderNotSentWhere,
+      },
+      select: {
+        eventId: true,
+        kind: true,
+        scheduledFor: true,
+      },
+    }),
+  ]);
+
+  const workoutReminderById = new Map(
+    workoutReminders.map((reminder) => [reminder.workoutId, reminder]),
+  );
+  const eventReminderById = new Map(
+    eventReminders.map((reminder) => [reminder.eventId, reminder]),
   );
 
-  return workouts.map((workout) => {
-    const reminder = reminderByWorkoutId.get(workout.id);
+  const workoutItems: CalendarScheduleItem[] = workouts.map((workout) => {
+    const reminder = workoutReminderById.get(workout.id);
 
     return {
+      kind: "workout",
       id: workout.id,
       type: workout.type,
       workoutKind: workout.workoutKind,
@@ -122,15 +158,50 @@ export async function loadCalendarWorkouts(
         : null,
     };
   });
+
+  const eventItems: CalendarScheduleItem[] = events.map((event) => {
+    const reminder = eventReminderById.get(event.id);
+
+    return {
+      kind: "event",
+      id: event.id,
+      title: event.title,
+      startsAt: event.startsAt.toISOString(),
+      durationMinutes: event.durationMinutes,
+      traineeId: event.traineeId,
+      traineeName: event.trainee?.displayName ?? null,
+      notes: event.notes,
+      userReminder: reminder
+        ? {
+            kind: reminder.kind,
+            scheduledFor: reminder.scheduledFor.toISOString(),
+          }
+        : null,
+    };
+  });
+
+  return [...workoutItems, ...eventItems].sort(
+    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+  );
 }
 
-export async function getCachedCalendarWorkouts(
+export async function getCachedCalendarSchedule(
   userId: string,
   role: UserRole,
-): Promise<CalendarWorkoutItem[]> {
+): Promise<CalendarScheduleItem[]> {
   return unstable_cache(
-    async () => loadCalendarWorkouts(userId, role),
-    ["calendar-workouts", userId, role],
+    async () => loadCalendarSchedule(userId, role),
+    ["calendar-schedule", userId, role],
     { tags: [calendarWorkoutsTag(userId)] },
   )();
+}
+
+/** @deprecated Use loadCalendarSchedule */
+export async function loadCalendarWorkouts(userId: string, role: UserRole) {
+  return loadCalendarSchedule(userId, role);
+}
+
+/** @deprecated Use getCachedCalendarSchedule */
+export async function getCachedCalendarWorkouts(userId: string, role: UserRole) {
+  return getCachedCalendarSchedule(userId, role);
 }

@@ -15,6 +15,7 @@ type PersonalWorkoutTraineePickerProps = {
   selectedTraineeId: string | null;
   onSelect: (traineeId: string | null) => void;
   disabled?: boolean;
+  required?: boolean;
 };
 
 export function PersonalWorkoutTraineePicker({
@@ -22,6 +23,7 @@ export function PersonalWorkoutTraineePicker({
   selectedTraineeId,
   onSelect,
   disabled = false,
+  required = true,
 }: PersonalWorkoutTraineePickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -41,7 +43,7 @@ export function PersonalWorkoutTraineePicker({
   return (
     <div className="space-y-2">
       <Label htmlFor="personal-trainee-search">מתאמן</Label>
-      <input type="hidden" name="traineeId" value={selectedTraineeId ?? ""} required={!disabled} />
+      <input type="hidden" name="traineeId" value={selectedTraineeId ?? ""} required={required && !disabled} />
 
       {selectedTrainee ? (
         <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">

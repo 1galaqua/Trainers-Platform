@@ -14,7 +14,8 @@ import {
 } from "@/lib/calendar-datetime";
 import { clampCalendarAnchorDate, getCalendarNavigationBounds } from "@/lib/calendar-range";
 import type { UserRole } from "@/lib/prisma-client";
-import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
+import type { CalendarTraineeOption } from "@/server/actions/calendar";
+import type { CalendarScheduleItem } from "@/server/actions/calendar-types";
 
 import { CalendarTimeGrid } from "./calendar-time-grid";
 
@@ -22,33 +23,33 @@ type CalendarScheduleViewProps = {
   viewMode: CalendarViewMode;
   anchorDate: string;
   onAnchorDateChange: (date: string) => void;
-  workouts: CalendarWorkoutItem[];
+  scheduleItems: CalendarScheduleItem[];
   userRole: UserRole;
   trainees?: CalendarTraineeOption[];
-  scrollToWorkoutId?: string | null;
+  scrollToItemId?: string | null;
 };
 
 export function CalendarScheduleView({
   viewMode,
   anchorDate,
   onAnchorDateChange,
-  workouts,
+  scheduleItems,
   userRole,
   trainees = [],
-  scrollToWorkoutId = null,
+  scrollToItemId = null,
 }: CalendarScheduleViewProps) {
   const bounds = useMemo(() => getCalendarNavigationBounds(), []);
   const weekStart = getWeekStartDateString(anchorDate);
   const weekDates = useMemo(() => getWeekDateStrings(weekStart), [weekStart]);
   const dates = viewMode === "week" ? weekDates : [anchorDate];
 
-  const workoutsByDate = useMemo(() => {
-    const map = new Map<string, CalendarWorkoutItem[]>();
+  const itemsByDate = useMemo(() => {
+    const map = new Map<string, CalendarScheduleItem[]>();
 
-    for (const workout of workouts) {
-      const key = getWorkoutIsraelDateKey(workout.startsAt);
+    for (const item of scheduleItems) {
+      const key = getWorkoutIsraelDateKey(item.startsAt);
       const list = map.get(key) ?? [];
-      list.push(workout);
+      list.push(item);
       map.set(key, list);
     }
 
@@ -59,7 +60,7 @@ export function CalendarScheduleView({
     }
 
     return map;
-  }, [workouts]);
+  }, [scheduleItems]);
 
   const isWeekView = viewMode === "week";
   const isToday = anchorDate === bounds.today;
@@ -134,12 +135,12 @@ export function CalendarScheduleView({
 
       <CalendarTimeGrid
         dates={dates}
-        workoutsByDate={workoutsByDate}
+        itemsByDate={itemsByDate}
         userRole={userRole}
         trainees={trainees}
         today={bounds.today}
         historyStart={bounds.historyStart}
-        scrollToWorkoutId={scrollToWorkoutId}
+        scrollToItemId={scrollToItemId}
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import { requireCoach, requireUser } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { parseIsraelDateTime } from "@/lib/calendar-datetime";
-import { getCachedCalendarWorkouts } from "@/lib/calendar-load";
+import { getCachedCalendarSchedule } from "@/lib/calendar-load";
 import {
   findOverlappingCoachWorkout,
   SCHEDULE_OVERLAP_ERROR,
@@ -43,6 +43,7 @@ import type { ProgramType, ScheduledWorkoutType, UserRole, WorkoutDeliveryMode }
 import { resolveStoredMeetingLink } from "@/lib/workout-delivery";
 
 export type CalendarWorkoutItem = {
+  kind: "workout";
   id: string;
   type: ScheduledWorkoutType;
   workoutKind: string;
@@ -821,7 +822,7 @@ export async function cancelGroupWorkoutRegistrationAction(workoutId: string) {
   return { success: true as const };
 }
 
-export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]> {
+export async function getCalendarWorkoutsAction() {
   const user = await requireUser();
-  return getCachedCalendarWorkouts(user.id, user.role);
+  return getCachedCalendarSchedule(user.id, user.role);
 }

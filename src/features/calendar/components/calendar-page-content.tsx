@@ -1,9 +1,11 @@
 "use client";
 
 import type { UserRole } from "@/lib/prisma-client";
-import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
+import type { CalendarTraineeOption } from "@/server/actions/calendar";
+import type { CalendarScheduleItem } from "@/server/actions/calendar-types";
 
 import { CalendarScheduleView } from "./calendar-schedule-view";
+import { CreateEventSheet } from "./create-event-sheet";
 import { CreateWorkoutSheet } from "./create-workout-sheet";
 import {
   CalendarFeedbackProvider,
@@ -22,20 +24,20 @@ import { useEffect, useMemo, useState } from "react";
 
 type CalendarPageContentProps = {
   userRole: UserRole;
-  workouts: CalendarWorkoutItem[];
+  scheduleItems: CalendarScheduleItem[];
   trainees: CalendarTraineeOption[];
 };
 
 export function CalendarPageContent({
   userRole,
-  workouts,
+  scheduleItems,
   trainees,
 }: CalendarPageContentProps) {
   return (
     <CalendarFeedbackProvider>
       <CalendarPageContentInner
         userRole={userRole}
-        workouts={workouts}
+        scheduleItems={scheduleItems}
         trainees={trainees}
       />
     </CalendarFeedbackProvider>
@@ -44,25 +46,33 @@ export function CalendarPageContent({
 
 function CalendarPageContentInner({
   userRole,
-  workouts,
+  scheduleItems,
   trainees,
 }: CalendarPageContentProps) {
   const { successMessage } = useCalendarFeedback();
   const searchParams = useSearchParams();
-  const focusWorkout = useMemo(() => {
+  const focusItem = useMemo(() => {
     const workoutId = searchParams.get("workout");
-    if (!workoutId) return null;
-    return workouts.find((workout) => workout.id === workoutId) ?? null;
-  }, [searchParams, workouts]);
+    if (workoutId) {
+      return scheduleItems.find((item) => item.id === workoutId) ?? null;
+    }
+
+    const eventId = searchParams.get("event");
+    if (eventId) {
+      return scheduleItems.find((item) => item.id === eventId) ?? null;
+    }
+
+    return null;
+  }, [searchParams, scheduleItems]);
 
   const bounds = useMemo(() => getCalendarNavigationBounds(), []);
   const [viewMode, setViewMode] = useState<CalendarViewMode>(() =>
-    focusWorkout || searchParams.get("view") === "day" ? "day" : "week",
+    focusItem || searchParams.get("view") === "day" ? "day" : "week",
   );
   const [anchorDate, setAnchorDate] = useState(() => {
-    if (focusWorkout) {
+    if (focusItem) {
       return clampCalendarAnchorDate(
-        getWorkoutIsraelDateKey(focusWorkout.startsAt),
+        getWorkoutIsraelDateKey(focusItem.startsAt),
         bounds,
       );
     }
@@ -71,20 +81,20 @@ function CalendarPageContentInner({
   const isCoach = userRole === "COACH";
 
   useEffect(() => {
-    if (focusWorkout || searchParams.get("view") === "day") {
+    if (focusItem || searchParams.get("view") === "day") {
       setViewMode("day");
     }
-    if (focusWorkout) {
+    if (focusItem) {
       setAnchorDate(
         clampCalendarAnchorDate(
-          getWorkoutIsraelDateKey(focusWorkout.startsAt),
+          getWorkoutIsraelDateKey(focusItem.startsAt),
           bounds,
         ),
       );
     }
-  }, [focusWorkout, searchParams, bounds]);
+  }, [focusItem, searchParams, bounds]);
 
-  const scrollToWorkoutId = focusWorkout?.id ?? null;
+  const scrollToItemId = focusItem?.id ?? null;
 
   return (
     <div className="space-y-6">
@@ -94,11 +104,16 @@ function CalendarPageContentInner({
           <h1 className="font-semibold text-2xl tracking-tight">יומן</h1>
           <p className="mt-1 text-muted-foreground text-sm">
             {isCoach
-              ? "תצוגה מלאה של כל האימונים — אישיים וקבוצתיים"
-              : "אימונים אישיים ואימונים קבוצתיים של המאמן שלך"}
+              ? "תצוגה מלאה של אימונים ואירועים ביומן"
+              : "אימונים ואירועים של המאמן שלך"}
           </p>
         </div>
-        {isCoach && <CreateWorkoutSheet trainees={trainees} />}
+        {isCoach && (
+          <div className="flex flex-wrap items-center gap-2">
+            <CreateWorkoutSheet trainees={trainees} />
+            <CreateEventSheet trainees={trainees} />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -122,10 +137,10 @@ function CalendarPageContentInner({
         viewMode={viewMode}
         anchorDate={anchorDate}
         onAnchorDateChange={setAnchorDate}
-        workouts={workouts}
+        scheduleItems={scheduleItems}
         userRole={userRole}
         trainees={trainees}
-        scrollToWorkoutId={scrollToWorkoutId}
+        scrollToItemId={scrollToItemId}
       />
     </div>
   );
