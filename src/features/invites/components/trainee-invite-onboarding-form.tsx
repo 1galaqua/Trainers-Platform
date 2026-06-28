@@ -26,7 +26,6 @@ import { completeTraineeInviteAction } from "@/server/actions/invites";
 
 type TraineeInviteOnboardingFormProps = {
   token: string;
-  coachName: string;
   questionnaireFields: QuestionField[];
   agreementText: string;
 };
@@ -35,7 +34,6 @@ const USER_FIELD_KEYS = ["displayName", "email"] as const;
 
 export function TraineeInviteOnboardingForm({
   token,
-  coachName,
   questionnaireFields,
   agreementText,
 }: TraineeInviteOnboardingFormProps) {

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { isPushConfigured } from "@/lib/push-config";
 
 import { usePushNotifications } from "../hooks/use-push-notifications";
 

@@ -13,15 +13,11 @@ import { RequestAgreementRedoButton } from "@/features/trainees/components/reque
 import { RequestQuestionnaireRedoButton } from "@/features/trainees/components/request-questionnaire-redo-button";
 import { TraineeOnboardingSheet } from "@/features/trainees/components/trainee-onboarding-sheet";
 import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
-import { requireCoach } from "@/lib/auth";
-import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { isAgreementRedoPending, isQuestionnaireRedoPending } from "@/lib/questionnaire-status";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, getTraineeStatus } from "@/lib/trainee-status";
-import { prisma } from "@/lib/prisma";
-import { getTraineeCoachingPeriodAction } from "@/server/actions/trainees";
+import { getCoachTraineeDetailPageDataAction } from "@/server/actions/trainees";
 import { getCoachOnboardingTemplateAction } from "@/server/actions/coach-onboarding";
 import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
-import { getCoachTraineeProgressExercisesAction, getCoachTraineeProgressAction } from "@/server/actions/workouts";
 import { TraineeStatusIndicator } from "@/features/trainees/components/trainee-status-indicator";
 
 export const metadata = {
@@ -33,49 +29,27 @@ type PageProps = {
 };
 
 export default async function TraineeDetailPage({ params }: PageProps) {
-  const coach = await requireCoach();
   const { id } = await params;
 
-  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, id);
-  if (!ownsTrainee) notFound();
-
-  let trainee;
-  try {
-    trainee = await prisma.user.findUnique({
-      where: { id },
-      include: { questionnaireResponse: true, agreement: true },
-    });
-  } catch {
-    notFound();
-  }
-
-  if (!trainee || trainee.role !== "TRAINEE") notFound();
-
-  const [sessions, coachingPeriod, template, coachLink, exercises] =
-    await Promise.all([
-    getCoachTraineeProgressAction(id),
-    getTraineeCoachingPeriodAction(id),
+  const [detail, template] = await Promise.all([
+    getCoachTraineeDetailPageDataAction(id),
     getCoachOnboardingTemplateAction(),
-    prisma.coachTrainee.findFirst({
-      where: { coachId: coach.id, traineeId: id },
-      select: {
-        questionnaireRedoRequestedAt: true,
-        agreementRedoRequestedAt: true,
-      },
-    }),
-    getCoachTraineeProgressExercisesAction(id),
   ]);
 
-  const loggedSessionsCount = coachingPeriod?.loggedSessionsCount ?? 0;
-  const workoutQuota = coachingPeriod?.workoutQuota ?? null;
+  if (!detail) notFound();
+
+  const { trainee, coachLink, coachingPeriod, sessions, progressExercises } = detail;
+
+  const loggedSessionsCount = coachingPeriod.loggedSessionsCount;
+  const workoutQuota = coachingPeriod.workoutQuota;
   const effectiveCompleted = getEffectiveWorkoutsCompleted(
-    coachingPeriod?.workoutsCompleted ?? null,
+    coachingPeriod.workoutsCompleted,
     loggedSessionsCount,
   );
   const workoutsRemaining = getWorkoutsRemaining(workoutQuota, effectiveCompleted);
   const status = getTraineeStatus({
-    coachingStartDate: coachingPeriod?.coachingStartDate ?? null,
-    coachingEndDate: coachingPeriod?.coachingEndDate ?? null,
+    coachingStartDate: coachingPeriod.coachingStartDate,
+    coachingEndDate: coachingPeriod.coachingEndDate,
     workoutQuota,
     sessionsCount: effectiveCompleted,
   });
@@ -103,11 +77,11 @@ export default async function TraineeDetailPage({ params }: PageProps) {
   const hasSignedAgreement = Boolean(trainee.agreement);
   const questionnaireRedoPending = isQuestionnaireRedoPending(
     trainee.questionnaireResponse,
-    coachLink?.questionnaireRedoRequestedAt,
+    coachLink.questionnaireRedoRequestedAt,
   );
   const agreementRedoPending = isAgreementRedoPending(
     trainee.agreement,
-    coachLink?.agreementRedoRequestedAt,
+    coachLink.agreementRedoRequestedAt,
   );
 
   return (
@@ -184,10 +158,10 @@ export default async function TraineeDetailPage({ params }: PageProps) {
         <CardContent>
           <CoachingPeriodForm
             traineeId={id}
-            coachingStartDate={coachingPeriod?.coachingStartDate ?? null}
-            coachingEndDate={coachingPeriod?.coachingEndDate ?? null}
+            coachingStartDate={coachingPeriod.coachingStartDate}
+            coachingEndDate={coachingPeriod.coachingEndDate}
             workoutQuota={workoutQuota}
-            workoutsCompleted={coachingPeriod?.workoutsCompleted ?? null}
+            workoutsCompleted={coachingPeriod.workoutsCompleted}
             loggedSessionsCount={loggedSessionsCount}
           />
         </CardContent>
@@ -205,7 +179,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
           </p>
         </div>
         <ProgressPageClient
-          exercises={exercises}
+          exercises={progressExercises}
           readOnly
           emptyMessage="אין עדיין נתוני התקדמות להצגה."
         />

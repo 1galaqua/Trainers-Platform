@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { getTraineeOnboardingStatus, requireTrainee } from "@/lib/auth";
+import { revalidatePrograms } from "@/lib/revalidate-tags";
 import {
   archiveAgreementIfExists,
   archiveQuestionnaireIfExists,
@@ -87,10 +88,10 @@ export async function submitQuestionnaireAction(formData: FormData) {
       ? "/dashboard/my-program"
       : "/dashboard/onboarding/agreement";
 
+    revalidatePrograms(trainee.id);
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/onboarding");
     revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/my-program");
     return { success: true, redirectTo };
   } catch {
     return { error: "שגיאה בשמירת השאלון" };
@@ -150,10 +151,10 @@ export async function submitAgreementAction(formData: FormData) {
       });
     }
 
+    revalidatePrograms(trainee.id);
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/onboarding");
     revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/my-program");
     return { success: true };
   } catch {
     return { error: "שגיאה בשמירת החתימה" };

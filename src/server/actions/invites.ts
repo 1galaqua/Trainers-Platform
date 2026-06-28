@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/auth";
 import { getCoachOnboardingTemplateByCoachId } from "@/lib/coach-onboarding-template";
 import { linkTraineeToCoach } from "@/lib/coach-trainee";
+import { revalidateCoachTrainees } from "@/lib/revalidate-tags";
 import { dbActionErrorMessage, isDbConnectionError } from "@/lib/db-errors";
 import {
   legacyFieldsFromAnswers,
@@ -239,7 +240,7 @@ export async function completeTraineeInviteAction(formData: FormData) {
       sessionVersion: user.sessionVersion ?? 0,
     });
 
-    revalidatePath("/dashboard");
+    revalidateCoachTrainees(invite.coachId);
     revalidatePath("/dashboard/trainees");
 
     return { success: true as const, redirectTo: "/dashboard" };

@@ -182,7 +182,7 @@ export function TrackingGridCell({ traineeId, cell }: TrackingGridCellProps) {
   useEffect(() => {
     setDraft(getEditValue(cell));
     setError(false);
-  }, [cell.raw, cell.display, cell.date, cell.kind]);
+  }, [cell]);
 
   async function commit() {
     if (saving || !cell.editable) return;

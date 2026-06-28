@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { requireUser } from "@/lib/auth";
+import { revalidateNotifications } from "@/lib/revalidate-tags";
 import { notReadWhere } from "@/lib/notification-prisma-filters";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
@@ -57,7 +56,7 @@ export async function markAllNotificationsReadAction() {
     data: { readAt: new Date() },
   });
 
-  revalidatePath("/dashboard", "layout");
+  revalidateNotifications(user.id);
 }
 
 export async function markNotificationReadAction(notificationId: string) {
@@ -72,6 +71,5 @@ export async function markNotificationReadAction(notificationId: string) {
     data: { readAt: new Date() },
   });
 
-  revalidatePath("/dashboard", "layout");
-  revalidatePath("/dashboard/updates");
+  revalidateNotifications(user.id);
 }

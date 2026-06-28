@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { MongoClient } from "mongodb";
 
 const URLS: Record<string, string> = {

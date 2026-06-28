@@ -8,6 +8,8 @@ import {
   parseCoachingDateInput,
   serializeCoachingDateForClient,
 } from "@/lib/coaching-period-dates";
+import { getCachedTraineeDetailCoreData } from "@/lib/trainee-home-load";
+import { revalidateCoachTrainees, revalidateTraineeDetail } from "@/lib/revalidate-tags";
 import { prisma } from "@/lib/prisma";
 import {
   CURRENT_ONBOARDING_VERSION_ID,
@@ -198,6 +200,8 @@ export async function updateCoachingPeriodAction(formData: FormData) {
       data: { coachingStartDate, coachingEndDate, workoutQuota, workoutsCompleted },
     });
 
+    revalidateTraineeDetail(traineeId);
+    revalidateCoachTrainees(coach.id);
     revalidatePath("/dashboard/trainees");
     revalidatePath(`/dashboard/trainees/${traineeId}`);
     return { success: true };
@@ -233,15 +237,29 @@ export async function updateTraineeDisplayNameAction(formData: FormData) {
       data: { displayName },
     });
 
+    revalidateTraineeDetail(traineeId);
+    revalidateCoachTrainees(coach.id);
     revalidatePath("/dashboard/trainees");
     revalidatePath(`/dashboard/trainees/${traineeId}`);
     revalidatePath(`/dashboard/trainees/${traineeId}/log`);
     revalidatePath("/dashboard/workouts");
-    revalidatePath("/dashboard");
 
     return { success: true as const };
   } catch {
     return { error: "שגיאה בשמירת השם" };
+  }
+}
+
+export async function getCoachTraineeDetailPageDataAction(traineeId: string) {
+  const coach = await requireCoach();
+
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) return null;
+
+  try {
+    return await getCachedTraineeDetailCoreData(coach.id, traineeId);
+  } catch {
+    return null;
   }
 }
 
@@ -302,6 +320,8 @@ export async function requestQuestionnaireRedoAction(traineeId: string) {
       data: { questionnaireRedoRequestedAt: new Date() },
     });
 
+    revalidateTraineeDetail(traineeId);
+    revalidateCoachTrainees(coach.id);
     revalidatePath("/dashboard/trainees");
     revalidatePath(`/dashboard/trainees/${traineeId}`);
     return { success: true };
@@ -339,6 +359,8 @@ export async function requestAgreementRedoAction(traineeId: string) {
       data: { agreementRedoRequestedAt: new Date() },
     });
 
+    revalidateTraineeDetail(traineeId);
+    revalidateCoachTrainees(coach.id);
     revalidatePath("/dashboard/trainees");
     revalidatePath(`/dashboard/trainees/${traineeId}`);
     return { success: true };

@@ -22,6 +22,7 @@ import {
   programSectionsInclude,
 } from "@/lib/program-sections-persistence";
 import { workoutSessionLogInclude } from "@/lib/workout-session-display";
+import { revalidateLogWorkout, revalidatePrograms } from "@/lib/revalidate-tags";
 import { prisma } from "@/lib/prisma";
 
 export type ExerciseInput = ProgramExerciseInput;
@@ -202,9 +203,10 @@ export async function createTrainingProgramAction(formData: FormData) {
       return { error: syncError };
     }
 
+    revalidatePrograms(traineeId);
+    revalidateLogWorkout(traineeId);
     revalidatePath("/dashboard/workouts");
     revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/my-program");
     return { success: true, programId: program.id };
   } catch {
     return { error: "שגיאה ביצירת התוכנית" };
@@ -260,11 +262,12 @@ export async function updateTrainingProgramAction(formData: FormData) {
     const syncError = await syncProgramSections(programId, parsed.sections, activeSections);
     if (syncError) return { error: syncError };
 
+    revalidatePrograms(program.traineeId);
+    revalidateLogWorkout(program.traineeId);
     revalidatePath("/dashboard/workouts");
     revalidatePath(`/dashboard/workouts/${programId}`);
     revalidatePath(`/dashboard/workouts/${programId}/edit`);
     revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/my-program");
     revalidatePath("/dashboard/progress");
     return { success: true, programId };
   } catch {
@@ -282,7 +285,7 @@ export async function deleteTrainingProgramAction(programId: string) {
   try {
     const program = await prisma.trainingProgram.findFirst({
       where: { id: programId, coachId: coach.id },
-      select: { id: true },
+      select: { id: true, traineeId: true },
     });
 
     if (!program) {
@@ -350,9 +353,10 @@ export async function deleteTrainingProgramAction(programId: string) {
       where: { id: programId },
     });
 
+    revalidatePrograms(program.traineeId);
+    revalidateLogWorkout(program.traineeId);
     revalidatePath("/dashboard/workouts");
     revalidatePath("/dashboard/trainees");
-    revalidatePath("/dashboard/my-program");
     revalidatePath("/dashboard/progress");
     revalidatePath("/dashboard");
 

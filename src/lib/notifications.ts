@@ -1,11 +1,27 @@
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
+
+import { notificationsTag } from "@/lib/cache-tags";
 import { prisma } from "@/lib/prisma";
 import { notReadWhere } from "@/lib/notification-prisma-filters";
 
-export async function getUnreadNotificationCountForUser(userId: string): Promise<number> {
+async function getUnreadNotificationCountUncached(userId: string): Promise<number> {
   return prisma.appNotification.count({
     where: { userId, ...notReadWhere },
   });
 }
+
+async function getCachedUnreadNotificationCount(userId: string): Promise<number> {
+  return unstable_cache(
+    async () => getUnreadNotificationCountUncached(userId),
+    ["unread-notifications", userId],
+    { tags: [notificationsTag(userId)] },
+  )();
+}
+
+export const getUnreadNotificationCountForUser = cache(async (userId: string) =>
+  getCachedUnreadNotificationCount(userId),
+);
 
 export async function getUnreadNotificationCountsForUsers(
   userIds: string[],

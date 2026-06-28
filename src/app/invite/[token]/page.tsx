@@ -56,7 +56,6 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
       <TraineeInviteOnboardingForm
         token={data.token}
-        coachName={data.coachName}
         questionnaireFields={data.questionnaireFields}
         agreementText={data.agreementText}
       />

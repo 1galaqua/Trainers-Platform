@@ -4,42 +4,17 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach } from "@/lib/auth";
 import {
-  buildCoachDashboardChartData,
-  type CoachDashboardChartData,
-} from "@/lib/coach-dashboard-stats";
+  getCachedCoachDashboardChartData,
+} from "@/lib/coach-dashboard-load";
+import type { CoachDashboardChartData } from "@/lib/coach-dashboard-stats";
+import { revalidateCoachTrainees } from "@/lib/revalidate-tags";
 import { prisma } from "@/lib/prisma";
+
+export type { CoachDashboardChartData } from "@/lib/coach-dashboard-stats";
 
 export async function getCoachDashboardChartAction(): Promise<CoachDashboardChartData> {
   const coach = await requireCoach();
-
-  try {
-    const links = await prisma.coachTrainee.findMany({
-      where: { coachId: coach.id },
-      include: {
-        trainee: {
-          include: {
-            workoutSessions: {
-              where: { program: { coachId: coach.id } },
-              select: { completedAt: true },
-            },
-          },
-        },
-      },
-    });
-
-    const trainees = links.map((link) => ({
-      linkedAt: link.createdAt,
-      coachingStartDate: link.coachingStartDate,
-      coachingEndDate: link.coachingEndDate,
-      workoutQuota: link.workoutQuota,
-      workoutsCompleted: link.workoutsCompleted,
-      sessionDates: link.trainee.workoutSessions.map((session) => session.completedAt),
-    }));
-
-    return buildCoachDashboardChartData(trainees);
-  } catch {
-    return buildCoachDashboardChartData([]);
-  }
+  return getCachedCoachDashboardChartData(coach.id);
 }
 
 export async function deleteTraineeAction(traineeId: string) {
@@ -121,7 +96,7 @@ export async function deleteTraineeAction(traineeId: string) {
     await prisma.coachTrainee.deleteMany({ where: { coachId: coach.id, traineeId } });
     await prisma.user.deleteMany({ where: { id: traineeId, role: "TRAINEE" } });
 
-    revalidatePath("/dashboard");
+    revalidateCoachTrainees(coach.id);
     revalidatePath("/dashboard/trainees");
     revalidatePath("/dashboard/workouts");
     revalidatePath("/dashboard/progress");

@@ -9,6 +9,7 @@ export type ProgramExerciseInput = {
   coachNotes?: string;
   youtubeUrl?: string;
   instructions?: string;
+  sortOrder?: number;
 };
 
 export type ProgramSectionInput = {

@@ -4,13 +4,17 @@ import { revalidatePath } from "next/cache";
 
 import { requireCoach, requireTrainee, requireTraineeOnboarded } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
-import { safeRevalidatePaths } from "@/lib/safe-revalidate";
-import { getTraineeQuotaSnapshot, type TraineeQuotaSnapshot } from "@/lib/trainee-quota";
-import { buildLogWorkoutProgramOption } from "@/lib/log-workout-program-option";
+import { getCachedLogWorkoutPageData, type LogWorkoutPageData } from "@/lib/log-workout-load";
+import { loadProgressExerciseCharts } from "@/lib/progress-exercises-load";
+import { getCachedTraineePrograms } from "@/lib/programs-load";
+import { getCachedTraineeHomeData, getCachedTraineeDetailSessions } from "@/lib/trainee-home-load";
 import {
-  resolveLogWorkoutSelectedProgramId,
-  type LogWorkoutProgramSummary,
-} from "@/lib/log-workout-page-data";
+  revalidateCoachTrainees,
+  revalidateLogWorkout,
+  revalidatePrograms,
+  revalidateTraineeDetail,
+} from "@/lib/revalidate-tags";
+import { getTraineeQuotaSnapshot, type TraineeQuotaSnapshot } from "@/lib/trainee-quota";
 import { computeExerciseLogMetrics } from "@/lib/workout-log-metrics";
 import {
   buildWorkoutSessionCreateData,
@@ -19,11 +23,8 @@ import {
 import {
   applyActiveProgramFilters,
   ensureLegacyProgramSections,
-  filterActiveProgramExercises,
-  loadProgressExercisesForProgram,
   programSectionsInclude,
 } from "@/lib/program-sections-persistence";
-import { workoutSessionLogInclude } from "@/lib/workout-session-display";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveWorkoutsCompleted, getWorkoutsRemaining, isCoachingPeriodActive } from "@/lib/trainee-status";
 
@@ -172,106 +173,17 @@ function parseWorkoutLogFormData(formData: FormData): ParsedWorkoutLogFormData {
   return { programId, sessionNotes, logs, consumeQuota };
 }
 
-async function loadLogWorkoutProgramSummaries(params: {
-  traineeId: string;
-  coachId?: string;
-}): Promise<LogWorkoutProgramSummary[]> {
-  const programs = await prisma.trainingProgram.findMany({
-    where: {
-      traineeId: params.traineeId,
-      isActive: true,
-      ...(params.coachId ? { coachId: params.coachId } : {}),
-    },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      coach: { select: { displayName: true } },
-      exercises: { select: { archivedAt: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return programs.map((program) => ({
-    id: program.id,
-    name: program.name,
-    type: program.type,
-    coachName: program.coach.displayName,
-    exerciseCount: filterActiveProgramExercises(program.exercises).length,
-  }));
-}
-
-async function loadLogWorkoutProgramDetail(params: {
-  traineeId: string;
-  programId: string;
-  coachId?: string;
-}) {
-  await ensureLegacyProgramSections(params.programId);
-
-  const program = await prisma.trainingProgram.findFirst({
-    where: {
-      id: params.programId,
-      traineeId: params.traineeId,
-      isActive: true,
-      ...(params.coachId ? { coachId: params.coachId } : {}),
-    },
-    include: {
-      ...programSectionsInclude,
-      coach: true,
-    },
-  });
-
-  return program ? applyActiveProgramFilters(program) : null;
-}
-
-export type LogWorkoutPageData = {
-  programSummaries: LogWorkoutProgramSummary[];
-  activeProgram: ReturnType<typeof buildLogWorkoutProgramOption> | null;
-  quotaInfo: TraineeQuotaSnapshot | null;
-};
+export type { LogWorkoutPageData };
 
 export async function getLogWorkoutPageDataAction(
   selectedProgramParam?: string,
 ): Promise<LogWorkoutPageData> {
   const trainee = await requireTraineeOnboarded();
 
-  try {
-    const programSummaries = await loadLogWorkoutProgramSummaries({ traineeId: trainee.id });
-    if (programSummaries.length === 0) {
-      return { programSummaries: [], activeProgram: null, quotaInfo: null };
-    }
-
-    const selectedProgramId = resolveLogWorkoutSelectedProgramId(
-      programSummaries,
-      selectedProgramParam,
-    );
-    if (!selectedProgramId) {
-      return { programSummaries, activeProgram: null, quotaInfo: null };
-    }
-
-    const coachLink = await prisma.coachTrainee.findUnique({
-      where: { traineeId: trainee.id },
-      select: { coachId: true },
-    });
-
-    const [programRaw, quotaInfo] = await Promise.all([
-      loadLogWorkoutProgramDetail({
-        traineeId: trainee.id,
-        programId: selectedProgramId,
-      }),
-      coachLink
-        ? getTraineeQuotaSnapshot(trainee.id, coachLink.coachId)
-        : Promise.resolve(null),
-    ]);
-
-    return {
-      programSummaries,
-      activeProgram: programRaw ? buildLogWorkoutProgramOption(programRaw) : null,
-      quotaInfo,
-    };
-  } catch {
-    return { programSummaries: [], activeProgram: null, quotaInfo: null };
-  }
+  return getCachedLogWorkoutPageData({
+    traineeId: trainee.id,
+    selectedProgramParam,
+  });
 }
 
 export async function getCoachLogWorkoutPageDataAction(
@@ -280,69 +192,23 @@ export async function getCoachLogWorkoutPageDataAction(
 ): Promise<LogWorkoutPageData> {
   const coach = await requireCoach();
 
-  try {
-    const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
-    if (!ownsTrainee) {
-      return { programSummaries: [], activeProgram: null, quotaInfo: null };
-    }
-
-    const programSummaries = await loadLogWorkoutProgramSummaries({
-      traineeId,
-      coachId: coach.id,
-    });
-    if (programSummaries.length === 0) {
-      return { programSummaries: [], activeProgram: null, quotaInfo: null };
-    }
-
-    const selectedProgramId = resolveLogWorkoutSelectedProgramId(
-      programSummaries,
-      selectedProgramParam,
-    );
-    if (!selectedProgramId) {
-      return { programSummaries, activeProgram: null, quotaInfo: null };
-    }
-
-    const [programRaw, quotaInfo] = await Promise.all([
-      loadLogWorkoutProgramDetail({
-        traineeId,
-        programId: selectedProgramId,
-        coachId: coach.id,
-      }),
-      getTraineeQuotaSnapshot(traineeId, coach.id),
-    ]);
-
-    return {
-      programSummaries,
-      activeProgram: programRaw ? buildLogWorkoutProgramOption(programRaw) : null,
-      quotaInfo,
-    };
-  } catch {
+  const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
+  if (!ownsTrainee) {
     return { programSummaries: [], activeProgram: null, quotaInfo: null };
   }
+
+  return getCachedLogWorkoutPageData({
+    traineeId,
+    coachId: coach.id,
+    selectedProgramParam,
+  });
 }
 
 export async function getTraineeProgramsAction() {
   const trainee = await requireTraineeOnboarded();
 
   try {
-    const programs = await prisma.trainingProgram.findMany({
-      where: { traineeId: trainee.id, isActive: true },
-      select: { id: true },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
-
-    const loaded = await prisma.trainingProgram.findMany({
-      where: { traineeId: trainee.id, isActive: true },
-      include: {
-        ...programSectionsInclude,
-        coach: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    return loaded.map(applyActiveProgramFilters);
+    return await getCachedTraineePrograms({ traineeId: trainee.id });
   } catch {
     return [];
   }
@@ -479,13 +345,18 @@ export async function logWorkoutAction(formData: FormData): Promise<LogWorkoutAc
   );
   if ("error" in result) return result;
 
-  safeRevalidatePaths([
-    "/dashboard",
-    "/dashboard/workouts/log",
-    "/dashboard/progress",
-    "/dashboard/my-program",
-    "/dashboard/trainees",
-  ]);
+  const coachLink = await prisma.coachTrainee.findUnique({
+    where: { traineeId: trainee.id },
+    select: { coachId: true },
+  });
+
+  revalidateLogWorkout(trainee.id);
+  revalidatePrograms(trainee.id);
+  revalidateTraineeDetail(trainee.id);
+  if (coachLink?.coachId) {
+    revalidateCoachTrainees(coachLink.coachId);
+  }
+  revalidatePath("/dashboard/workouts/log");
   return { success: true };
 }
 
@@ -527,22 +398,7 @@ export async function getCoachTraineeProgramsAction(traineeId: string) {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
     if (!ownsTrainee) return [];
 
-    const programs = await prisma.trainingProgram.findMany({
-      where: { traineeId, coachId: coach.id, isActive: true },
-      select: { id: true },
-    });
-    await Promise.all(programs.map((program) => ensureLegacyProgramSections(program.id)));
-
-    const loaded = await prisma.trainingProgram.findMany({
-      where: { traineeId, coachId: coach.id, isActive: true },
-      include: {
-        ...programSectionsInclude,
-        coach: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    return loaded.map(applyActiveProgramFilters);
+    return await getCachedTraineePrograms({ traineeId, coachId: coach.id });
   } catch {
     return [];
   }
@@ -570,67 +426,32 @@ export async function logCoachTraineeWorkoutAction(
   );
   if ("error" in result) return result;
 
-  safeRevalidatePaths([
-    `/dashboard/trainees/${traineeId}`,
-    `/dashboard/trainees/${traineeId}/log`,
-    "/dashboard/trainees",
-    "/dashboard/progress",
-    "/dashboard",
-  ]);
+  revalidateLogWorkout(traineeId);
+  revalidatePrograms(traineeId);
+  revalidateTraineeDetail(traineeId);
+  revalidateCoachTrainees(coach.id);
+  revalidatePath(`/dashboard/trainees/${traineeId}/log`);
   return { success: true };
 }
 
-export async function getWorkoutHistoryAction() {
+export async function getTraineeHomeDataAction() {
   const trainee = await requireTraineeOnboarded();
 
   try {
-    return await prisma.workoutSession.findMany({
-      where: { traineeId: trainee.id },
-      include: {
-        program: true,
-        logs: {
-          include: workoutSessionLogInclude,
-        },
-      },
-      orderBy: { completedAt: "desc" },
-    });
+    return await getCachedTraineeHomeData(trainee.id);
   } catch {
-    return [];
+    return { sessions: [], progressExercises: [] };
   }
 }
 
+export async function getWorkoutHistoryAction() {
+  const { sessions } = await getTraineeHomeDataAction();
+  return sessions;
+}
+
 export async function getTraineeProgressExercisesAction() {
-  const trainee = await requireTraineeOnboarded();
-  const programs = await getTraineeProgramsAction();
-  const multiplePrograms = programs.length > 1;
-
-  const results = await Promise.all(
-    programs.map(async (program) => {
-      const exercises = await loadProgressExercisesForProgram(program.id, trainee.id);
-
-      return Promise.all(
-        exercises.map(async (ex) => {
-          const data = await getExerciseProgressAction(ex.id);
-          if (data.length === 0) return null;
-
-          const baseName = ex.archivedAt ? `${ex.name} (ארכיון)` : ex.name;
-          const label = multiplePrograms ? `${baseName} (${program.name})` : baseName;
-
-          return {
-            id: ex.id,
-            name: label,
-            data: data.map((d) => ({
-              date: d.date,
-              weight: d.weight,
-              volume: d.volume,
-            })),
-          };
-        }),
-      );
-    }),
-  );
-
-  return results.flat().filter((item): item is NonNullable<typeof item> => item != null);
+  const { progressExercises } = await getTraineeHomeDataAction();
+  return progressExercises;
 }
 
 export async function getCoachTraineeProgressExercisesAction(traineeId: string) {
@@ -638,60 +459,11 @@ export async function getCoachTraineeProgressExercisesAction(traineeId: string) 
   const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
   if (!ownsTrainee) return [];
 
-  const programs = await getCoachTraineeProgramsAction(traineeId);
-  const multiplePrograms = programs.length > 1;
-
-  const results = await Promise.all(
-    programs.map(async (program) => {
-      const exercises = await loadProgressExercisesForProgram(program.id, traineeId);
-
-      return Promise.all(
-        exercises.map(async (ex) => {
-          const logs = await prisma.exerciseLog.findMany({
-            where: {
-              exerciseId: ex.id,
-              session: { traineeId },
-            },
-            include: {
-              session: true,
-              exercise: true,
-              setLogs: { orderBy: { setNumber: "asc" } },
-            },
-            orderBy: { session: { completedAt: "asc" } },
-          });
-
-          if (logs.length === 0) return null;
-
-          const data = logs.map((log) => {
-            const metrics = computeExerciseLogMetrics({
-              weightKg: log.weightKg,
-              repsCompleted: log.repsCompleted,
-              setLogs: log.setLogs,
-              defaultReps: log.exercise.reps,
-              plannedSets: log.exercise.sets,
-            });
-
-            return {
-              date: log.session.completedAt.toISOString(),
-              weight: metrics.averageWeight,
-              volume: metrics.volume,
-            };
-          });
-
-          const baseName = ex.archivedAt ? `${ex.name} (ארכיון)` : ex.name;
-          const label = multiplePrograms ? `${baseName} (${program.name})` : baseName;
-
-          return {
-            id: ex.id,
-            name: label,
-            data,
-          };
-        }),
-      );
-    }),
-  );
-
-  return results.flat().filter((item): item is NonNullable<typeof item> => item != null);
+  try {
+    return await loadProgressExerciseCharts({ traineeId, coachId: coach.id });
+  } catch {
+    return [];
+  }
 }
 
 export async function getExerciseProgressAction(exerciseId: string) {
@@ -740,17 +512,8 @@ export async function getCoachTraineeProgressAction(traineeId: string) {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, traineeId);
     if (!ownsTrainee) return [];
 
-    return await prisma.workoutSession.findMany({
-      where: { traineeId, program: { coachId: coach.id } },
-      include: {
-        program: true,
-        logs: {
-          include: workoutSessionLogInclude,
-        },
-      },
-      orderBy: { completedAt: "desc" },
-      take: 20,
-    });
+    const sessions = await getCachedTraineeDetailSessions(coach.id, traineeId);
+    return sessions;
   } catch {
     return [];
   }
@@ -812,12 +575,14 @@ export async function deleteWorkoutSessionAction(sessionId: string) {
       });
     }
 
+    revalidateTraineeDetail(session.traineeId);
+    revalidatePrograms(session.traineeId);
+    revalidateCoachTrainees(coach.id);
+    revalidatePath(`/dashboard/trainees/${session.traineeId}`);
     revalidatePath("/dashboard/workouts");
     revalidatePath(`/dashboard/workouts/${session.programId}`);
-    revalidatePath(`/dashboard/trainees/${session.traineeId}`);
     revalidatePath("/dashboard/trainees");
     revalidatePath("/dashboard/progress");
-    revalidatePath("/dashboard");
 
     return { success: true as const };
   } catch {

@@ -6,6 +6,7 @@ import {
   loadBodyWeightChartData,
   loadBodyWeightCurrentDisplay,
 } from "@/lib/body-weight-load";
+import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
 import {
   BODY_WEIGHT_MAX_KG,
   BODY_WEIGHT_MIN_KG,
@@ -144,10 +145,9 @@ export async function upsertBodyWeightLogAction(formData: FormData) {
     return { error: "שגיאה בשמירת המשקל" };
   }
 
-  revalidatePath("/dashboard/body-weight");
-  revalidatePath("/dashboard/tracking");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/trainees");
+  revalidateAfterTrackingMetricSave(trainee.id, dateStr, {
+    metricPath: "/dashboard/body-weight",
+  });
 
   return { success: true as const };
 }
@@ -160,20 +160,18 @@ export async function deleteBodyWeightLogAction(logId: string) {
   try {
     const existing = await prisma.bodyWeightLog.findFirst({
       where: { id: logId, traineeId: trainee.id },
-      select: { id: true },
+      select: { id: true, recordedDay: true },
     });
 
     if (!existing) return { error: "רשומה לא נמצאה" };
 
     await prisma.bodyWeightLog.delete({ where: { id: logId } });
+    revalidateAfterTrackingMetricSave(trainee.id, existing.recordedDay, {
+      metricPath: "/dashboard/body-weight",
+    });
   } catch {
     return { error: "שגיאה במחיקת הרשומה" };
   }
-
-  revalidatePath("/dashboard/body-weight");
-  revalidatePath("/dashboard/tracking");
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/trainees");
 
   return { success: true as const };
 }

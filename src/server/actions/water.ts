@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { mapWaterLogsToChartData, resolveWaterCurrentDisplay } from "@/lib/water-chart-data";
+import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
 import {
   parseTrackingDaysOfWeek,
   parseWaterTimesLocal,
@@ -57,17 +58,10 @@ function mapLog(log: {
   };
 }
 
-const REVALIDATE_PATHS = [
-  "/dashboard/water",
-  "/dashboard/tracking",
-  "/dashboard",
-  "/dashboard/trainees",
-] as const;
-
-function revalidateWaterPaths() {
-  for (const path of REVALIDATE_PATHS) {
-    revalidatePath(path);
-  }
+function revalidateWaterPaths(traineeId: string, recordedDay: string) {
+  revalidateAfterTrackingMetricSave(traineeId, recordedDay, {
+    metricPath: "/dashboard/water",
+  });
 }
 
 async function buildChartDataForTrainee(traineeId: string) {
@@ -155,7 +149,7 @@ export async function upsertWaterLogAction(formData: FormData) {
     return { error: "שגיאה בשמירת השתייה" };
   }
 
-  revalidateWaterPaths();
+  revalidateWaterPaths(trainee.id, dateStr);
   return { success: true as const };
 }
 
@@ -166,15 +160,15 @@ export async function deleteWaterLogAction(logId: string) {
   try {
     const existing = await prisma.waterLog.findFirst({
       where: { id: logId, traineeId: trainee.id },
-      select: { id: true },
+      select: { id: true, recordedDay: true },
     });
     if (!existing) return { error: "רשומה לא נמצאה" };
     await prisma.waterLog.delete({ where: { id: logId } });
+    revalidateWaterPaths(trainee.id, existing.recordedDay);
   } catch {
     return { error: "שגיאה במחיקת הרשומה" };
   }
 
-  revalidateWaterPaths();
   return { success: true as const };
 }
 

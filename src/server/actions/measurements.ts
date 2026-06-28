@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
+import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
 import { mapMeasurementsLogsToChartSeries } from "@/lib/measurements-chart-data";
 import {
   parseMeasurementsForm,
@@ -72,13 +71,10 @@ function mapLog(log: {
   };
 }
 
-const REVALIDATE_PATHS = ["/dashboard/tracking", "/dashboard/measurements", "/dashboard/trainees"] as const;
-
-function revalidateMeasurementsPaths(traineeId: string) {
-  for (const path of REVALIDATE_PATHS) {
-    revalidatePath(path);
-  }
-  revalidatePath(`/dashboard/trainees/${traineeId}`);
+function revalidateMeasurementsPaths(traineeId: string, recordedDay: string) {
+  revalidateAfterTrackingMetricSave(traineeId, recordedDay, {
+    metricPath: "/dashboard/measurements",
+  });
 }
 
 async function loadMeasurementsLogs(traineeId: string) {
@@ -196,7 +192,7 @@ export async function upsertMeasurementsLogAction(traineeId: string, formData: F
     return { error: "שגיאה בשמירת ההיקפים" };
   }
 
-  revalidateMeasurementsPaths(traineeId);
+  revalidateMeasurementsPaths(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -208,14 +204,14 @@ export async function deleteMeasurementsLogAction(traineeId: string, logId: stri
   try {
     const existing = await prisma.measurementsLog.findFirst({
       where: { id: logId, traineeId },
-      select: { id: true },
+      select: { id: true, recordedDay: true },
     });
     if (!existing) return { error: "רשומה לא נמצאה" };
     await prisma.measurementsLog.delete({ where: { id: logId } });
+    revalidateMeasurementsPaths(traineeId, existing.recordedDay);
   } catch {
     return { error: "שגיאה במחיקת הרשומה" };
   }
 
-  revalidateMeasurementsPaths(traineeId);
   return { success: true as const };
 }

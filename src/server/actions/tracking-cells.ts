@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
+import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
 import { authorizeTrackingWrite } from "@/lib/tracking-access";
 import {
   parseBodyWeightKg,
@@ -46,20 +45,8 @@ import {
 import { getIsraelDateString } from "@/lib/calendar-datetime";
 import { prisma } from "@/lib/prisma";
 
-const REVALIDATE_PATHS = [
-  "/dashboard/tracking",
-  "/dashboard/body-weight",
-  "/dashboard/sleep",
-  "/dashboard/water",
-  "/dashboard/measurements",
-  "/dashboard/trainees",
-] as const;
-
-function revalidateTrackingPaths(traineeId: string) {
-  for (const path of REVALIDATE_PATHS) {
-    revalidatePath(path);
-  }
-  revalidatePath(`/dashboard/trainees/${traineeId}`);
+function revalidateAfterTrackingCellSave(traineeId: string, recordedDay: string) {
+  revalidateAfterTrackingMetricSave(traineeId, recordedDay);
 }
 
 export async function upsertTrackingBodyWeightAction(traineeId: string, formData: FormData) {
@@ -91,7 +78,7 @@ export async function upsertTrackingBodyWeightAction(traineeId: string, formData
     return { error: "שגיאה בשמירת המשקל" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -123,7 +110,7 @@ export async function upsertTrackingSleepAction(traineeId: string, formData: For
     return { error: "שגיאה בשמירת השינה" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -163,7 +150,7 @@ export async function upsertTrackingWaterAction(traineeId: string, formData: For
     return { error: "שגיאה בשמירת השתייה" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -196,7 +183,7 @@ export async function upsertTrackingStepsAction(traineeId: string, formData: For
     return { error: "שגיאה בשמירת הצעדים" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -231,7 +218,7 @@ export async function upsertTrackingCaloriesAction(traineeId: string, formData: 
     return { error: "שגיאה בשמירת הקלוריות" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -290,7 +277,7 @@ export async function upsertTrackingMeasurementFieldAction(
     return { error: "שגיאה בשמירת ההיקף" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }
 
@@ -341,6 +328,6 @@ export async function clearTrackingCellAction(
     return { error: "שגיאה במחיקה" };
   }
 
-  revalidateTrackingPaths(traineeId);
+  revalidateAfterTrackingCellSave(traineeId, dateStr);
   return { success: true as const };
 }

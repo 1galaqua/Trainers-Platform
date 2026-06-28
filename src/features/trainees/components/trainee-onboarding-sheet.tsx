@@ -23,7 +23,6 @@ import {
   CURRENT_ONBOARDING_VERSION_ID,
   formatOnboardingVersionDate,
   questionnaireVersionLabel,
-  type OnboardingAgreementVersion,
   type OnboardingQuestionnaireVersion,
 } from "@/lib/onboarding-versions";
 import {

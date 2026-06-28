@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { requireUser } from "@/lib/auth";
+import { revalidateCalendarWorkouts } from "@/lib/revalidate-tags";
 import {
   canUserManageWorkoutReminder,
   cancelUserWorkoutReminder,
@@ -64,7 +63,7 @@ export async function setWorkoutReminderAction(
     return { error: result.error };
   }
 
-  revalidatePath("/dashboard/calendar");
+  revalidateCalendarWorkouts(user.id);
   return { success: true as const };
 }
 
@@ -85,6 +84,6 @@ export async function cancelWorkoutReminderAction(workoutId: string) {
   }
 
   await cancelUserWorkoutReminder(workoutId, user.id);
-  revalidatePath("/dashboard/calendar");
+  revalidateCalendarWorkouts(user.id);
   return { success: true as const };
 }

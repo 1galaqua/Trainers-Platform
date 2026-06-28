@@ -27,8 +27,8 @@ vi.mock("@/lib/push-send", () => ({
   sendPushNotificationsToUsers: (...args: unknown[]) => sendPushMock(...args),
 }));
 
-vi.mock("@/lib/safe-revalidate", () => ({
-  safeRevalidatePaths: (...args: unknown[]) => revalidateMock(...args),
+vi.mock("@/lib/revalidate-tags", () => ({
+  revalidateNotifications: (...args: unknown[]) => revalidateMock(...args),
 }));
 
 import { notifyUserAboutBodyWeightReminder } from "@/lib/body-weight-reminder-notifications";
@@ -72,10 +72,7 @@ describe("notifyUserAboutBodyWeightReminder", () => {
         url: "/dashboard/tracking",
       }),
     );
-    expect(revalidateMock).toHaveBeenCalledWith([
-      "/dashboard/tracking",
-      "/dashboard/updates",
-    ]);
+    expect(revalidateMock).toHaveBeenCalledWith("trainee-1");
   });
 
   it("does not duplicate notifications on the same day", async () => {

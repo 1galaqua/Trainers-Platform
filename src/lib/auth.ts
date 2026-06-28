@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import type { User, UserRole } from "@/lib/prisma-client";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { isClerkConfigured } from "@/config/clerk";
@@ -56,35 +57,56 @@ async function resolveLocalSessionUser(session: SessionData): Promise<SessionUse
   }
 }
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
-  if (isClerkConfigured()) {
-    const { userId } = await auth();
-    if (!userId) return null;
+function clerkProfileChanged(
+  existing: Pick<User, "displayName" | "email">,
+  displayName: string | null,
+  email: string | null,
+) {
+  return (
+    (displayName != null && existing.displayName !== displayName) ||
+    (email != null && existing.email !== email)
+  );
+}
 
-    const clerkUser = await currentUser();
-    const email = clerkUser?.emailAddresses[0]?.emailAddress ?? null;
-    const displayName =
-      [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") ||
-      clerkUser?.username ||
-      email;
+async function resolveClerkSessionUser(clerkUserId: string): Promise<SessionUser | null> {
+  const clerkUser = await currentUser();
+  const email = clerkUser?.emailAddresses[0]?.emailAddress ?? null;
+  const displayName =
+    [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(" ") ||
+    clerkUser?.username ||
+    email;
 
-    try {
-      return await prisma.user.upsert({
-        where: { clerkId: userId },
-        create: {
-          clerkId: userId,
+  try {
+    const existing = await prisma.user.findUnique({ where: { clerkId: clerkUserId } });
+    if (!existing) {
+      return prisma.user.create({
+        data: {
+          clerkId: clerkUserId,
           displayName,
           email,
           role: "TRAINEE",
         },
-        update: {
-          displayName,
-          email,
-        },
       });
-    } catch {
-      return null;
     }
+
+    if (!clerkProfileChanged(existing, displayName, email)) {
+      return existing;
+    }
+
+    return prisma.user.update({
+      where: { id: existing.id },
+      data: { displayName, email },
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function getCurrentUserUncached(): Promise<SessionUser | null> {
+  if (isClerkConfigured()) {
+    const { userId } = await auth();
+    if (!userId) return null;
+    return resolveClerkSessionUser(userId);
   }
 
   const session = await getSession();
@@ -92,6 +114,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   return resolveLocalSessionUser(session);
 }
+
+export const getCurrentUser = cache(getCurrentUserUncached);
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
@@ -117,7 +141,7 @@ export async function requireTrainee(): Promise<SessionUser> {
   return requireRole("TRAINEE");
 }
 
-export async function getTraineeOnboardingStatus(traineeId: string) {
+async function getTraineeOnboardingStatusUncached(traineeId: string) {
   try {
     const [questionnaire, agreement, coachLink] = await Promise.all([
       prisma.questionnaireResponse.findUnique({ where: { traineeId } }),
@@ -164,6 +188,8 @@ export async function getTraineeOnboardingStatus(traineeId: string) {
     };
   }
 }
+
+export const getTraineeOnboardingStatus = cache(getTraineeOnboardingStatusUncached);
 
 export async function requireTraineeOnboarded(): Promise<SessionUser> {
   const user = await requireTrainee();

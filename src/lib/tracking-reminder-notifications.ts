@@ -1,8 +1,8 @@
 import { getIsraelDateString } from "@/lib/calendar-datetime";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
+import { revalidateNotifications } from "@/lib/revalidate-tags";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
-import { safeRevalidatePaths } from "@/lib/safe-revalidate";
 
 const TRACKING_URL = "/dashboard/tracking";
 
@@ -68,7 +68,11 @@ async function deliverTrackingReminder(params: {
     console.error(`[push] ${params.type} delivery failed:`, error);
   }
 
-  safeRevalidatePaths([TRACKING_URL, "/dashboard/updates"]);
+  try {
+    revalidateNotifications(params.userId);
+  } catch {
+    // revalidateTag requires a Next.js request context.
+  }
   return true;
 }
 

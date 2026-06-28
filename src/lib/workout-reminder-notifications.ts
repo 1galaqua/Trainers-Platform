@@ -4,7 +4,7 @@ import { getUnreadNotificationCountForUser } from "@/lib/notifications";
 import { programTypeLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
-import { safeRevalidatePaths } from "@/lib/safe-revalidate";
+import { revalidateNotifications } from "@/lib/revalidate-tags";
 import type { ProgramType, ScheduledWorkout } from "@/lib/prisma-client";
 
 type WorkoutReminderContext = Pick<
@@ -68,6 +68,10 @@ export async function notifyUserAboutWorkoutReminder(params: {
     console.error("[push] workout reminder delivery failed:", error);
   }
 
-  safeRevalidatePaths(["/dashboard", "/dashboard/updates"]);
+  try {
+    revalidateNotifications(params.userId);
+  } catch {
+    // revalidateTag requires a Next.js request context.
+  }
   return true;
 }

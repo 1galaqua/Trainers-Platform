@@ -4,20 +4,14 @@ import { Button } from "@/components/ui/button";
 import { TraineeWeeklyWorkoutChart } from "@/features/dashboard/components/trainee-weekly-workout-chart";
 import { ProgressPageClient } from "@/features/progress/components/progress-page-client";
 import { WorkoutSessionHistoryList } from "@/features/workouts/components/workout-session-history-list";
-import {
-  getTraineeProgressExercisesAction,
-  getWorkoutHistoryAction,
-} from "@/server/actions/workouts";
+import { getTraineeHomeDataAction } from "@/server/actions/workouts";
 
 type TraineeDashboardHomeProps = {
   traineeName?: string | null;
 };
 
 export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHomeProps) {
-  const [sessions, exercises] = await Promise.all([
-    getWorkoutHistoryAction(),
-    getTraineeProgressExercisesAction(),
-  ]);
+  const { sessions, progressExercises } = await getTraineeHomeDataAction();
 
   const sessionDates = sessions.map((session) => session.completedAt.toISOString());
 
@@ -52,7 +46,7 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
           <p className="mt-1 text-muted-foreground text-sm">מעקב משקלי אימון ונפח לפי תאריך</p>
         </div>
         <ProgressPageClient
-          exercises={exercises}
+          exercises={progressExercises}
           emptyMessage="אין עדיין נתוני התקדמות. דווח על אימון כדי להתחיל."
         />
       </div>

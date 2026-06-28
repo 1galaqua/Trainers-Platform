@@ -8,6 +8,7 @@ import {
   buildTrackingWeekRawLogs,
   type TrackingWeekGrid,
 } from "@/lib/tracking-week-data";
+import { getCachedWeekLogsForTrainee } from "@/lib/tracking-week-load";
 import {
   canGoForwardWeek,
   formatWeekRangeLabel,
@@ -44,39 +45,6 @@ export type TrackingHubData = {
   measurementsGrid: TrackingWeekGrid;
   reminders: TrackingReminderBundle | null;
 };
-
-async function loadWeekLogsForTrainee(traineeId: string, weekStart: string, weekEnd: string) {
-  const [bodyWeightLogs, sleepLogs, waterLogs, stepsLogs, caloriesLogs, measurementsLogs] =
-    await Promise.all([
-    prisma.bodyWeightLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-    prisma.sleepLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-    prisma.waterLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-    prisma.stepsLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-    prisma.caloriesLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-    prisma.measurementsLog.findMany({
-      where: { traineeId, recordedDay: { gte: weekStart, lte: weekEnd } },
-    }),
-  ]);
-
-  return buildTrackingWeekRawLogs({
-    bodyWeightLogs,
-    sleepLogs,
-    waterLogs,
-    stepsLogs,
-    caloriesLogs,
-    measurementsLogs,
-  });
-}
 
 async function loadRemindersForTrainee(traineeId: string): Promise<TrackingReminderBundle> {
   const [bodyWeight, sleep, water, measurements, steps, calories] = await Promise.all([
@@ -149,7 +117,7 @@ export async function getTrackingHubDataAction(
 
   if (user.role === "TRAINEE") {
     const trainee = await requireTraineeOnboarded();
-    const raw = await loadWeekLogsForTrainee(trainee.id, weekStart, weekLastDay);
+    const raw = await getCachedWeekLogsForTrainee(trainee.id, weekStart, weekLastDay);
     const reminders = await loadRemindersForTrainee(trainee.id);
 
     return {
@@ -230,7 +198,7 @@ export async function getTrackingHubDataAction(
     }
 
     const trainee = trainees.find((item) => item.id === traineeIdParam);
-    const raw = await loadWeekLogsForTrainee(traineeIdParam, weekStart, weekLastDay);
+    const raw = await getCachedWeekLogsForTrainee(traineeIdParam, weekStart, weekLastDay);
 
     return {
       role: "COACH",

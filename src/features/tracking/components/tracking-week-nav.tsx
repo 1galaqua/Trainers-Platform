@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ export function TrackingWeekNav({
   canGoForward,
   traineeId,
 }: TrackingWeekNavProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   function buildHref(nextWeekStart: string) {

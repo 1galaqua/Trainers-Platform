@@ -1,9 +1,8 @@
-import { revalidatePath } from "next/cache";
-
 import { formatWorkoutDateTime } from "@/lib/calendar-range";
 import { notCancelledWhere } from "@/lib/calendar-prisma-filters";
 import { filterUsersWithoutRecentDuplicateNotification } from "@/lib/notification-dedupe";
 import { getUnreadNotificationCountsForUsers } from "@/lib/notifications";
+import { revalidateNotifications } from "@/lib/revalidate-tags";
 import { programTypeLabels } from "@/lib/program-labels";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
@@ -126,10 +125,11 @@ async function deliverNotificationsToUsers(
   }
 
   try {
-    revalidatePath("/dashboard", "layout");
-    revalidatePath("/dashboard/updates");
+    for (const userId of recipients) {
+      revalidateNotifications(userId);
+    }
   } catch {
-    // revalidatePath requires a Next.js request context.
+    // revalidateTag requires a Next.js request context.
   }
 }
 

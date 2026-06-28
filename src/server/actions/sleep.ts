@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { mapSleepLogsToChartData, resolveSleepCurrentDisplay } from "@/lib/sleep-chart-data";
+import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
 import {
   parseSleepTime,
   resolveSleepRecordedAt,
@@ -67,17 +68,10 @@ function mapLog(log: {
   };
 }
 
-const REVALIDATE_PATHS = [
-  "/dashboard/sleep",
-  "/dashboard/tracking",
-  "/dashboard",
-  "/dashboard/trainees",
-] as const;
-
-function revalidateSleepPaths() {
-  for (const path of REVALIDATE_PATHS) {
-    revalidatePath(path);
-  }
+function revalidateSleepPaths(traineeId: string, recordedDay: string) {
+  revalidateAfterTrackingMetricSave(traineeId, recordedDay, {
+    metricPath: "/dashboard/sleep",
+  });
 }
 
 async function buildChartDataForTrainee(traineeId: string) {
@@ -166,7 +160,7 @@ export async function upsertSleepLogAction(formData: FormData) {
     return { error: "שגיאה בשמירת השינה" };
   }
 
-  revalidateSleepPaths();
+  revalidateSleepPaths(trainee.id, dateStr);
   return { success: true as const };
 }
 
@@ -177,15 +171,15 @@ export async function deleteSleepLogAction(logId: string) {
   try {
     const existing = await prisma.sleepLog.findFirst({
       where: { id: logId, traineeId: trainee.id },
-      select: { id: true },
+      select: { id: true, recordedDay: true },
     });
     if (!existing) return { error: "רשומה לא נמצאה" };
     await prisma.sleepLog.delete({ where: { id: logId } });
+    revalidateSleepPaths(trainee.id, existing.recordedDay);
   } catch {
     return { error: "שגיאה במחיקת הרשומה" };
   }
 
-  revalidateSleepPaths();
   return { success: true as const };
 }
 

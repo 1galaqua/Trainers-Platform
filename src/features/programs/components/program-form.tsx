@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DEFAULT_PROGRAM_SECTION_NAME } from "@/lib/program-sections";
 import { programTypeLabels } from "@/lib/program-labels";
 import {
   createTrainingProgramAction,

@@ -1,15 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { requireCoach, requireUser } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
 import { parseIsraelDateTime } from "@/lib/calendar-datetime";
-import { getCalendarVisibleRange } from "@/lib/calendar-range";
+import { getCachedCalendarWorkouts } from "@/lib/calendar-load";
 import {
   findOverlappingCoachWorkout,
   SCHEDULE_OVERLAP_ERROR,
 } from "@/lib/calendar-overlap";
+import { revalidateCalendarWorkoutsForUsers } from "@/lib/revalidate-tags";
 import {
   createWorkoutInputFromFormData,
   validateCreateWorkoutInput,
@@ -31,7 +30,6 @@ import {
   cancelAllUserWorkoutReminders,
   cancelUserWorkoutReminder,
   createDefaultUserWorkoutReminder,
-  reminderNotSentWhere,
   rescheduleWorkoutUserReminders,
 } from "@/lib/user-workout-reminders";
 import { detectSignificantWorkoutChanges } from "@/lib/calendar-workout-changes";
@@ -129,6 +127,10 @@ async function getCoachIdForUser(userId: string, role: UserRole) {
   });
 
   return link?.coachId ?? null;
+}
+
+function revalidateCalendarViews(...userIds: Array<string | null | undefined>) {
+  revalidateCalendarWorkoutsForUsers(userIds.filter((id): id is string => Boolean(id)));
 }
 
 export async function getCoachTraineesForCalendarAction(): Promise<CalendarTraineeOption[]> {
@@ -335,6 +337,8 @@ export async function createScheduledWorkoutAction(formData: FormData) {
     return { error: SCHEDULE_OVERLAP_ERROR };
   }
 
+  let affectedTraineeIds: string[] = [];
+
   if (input.type === "PERSONAL") {
     const ownsTrainee = await isCoachOwnerOfTrainee(coach.id, input.traineeId);
     if (!ownsTrainee) {
@@ -372,6 +376,7 @@ export async function createScheduledWorkoutAction(formData: FormData) {
 
     await createDefaultUserWorkoutReminder(workout.id, input.traineeId, startsAt);
     await createDefaultUserWorkoutReminder(workout.id, coach.id, startsAt);
+    affectedTraineeIds = [input.traineeId];
   } else {
     const groupTraineeValidation = await validateActiveGroupTraineeIds(
       coach.id,
@@ -416,10 +421,10 @@ export async function createScheduledWorkoutAction(formData: FormData) {
     }
 
     await createDefaultUserWorkoutReminder(workout.id, coach.id, startsAt);
+    affectedTraineeIds = groupTraineeIds;
   }
 
-  revalidatePath("/dashboard/calendar");
-  revalidatePath("/dashboard/updates");
+  revalidateCalendarViews(coach.id, ...affectedTraineeIds);
   return { success: true as const };
 }
 
@@ -614,8 +619,13 @@ export async function updateScheduledWorkoutAction(workoutId: string, formData: 
     await rescheduleWorkoutUserReminders(updated.id, startsAt);
   }
 
-  revalidatePath("/dashboard/calendar");
-  revalidatePath("/dashboard/updates");
+  revalidateCalendarViews(
+    coach.id,
+    existing.traineeId,
+    input.traineeId,
+    ...previousRegisteredIds,
+    ...nextGroupTraineeIds,
+  );
   return { success: true as const };
 }
 
@@ -639,6 +649,10 @@ export async function cancelScheduledWorkoutAction(workoutId: string) {
   await cancelGroupWorkoutReminder(existing.id);
   await cancelAllUserWorkoutReminders(existing.id);
 
+  const registeredIds = existing.registrations.map(
+    (registration) => registration.traineeId,
+  );
+
   if (existing.type === "PERSONAL" && existing.traineeId) {
     await notifyTraineeAboutPersonalCancellation({
       workout: existing,
@@ -647,18 +661,13 @@ export async function cancelScheduledWorkoutAction(workoutId: string) {
   }
 
   if (existing.type === "GROUP") {
-    const registeredIds = existing.registrations.map(
-      (registration) => registration.traineeId,
-    );
-
     await notifyRegisteredTraineesAboutGroupCancellation({
       workout: existing,
       traineeIds: registeredIds,
     });
   }
 
-  revalidatePath("/dashboard/calendar");
-  revalidatePath("/dashboard/updates");
+  revalidateCalendarViews(coach.id, existing.traineeId, ...registeredIds);
   return { success: true as const };
 }
 
@@ -760,8 +769,7 @@ export async function registerForGroupWorkoutAction(workoutId: string) {
 
   await createDefaultUserWorkoutReminder(workoutId, user.id, workout.startsAt);
 
-  revalidatePath("/dashboard/calendar");
-  revalidatePath("/dashboard/updates");
+  revalidateCalendarViews(coachId, user.id);
   return { success: true as const };
 }
 
@@ -809,110 +817,11 @@ export async function cancelGroupWorkoutRegistrationAction(workoutId: string) {
 
   await cancelUserWorkoutReminder(workoutId, user.id);
 
-  revalidatePath("/dashboard/calendar");
-  revalidatePath("/dashboard/updates");
+  revalidateCalendarViews(registration.workout.coachId, user.id);
   return { success: true as const };
 }
 
 export async function getCalendarWorkoutsAction(): Promise<CalendarWorkoutItem[]> {
   const user = await requireUser();
-  const { start, end } = getCalendarVisibleRange();
-
-  if (user.role === "ADMIN") return [];
-
-  const coachId = await getCoachIdForUser(user.id, user.role);
-  if (!coachId) return [];
-
-  const workouts = await prisma.scheduledWorkout.findMany({
-    where: {
-      coachId,
-      startsAt: { gte: start, lte: end },
-      AND: [
-        notCancelledWhere,
-        ...(user.role === "TRAINEE"
-          ? [
-              {
-                OR: [
-                  { type: "GROUP" as const },
-                  { type: "PERSONAL" as const, traineeId: user.id },
-                ],
-              },
-            ]
-          : []),
-      ],
-    },
-    orderBy: { startsAt: "asc" },
-    include: {
-      trainee: { select: { displayName: true } },
-      program: { select: { name: true } },
-      registrations: {
-        where: notCancelledWhere,
-        select: {
-          traineeId: true,
-          trainee: {
-            select: { id: true, displayName: true, email: true },
-          },
-        },
-      },
-    },
-  });
-
-  const workoutIds = workouts.map((workout) => workout.id);
-  const userReminders = await prisma.userWorkoutReminder.findMany({
-    where: {
-      userId: user.id,
-      workoutId: { in: workoutIds },
-      ...reminderNotSentWhere,
-    },
-    select: {
-      workoutId: true,
-      kind: true,
-      scheduledFor: true,
-    },
-  });
-
-  const reminderByWorkoutId = new Map(
-    userReminders.map((reminder) => [reminder.workoutId, reminder]),
-  );
-
-  return workouts.map((workout) => {
-    const reminder = reminderByWorkoutId.get(workout.id);
-
-    return {
-    id: workout.id,
-    type: workout.type,
-    workoutKind: workout.workoutKind,
-    startsAt: workout.startsAt.toISOString(),
-    durationMinutes: workout.durationMinutes,
-    traineeId: workout.traineeId,
-    traineeName: workout.trainee?.displayName ?? null,
-    programId: workout.programId,
-    programName: workout.program?.name ?? null,
-    maxParticipants: workout.maxParticipants,
-    registeredCount: workout.registrations.length,
-    isRegistered:
-      user.role === "TRAINEE"
-        ? workout.registrations.some((registration) => registration.traineeId === user.id)
-        : false,
-    registeredTrainees:
-      user.role === "COACH"
-        ? workout.registrations.map((registration) => ({
-            id: registration.trainee.id,
-            name:
-              registration.trainee.displayName ??
-              registration.trainee.email ??
-              "מתאמן",
-          }))
-        : [],
-    notes: workout.notes,
-    deliveryMode: workout.deliveryMode,
-    meetingLink: workout.meetingLink,
-    userReminder: reminder
-      ? {
-          kind: reminder.kind,
-          scheduledFor: reminder.scheduledFor.toISOString(),
-        }
-      : null,
-  };
-  });
+  return getCachedCalendarWorkouts(user.id, user.role);
 }

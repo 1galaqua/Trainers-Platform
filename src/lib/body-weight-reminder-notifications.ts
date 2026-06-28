@@ -1,8 +1,8 @@
 import { getIsraelDateString } from "@/lib/calendar-datetime";
 import { getUnreadNotificationCountForUser } from "@/lib/notifications";
+import { revalidateNotifications } from "@/lib/revalidate-tags";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationsToUsers } from "@/lib/push-send";
-import { safeRevalidatePaths } from "@/lib/safe-revalidate";
 
 export async function notifyUserAboutBodyWeightReminder(params: {
   userId: string;
@@ -53,6 +53,10 @@ export async function notifyUserAboutBodyWeightReminder(params: {
     console.error("[push] body weight reminder delivery failed:", error);
   }
 
-  safeRevalidatePaths(["/dashboard/tracking", "/dashboard/updates"]);
+  try {
+    revalidateNotifications(params.userId);
+  } catch {
+    // revalidateTag requires a Next.js request context.
+  }
   return true;
 }

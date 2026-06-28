@@ -60,53 +60,111 @@ export type ProgramWithSections = {
   exercises: ProgramExerciseRecord[];
 };
 
-export async function ensureLegacyProgramSections(programId: string): Promise<boolean> {
-  const exercises = await prisma.programExercise.findMany({
-    where: { programId },
-    orderBy: { sortOrder: "asc" },
-  });
+function groupRowsByProgramId<T extends { programId: string }>(rows: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = map.get(row.programId) ?? [];
+    list.push(row);
+    map.set(row.programId, list);
+  }
+  return map;
+}
 
-  const activeExercises = filterActiveProgramExercises(exercises);
-  if (activeExercises.length === 0) return false;
-
-  const orphanCount = activeExercises.filter((exercise) => exercise.sectionId == null).length;
-  if (orphanCount === 0) return false;
-
-  const sections = await prisma.programSection.findMany({
-    where: { programId },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  let section = filterActiveProgramExercises(sections).find(
-    (item) => item.name === DEFAULT_PROGRAM_SECTION_NAME,
+function pickLegacySection<
+  T extends { name: string; archivedAt?: Date | null },
+>(sections: T[]): T | null {
+  const activeSections = filterActiveProgramExercises(sections);
+  return (
+    activeSections.find((section) => section.name === DEFAULT_PROGRAM_SECTION_NAME) ??
+    activeSections[0] ??
+    null
   );
+}
 
-  if (!section) {
-    section = filterActiveProgramExercises(sections)[0];
+export async function ensureLegacyProgramSectionsBatch(
+  programIds: string[],
+): Promise<Map<string, boolean>> {
+  const results = new Map<string, boolean>();
+  const uniqueIds = [...new Set(programIds)];
+  if (uniqueIds.length === 0) return results;
+
+  const [allExercises, allSections] = await Promise.all([
+    prisma.programExercise.findMany({
+      where: { programId: { in: uniqueIds } },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.programSection.findMany({
+      where: { programId: { in: uniqueIds } },
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
+
+  const exercisesByProgram = groupRowsByProgramId(allExercises);
+  const sectionsByProgram = groupRowsByProgramId(allSections);
+  const createsNeeded: Array<{ programId: string; orphanIds: string[] }> = [];
+  const updatesBySectionId = new Map<string, string[]>();
+
+  for (const programId of uniqueIds) {
+    const activeExercises = filterActiveProgramExercises(
+      exercisesByProgram.get(programId) ?? [],
+    );
+    if (activeExercises.length === 0) {
+      results.set(programId, false);
+      continue;
+    }
+
+    const orphanIds = activeExercises
+      .filter((exercise) => exercise.sectionId == null)
+      .map((exercise) => exercise.id);
+
+    if (orphanIds.length === 0) {
+      results.set(programId, false);
+      continue;
+    }
+
+    const section = pickLegacySection(sectionsByProgram.get(programId) ?? []);
+    if (!section) {
+      createsNeeded.push({ programId, orphanIds });
+      results.set(programId, true);
+      continue;
+    }
+
+    const existing = updatesBySectionId.get(section.id) ?? [];
+    updatesBySectionId.set(section.id, [...existing, ...orphanIds]);
+    results.set(programId, true);
   }
 
-  if (!section) {
-    section = await prisma.programSection.create({
-      data: {
-        programId,
-        name: DEFAULT_PROGRAM_SECTION_NAME,
-        sortOrder: 0,
-      },
-    });
-  }
+  await Promise.all([
+    ...createsNeeded.map(async ({ programId, orphanIds }) => {
+      const section = await prisma.programSection.create({
+        data: {
+          programId,
+          name: DEFAULT_PROGRAM_SECTION_NAME,
+          sortOrder: 0,
+        },
+      });
 
-  const orphanIds = activeExercises
-    .filter((exercise) => exercise.sectionId == null)
-    .map((exercise) => exercise.id);
+      if (orphanIds.length > 0) {
+        await prisma.programExercise.updateMany({
+          where: { id: { in: orphanIds }, programId },
+          data: { sectionId: section.id },
+        });
+      }
+    }),
+    ...Array.from(updatesBySectionId.entries()).map(([sectionId, orphanIds]) =>
+      prisma.programExercise.updateMany({
+        where: { id: { in: orphanIds } },
+        data: { sectionId },
+      }),
+    ),
+  ]);
 
-  if (orphanIds.length > 0) {
-    await prisma.programExercise.updateMany({
-      where: { id: { in: orphanIds }, programId },
-      data: { sectionId: section.id },
-    });
-  }
+  return results;
+}
 
-  return true;
+export async function ensureLegacyProgramSections(programId: string): Promise<boolean> {
+  const results = await ensureLegacyProgramSectionsBatch([programId]);
+  return results.get(programId) ?? false;
 }
 
 export async function loadProgramWithSections(programId: string) {
