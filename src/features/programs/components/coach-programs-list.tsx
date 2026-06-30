@@ -132,14 +132,26 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
                 <span className="pointer-events-none text-muted-foreground text-xs">
                   {program.exerciseCount} תרגילים · {program.sessionCount} אימונים שבוצעו
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="pointer-events-auto"
-                  render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}
-                >
-                  עריכה
-                </Button>
+                <div className="pointer-events-auto flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={
+                      <Link
+                        href={`/dashboard/trainees/${program.traineeId}/log?program=${program.id}`}
+                      />
+                    }
+                  >
+                    דיווח אימון
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}
+                  >
+                    עריכה
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

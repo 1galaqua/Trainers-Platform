@@ -46,6 +46,15 @@ export default async function ProgramDetailPage({ params }: PageProps) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            render={
+              <Link
+                href={`/dashboard/trainees/${program.traineeId}/log?program=${program.id}`}
+              />
+            }
+          >
+            דיווח אימון
+          </Button>
           <Button variant="outline" render={<Link href={`/dashboard/workouts/${program.id}/edit`} />}>
             <Pencil className="size-4" />
             עריכה
