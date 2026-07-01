@@ -4,6 +4,8 @@ import {
   buildDailyTrackingWeekGrid,
   buildMeasurementsTrackingWeekGrid,
   buildTrackingWeekRawLogs,
+  computeWeeklyAverageForRow,
+  patchTrackingWeekGridCell,
 } from "@/lib/tracking-week-data";
 import { getWeekStartDateString } from "@/lib/calendar-datetime";
 
@@ -121,5 +123,50 @@ describe("buildMeasurementsTrackingWeekGrid", () => {
 
     expect(chestRow?.weeklyAverage.raw).toBe(100.5);
     expect(bellyRow?.weeklyAverage.raw).toBe(90);
+  });
+});
+
+describe("patchTrackingWeekGridCell", () => {
+  it("updates a cell and recalculates weekly average", () => {
+    const raw = buildTrackingWeekRawLogs({
+      bodyWeightLogs: [{ recordedDay: "2026-06-21", weightKg: 80 }],
+      sleepLogs: [],
+      waterLogs: [],
+      stepsLogs: [],
+      caloriesLogs: [],
+      measurementsLogs: [],
+    });
+    const grid = buildDailyTrackingWeekGrid(WEEK_START, raw, true);
+    const updated = patchTrackingWeekGridCell(grid, "body-weight", "2026-06-22", {
+      raw: 82,
+      display: '82 ק"ג',
+    });
+    const row = updated.rows.find((item) => item.id === "body-weight");
+
+    expect(row?.cells[1]?.raw).toBe(82);
+    expect(row?.weeklyAverage.raw).toBe(81);
+  });
+});
+
+describe("computeWeeklyAverageForRow", () => {
+  it("averages water row in liters", () => {
+    const raw = buildTrackingWeekRawLogs({
+      bodyWeightLogs: [],
+      sleepLogs: [],
+      waterLogs: [
+        { recordedDay: "2026-06-21", amountMl: 2000 },
+        { recordedDay: "2026-06-22", amountMl: 3000 },
+      ],
+      stepsLogs: [],
+      caloriesLogs: [],
+      measurementsLogs: [],
+    });
+    const grid = buildDailyTrackingWeekGrid(WEEK_START, raw, true);
+    const waterRow = grid.rows.find((row) => row.id === "water");
+    if (!waterRow) throw new Error("missing water row");
+
+    const average = computeWeeklyAverageForRow("water", waterRow.cells);
+    expect(average.raw).toBe(2.5);
+    expect(average.display).toContain("2.5");
   });
 });

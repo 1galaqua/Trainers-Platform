@@ -1,8 +1,11 @@
 import { Suspense } from "react";
 
-import { TrackingHubPageContent } from "@/features/tracking/components/tracking-hub-page-content";
+import { TrackingGridsLoading } from "@/features/tracking/components/tracking-grids-loading";
+import { TrackingHubGridsLoader } from "@/features/tracking/components/tracking-hub-grids-loader";
+import { TrackingHubHeader } from "@/features/tracking/components/tracking-hub-header";
+import { TrackingWeekNav } from "@/features/tracking/components/tracking-week-nav";
 import { siteConfig } from "@/config/site";
-import { getTrackingHubDataAction } from "@/server/actions/tracking";
+import { getTrackingHubShellAction } from "@/server/actions/tracking";
 
 export const metadata = {
   title: `מעקב | ${siteConfig.shortName}`,
@@ -14,11 +17,38 @@ type PageProps = {
 
 export default async function TrackingPage({ searchParams }: PageProps) {
   const { traineeId, week } = await searchParams;
-  const data = await getTrackingHubDataAction(traineeId, week);
+  const shell = await getTrackingHubShellAction(traineeId, week);
 
   return (
-    <Suspense fallback={null}>
-      <TrackingHubPageContent data={data} />
-    </Suspense>
+    <div className="min-w-0 space-y-8">
+      <TrackingHubHeader shell={shell} />
+
+      {shell.showGrids && shell.traineeId ? (
+        <>
+          <TrackingWeekNav
+            weekStart={shell.weekStart}
+            weekLabel={shell.weekLabel}
+            canGoForward={shell.canGoForward}
+            traineeId={shell.traineeId}
+          />
+
+          <Suspense
+            key={`${shell.traineeId}:${shell.weekStart}`}
+            fallback={<TrackingGridsLoading />}
+          >
+            <TrackingHubGridsLoader
+              traineeId={shell.traineeId}
+              weekStart={shell.weekStart}
+              canEdit={shell.canEdit}
+              loadReminders={shell.role === "TRAINEE"}
+            />
+          </Suspense>
+        </>
+      ) : shell.role === "COACH" ? (
+        <p className="py-10 text-center text-muted-foreground text-sm">
+          בחר/י מתאמן מהרשימה או חפש/י לפי שם
+        </p>
+      ) : null}
+    </div>
   );
 }

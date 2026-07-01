@@ -72,6 +72,90 @@ function formatMeasurementCm(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
+export function formatTrackingCellDisplay(kind: TrackingWeekRowKind, raw: number): string {
+  switch (kind) {
+    case "body-weight":
+      return formatWeightKg(raw);
+    case "sleep":
+      return formatSleepHours(raw);
+    case "water":
+      return formatWaterMl(raw);
+    case "steps":
+      return formatStepsDisplay(raw);
+    case "calories":
+      return formatCaloriesDisplay(raw);
+    case "measurement":
+      return formatMeasurementCm(raw);
+    default:
+      return String(raw);
+  }
+}
+
+export function computeWeeklyAverageForRow(
+  kind: TrackingWeekRowKind,
+  cells: TrackingWeekCell[],
+): { raw: number | null; display: string } {
+  const rawValues = cells.map((cell) => cell.raw);
+
+  const avgRaw =
+    kind === "water"
+      ? averageNumbers(
+          rawValues.map((value) => (value == null ? null : mlToLitersInput(value))),
+          1,
+        )
+      : averageNumbers(rawValues, kind === "steps" || kind === "calories" ? 0 : 1);
+
+  if (avgRaw == null) {
+    return { raw: null, display: emptyDisplay() };
+  }
+
+  const display =
+    kind === "water"
+      ? formatWaterLitersAverage(avgRaw)
+      : kind === "steps"
+        ? formatStepsDisplay(avgRaw)
+        : kind === "calories"
+          ? formatCaloriesDisplay(avgRaw)
+          : kind === "sleep"
+            ? formatSleepHours(avgRaw)
+            : kind === "measurement"
+              ? formatMeasurementCm(avgRaw)
+              : formatWeightKg(avgRaw);
+
+  return { raw: avgRaw, display };
+}
+
+export function patchTrackingWeekGridCell(
+  grid: TrackingWeekGrid,
+  rowId: string,
+  date: string,
+  update: Pick<TrackingWeekCell, "raw" | "display" | "sleepStart" | "sleepEnd">,
+): TrackingWeekGrid {
+  return {
+    ...grid,
+    rows: grid.rows.map((row) => {
+      if (row.id !== rowId) return row;
+
+      const cells = row.cells.map((cell) =>
+        cell.date === date
+          ? {
+              ...cell,
+              ...update,
+              sleepStart: update.sleepStart ?? (update.raw == null ? undefined : cell.sleepStart),
+              sleepEnd: update.sleepEnd ?? (update.raw == null ? undefined : cell.sleepEnd),
+            }
+          : cell,
+      );
+
+      return {
+        ...row,
+        cells,
+        weeklyAverage: computeWeeklyAverageForRow(row.kind, cells),
+      };
+    }),
+  };
+}
+
 function emptyDisplay() {
   return "—";
 }

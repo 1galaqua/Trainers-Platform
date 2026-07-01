@@ -1,9 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { mapSleepLogsToChartData, resolveSleepCurrentDisplay } from "@/lib/sleep-chart-data";
-import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
+import { revalidateAfterTrackingMetricSave, revalidateTrackingHubReminders } from "@/lib/revalidate-tracking";
 import {
   parseSleepTime,
   resolveSleepRecordedAt,
@@ -213,7 +211,7 @@ export async function upsertSleepReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingHubReminders(trainee.id);
   return { success: true as const };
 }
 
@@ -235,6 +233,6 @@ export async function cancelSleepReminderAction() {
     return { error: "שגיאה בביטול התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingHubReminders(trainee.id);
   return { success: true as const };
 }

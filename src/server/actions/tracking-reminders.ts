@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireTraineeOnboarded } from "@/lib/auth";
+import { revalidateTrackingReminders } from "@/lib/revalidate-tags";
 import {
   parseTrackingDaysOfWeek,
   parseTrackingTimeLocal,
@@ -15,7 +16,8 @@ export type StepsReminderSettings = {
   timeLocal: string;
 };
 
-function revalidateStepsPaths() {
+function revalidateTrackingReminderState(traineeId: string) {
+  revalidateTrackingReminders(traineeId);
   revalidatePath("/dashboard/tracking");
 }
 
@@ -50,7 +52,7 @@ export async function upsertStepsReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidateStepsPaths();
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }
 
@@ -73,7 +75,7 @@ export async function cancelStepsReminderAction() {
     return { error: "שגיאה בביטול התזכורת" };
   }
 
-  revalidateStepsPaths();
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }
 
@@ -108,7 +110,7 @@ export async function upsertMeasurementsReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }
 
@@ -131,7 +133,7 @@ export async function cancelMeasurementsReminderAction() {
     return { error: "שגיאה בביטול התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }
 
@@ -166,7 +168,7 @@ export async function upsertCaloriesReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }
 
@@ -189,6 +191,6 @@ export async function cancelCaloriesReminderAction() {
     return { error: "שגיאה בביטול התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingReminderState(trainee.id);
   return { success: true as const };
 }

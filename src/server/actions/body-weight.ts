@@ -1,12 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import {
   loadBodyWeightChartData,
   loadBodyWeightCurrentDisplay,
 } from "@/lib/body-weight-load";
-import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
+import { revalidateAfterTrackingMetricSave, revalidateTrackingHubReminders } from "@/lib/revalidate-tracking";
 import {
   BODY_WEIGHT_MAX_KG,
   BODY_WEIGHT_MIN_KG,
@@ -207,7 +205,7 @@ export async function upsertBodyWeightReminderAction(formData: FormData) {
     return { error: "שגיאה בשמירת התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingHubReminders(trainee.id);
   return { success: true as const };
 }
 
@@ -232,6 +230,6 @@ export async function cancelBodyWeightReminderAction() {
     return { error: "שגיאה בביטול התזכורת" };
   }
 
-  revalidatePath("/dashboard/tracking");
+  revalidateTrackingHubReminders(trainee.id);
   return { success: true as const };
 }

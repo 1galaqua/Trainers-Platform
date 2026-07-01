@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidateAfterTrackingMetricSave } from "@/lib/revalidate-tracking";
+import { revalidateTrackingWeek } from "@/lib/revalidate-tags";
+import { getWeekStartDateString } from "@/lib/calendar-datetime";
 import { authorizeTrackingWrite } from "@/lib/tracking-access";
 import {
   parseBodyWeightKg,
@@ -46,7 +47,7 @@ import { getIsraelDateString } from "@/lib/calendar-datetime";
 import { prisma } from "@/lib/prisma";
 
 function revalidateAfterTrackingCellSave(traineeId: string, recordedDay: string) {
-  revalidateAfterTrackingMetricSave(traineeId, recordedDay);
+  revalidateTrackingWeek(traineeId, getWeekStartDateString(recordedDay));
 }
 
 export async function upsertTrackingBodyWeightAction(traineeId: string, formData: FormData) {

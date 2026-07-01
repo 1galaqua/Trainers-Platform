@@ -2,10 +2,11 @@
 
 import { requireCoach, requireTraineeOnboarded, getCurrentUser } from "@/lib/auth";
 import { isCoachOwnerOfTrainee } from "@/lib/coach-trainee";
+import { getCachedCoachTrackingTraineeOptions } from "@/lib/coach-tracking-load";
+import { getCachedRemindersForTrainee } from "@/lib/tracking-reminders-load";
 import {
   buildDailyTrackingWeekGrid,
   buildMeasurementsTrackingWeekGrid,
-  buildTrackingWeekRawLogs,
   type TrackingWeekGrid,
 } from "@/lib/tracking-week-data";
 import { getCachedWeekLogsForTrainee } from "@/lib/tracking-week-load";
@@ -15,8 +16,6 @@ import {
   parseTrackingWeekStart,
 } from "@/lib/tracking-week-navigation";
 import { addIsraelDays } from "@/lib/calendar-datetime";
-import { getCoachTraineeListAction } from "@/server/actions/trainees";
-import { prisma } from "@/lib/prisma";
 
 export type TrackingTraineeOption = {
   id: string;
@@ -32,7 +31,7 @@ export type TrackingReminderBundle = {
   calories: { enabled: boolean; daysOfWeek: number[]; timeLocal: string } | null;
 };
 
-export type TrackingHubData = {
+export type TrackingHubShell = {
   role: "TRAINEE" | "COACH";
   traineeId: string | null;
   traineeName: string | null;
@@ -41,84 +40,28 @@ export type TrackingHubData = {
   weekLabel: string;
   canGoForward: boolean;
   canEdit: boolean;
+  showGrids: boolean;
+};
+
+export type TrackingHubGridsData = {
   dailyGrid: TrackingWeekGrid;
   measurementsGrid: TrackingWeekGrid;
   reminders: TrackingReminderBundle | null;
 };
 
-async function loadRemindersForTrainee(traineeId: string): Promise<TrackingReminderBundle> {
-  const [bodyWeight, sleep, water, measurements, steps, calories] = await Promise.all([
-    prisma.bodyWeightReminder.findUnique({ where: { traineeId } }),
-    prisma.sleepReminder.findUnique({ where: { traineeId } }),
-    prisma.waterReminder.findUnique({ where: { traineeId } }),
-    prisma.measurementsReminder.findUnique({ where: { traineeId } }),
-    prisma.stepsReminder.findUnique({ where: { traineeId } }),
-    prisma.caloriesReminder.findUnique({ where: { traineeId } }),
-  ]);
-
-  return {
-    bodyWeight: bodyWeight
-      ? { enabled: bodyWeight.enabled, daysOfWeek: bodyWeight.daysOfWeek, timeLocal: bodyWeight.timeLocal }
-      : null,
-    sleep: sleep
-      ? { enabled: sleep.enabled, daysOfWeek: sleep.daysOfWeek, timeLocal: sleep.timeLocal }
-      : null,
-    water: water
-      ? {
-          enabled: water.enabled,
-          daysOfWeek: water.daysOfWeek,
-          timesLocal: water.timesLocal.length > 0 ? water.timesLocal : [],
-        }
-      : null,
-    measurements: measurements
-      ? {
-          enabled: measurements.enabled,
-          daysOfWeek: measurements.daysOfWeek,
-          timeLocal: measurements.timeLocal,
-        }
-      : null,
-    steps: steps
-      ? { enabled: steps.enabled, daysOfWeek: steps.daysOfWeek, timeLocal: steps.timeLocal }
-      : null,
-    calories: calories
-      ? {
-          enabled: calories.enabled,
-          daysOfWeek: calories.daysOfWeek,
-          timeLocal: calories.timeLocal,
-        }
-      : null,
-  };
-}
-
-function emptyGrid(weekStart: string): TrackingWeekGrid {
-  return buildDailyTrackingWeekGrid(
-    weekStart,
-    buildTrackingWeekRawLogs({
-      bodyWeightLogs: [],
-      sleepLogs: [],
-      waterLogs: [],
-      stepsLogs: [],
-      caloriesLogs: [],
-      measurementsLogs: [],
-    }),
-    false,
-  );
-}
-
-export async function getTrackingHubDataAction(
+export async function getTrackingHubShellAction(
   traineeIdParam?: string,
   weekParam?: string,
-): Promise<TrackingHubData> {
+): Promise<TrackingHubShell> {
   const user = await getCurrentUser();
   if (!user) throw new Error("Unauthorized");
 
   const weekStart = parseTrackingWeekStart(weekParam);
-  const weekLastDay = addIsraelDays(weekStart, 6);
+  const weekLabel = formatWeekRangeLabel(weekStart);
+  const canGoForward = canGoForwardWeek(weekStart);
 
   if (user.role === "TRAINEE") {
     const trainee = await requireTraineeOnboarded();
-    const raw = await getCachedWeekLogsForTrainee(trainee.id, weekStart, weekLastDay);
-    const reminders = await loadRemindersForTrainee(trainee.id);
 
     return {
       role: "TRAINEE",
@@ -126,21 +69,16 @@ export async function getTrackingHubDataAction(
       traineeName: trainee.displayName,
       trainees: [],
       weekStart,
-      weekLabel: formatWeekRangeLabel(weekStart),
-      canGoForward: canGoForwardWeek(weekStart),
+      weekLabel,
+      canGoForward,
       canEdit: true,
-      dailyGrid: buildDailyTrackingWeekGrid(weekStart, raw, true),
-      measurementsGrid: buildMeasurementsTrackingWeekGrid(weekStart, raw, true),
-      reminders,
+      showGrids: true,
     };
   }
 
   if (user.role === "COACH") {
     await requireCoach();
-    const trainees = (await getCoachTraineeListAction()).map((item) => ({
-      id: item.id,
-      name: item.displayName ?? "מתאמן",
-    }));
+    const trainees = await getCachedCoachTrackingTraineeOptions(user.id);
 
     if (!traineeIdParam) {
       return {
@@ -149,23 +87,10 @@ export async function getTrackingHubDataAction(
         traineeName: null,
         trainees,
         weekStart,
-        weekLabel: formatWeekRangeLabel(weekStart),
-        canGoForward: canGoForwardWeek(weekStart),
+        weekLabel,
+        canGoForward,
         canEdit: false,
-        dailyGrid: emptyGrid(weekStart),
-        measurementsGrid: buildMeasurementsTrackingWeekGrid(
-          weekStart,
-          buildTrackingWeekRawLogs({
-            bodyWeightLogs: [],
-            sleepLogs: [],
-            waterLogs: [],
-            stepsLogs: [],
-            caloriesLogs: [],
-            measurementsLogs: [],
-          }),
-          false,
-        ),
-        reminders: null,
+        showGrids: false,
       };
     }
 
@@ -177,28 +102,14 @@ export async function getTrackingHubDataAction(
         traineeName: null,
         trainees,
         weekStart,
-        weekLabel: formatWeekRangeLabel(weekStart),
-        canGoForward: canGoForwardWeek(weekStart),
+        weekLabel,
+        canGoForward,
         canEdit: false,
-        dailyGrid: emptyGrid(weekStart),
-        measurementsGrid: buildMeasurementsTrackingWeekGrid(
-          weekStart,
-          buildTrackingWeekRawLogs({
-            bodyWeightLogs: [],
-            sleepLogs: [],
-            waterLogs: [],
-            stepsLogs: [],
-            caloriesLogs: [],
-            measurementsLogs: [],
-          }),
-          false,
-        ),
-        reminders: null,
+        showGrids: false,
       };
     }
 
     const trainee = trainees.find((item) => item.id === traineeIdParam);
-    const raw = await getCachedWeekLogsForTrainee(traineeIdParam, weekStart, weekLastDay);
 
     return {
       role: "COACH",
@@ -206,14 +117,29 @@ export async function getTrackingHubDataAction(
       traineeName: trainee?.name ?? "מתאמן",
       trainees,
       weekStart,
-      weekLabel: formatWeekRangeLabel(weekStart),
-      canGoForward: canGoForwardWeek(weekStart),
+      weekLabel,
+      canGoForward,
       canEdit: true,
-      dailyGrid: buildDailyTrackingWeekGrid(weekStart, raw, true),
-      measurementsGrid: buildMeasurementsTrackingWeekGrid(weekStart, raw, true),
-      reminders: null,
+      showGrids: true,
     };
   }
 
   throw new Error("Unauthorized");
+}
+
+export async function getTrackingHubGridsAction(
+  traineeId: string,
+  weekStart: string,
+  canEdit: boolean,
+  loadReminders: boolean,
+): Promise<TrackingHubGridsData> {
+  const weekLastDay = addIsraelDays(weekStart, 6);
+  const raw = await getCachedWeekLogsForTrainee(traineeId, weekStart, weekLastDay);
+  const reminders = loadReminders ? await getCachedRemindersForTrainee(traineeId) : null;
+
+  return {
+    dailyGrid: buildDailyTrackingWeekGrid(weekStart, raw, canEdit),
+    measurementsGrid: buildMeasurementsTrackingWeekGrid(weekStart, raw, canEdit),
+    reminders,
+  };
 }

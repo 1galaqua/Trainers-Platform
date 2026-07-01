@@ -11,6 +11,7 @@ type TrackingWeeklyGridProps = {
   grid: TrackingWeekGrid;
   traineeId?: string | null;
   canEdit?: boolean;
+  onCellSaved?: (rowId: string, date: string, updated: TrackingWeekCell) => void;
 };
 
 const AVG_COL_WIDTH = "7rem";
@@ -29,13 +30,17 @@ function GridCellContent({
   cell,
   showInputs,
   traineeId,
+  onCellSaved,
 }: {
   cell: TrackingWeekCell;
   showInputs: boolean;
   traineeId: string | null | undefined;
+  onCellSaved?: (rowId: string, date: string, updated: TrackingWeekCell) => void;
 }) {
   if (showInputs && traineeId) {
-    return <TrackingGridCell traineeId={traineeId} cell={cell} />;
+    return (
+      <TrackingGridCell traineeId={traineeId} cell={cell} onCellSaved={onCellSaved} />
+    );
   }
 
   return (
@@ -56,6 +61,7 @@ export function TrackingWeeklyGrid({
   grid,
   traineeId,
   canEdit = false,
+  onCellSaved,
 }: TrackingWeeklyGridProps) {
   const showInputs = canEdit && Boolean(traineeId);
   const gridCellClass = cn(GRID_LINE, "min-w-0");
@@ -153,6 +159,7 @@ export function TrackingWeeklyGrid({
                         cell={cell}
                         showInputs={showInputs}
                         traineeId={traineeId}
+                        onCellSaved={onCellSaved}
                       />
                     </div>
                   ))}

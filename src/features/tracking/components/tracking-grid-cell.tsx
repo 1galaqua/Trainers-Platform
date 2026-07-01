@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { BODY_WEIGHT_MAX_KG, BODY_WEIGHT_MIN_KG } from "@/lib/body-weight-validation";
@@ -9,6 +8,10 @@ import { MEASUREMENT_MAX_CM, MEASUREMENT_MIN_CM } from "@/lib/measurements-valid
 import { sleepHoursToRange } from "@/lib/sleep-validation";
 import { STEPS_MAX, STEPS_MIN } from "@/lib/steps-validation";
 import { CALORIES_MAX, CALORIES_MIN } from "@/lib/calories-validation";
+import {
+  buildSavedCellFromDraft,
+  trackingGridRowId,
+} from "@/lib/tracking-cell-client-update";
 import type { TrackingWeekCell } from "@/lib/tracking-week-data";
 import {
   parseWaterAmountMl,
@@ -28,6 +31,7 @@ import {
 type TrackingGridCellProps = {
   traineeId: string;
   cell: TrackingWeekCell;
+  onCellSaved?: (rowId: string, date: string, updated: TrackingWeekCell) => void;
 };
 
 function getEditValue(cell: TrackingWeekCell) {
@@ -172,8 +176,7 @@ function maxForKind(kind: TrackingWeekCell["kind"]) {
   }
 }
 
-export function TrackingGridCell({ traineeId, cell }: TrackingGridCellProps) {
-  const router = useRouter();
+export function TrackingGridCell({ traineeId, cell, onCellSaved }: TrackingGridCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState(getEditValue(cell));
   const [saving, setSaving] = useState(false);
@@ -188,6 +191,12 @@ export function TrackingGridCell({ traineeId, cell }: TrackingGridCellProps) {
     if (saving || !cell.editable) return;
     if (valuesEqual(cell, draft)) return;
 
+    const parsed = buildSavedCellFromDraft(cell, draft);
+    if ("error" in parsed) {
+      setError(true);
+      return;
+    }
+
     setSaving(true);
     setError(false);
     const result = await saveCell(traineeId, cell, draft);
@@ -198,7 +207,7 @@ export function TrackingGridCell({ traineeId, cell }: TrackingGridCellProps) {
       return;
     }
 
-    router.refresh();
+    onCellSaved?.(trackingGridRowId(cell), cell.date, parsed);
   }
 
   if (!cell.editable) {

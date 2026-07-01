@@ -7,6 +7,7 @@ import {
   logWorkoutTag,
   notificationsTag,
   programsTag,
+  trackingRemindersTag,
   trackingWeekTag,
   traineeDetailTag,
   userTag,
@@ -52,4 +53,8 @@ export function revalidateCalendarWorkoutsForUsers(userIds: Iterable<string>) {
 
 export function revalidateCoachTrainees(coachId: string) {
   revalidateTag(coachTraineesTag(coachId));
+}
+
+export function revalidateTrackingReminders(traineeId: string) {
+  revalidateTag(trackingRemindersTag(traineeId));
 }

@@ -35,3 +35,7 @@ export function calendarWorkoutsTag(userId: string) {
 export function coachTraineesTag(coachId: string) {
   return `coach-trainees:${coachId}`;
 }
+
+export function trackingRemindersTag(traineeId: string) {
+  return `tracking-reminders:${traineeId}`;
+}

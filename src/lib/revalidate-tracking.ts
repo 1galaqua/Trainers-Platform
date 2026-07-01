@@ -1,7 +1,12 @@
 import { revalidatePath } from "next/cache";
 
 import { getWeekStartDateString } from "@/lib/calendar-datetime";
-import { revalidateTrackingWeek, revalidateTraineeDetail } from "@/lib/revalidate-tags";
+import { revalidateTrackingReminders, revalidateTrackingWeek, revalidateTraineeDetail } from "@/lib/revalidate-tags";
+
+export function revalidateTrackingHubReminders(traineeId: string) {
+  revalidateTrackingReminders(traineeId);
+  revalidatePath("/dashboard/tracking");
+}
 
 export function revalidateAfterTrackingMetricSave(
   traineeId: string,
