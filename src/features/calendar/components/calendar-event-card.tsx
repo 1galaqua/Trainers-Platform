@@ -62,7 +62,7 @@ export function CalendarEventCard({
           {event.traineeName}
         </p>
       )}
-      {event.notes && !compact && !inTimeGrid && (
+      {event.notes && !inTimeGrid && (
         <p className="mt-1 text-muted-foreground text-xs leading-relaxed">{event.notes}</p>
       )}
 

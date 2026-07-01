@@ -135,7 +135,7 @@ export function CalendarWorkoutCard({
           {userRole === "TRAINEE" && workout.isRegistered ? " · נרשמת" : ""}
         </p>
       )}
-      {workout.notes && !compact && !inTimeGrid && (
+      {workout.notes && !inTimeGrid && (
         <p className="mt-1 text-muted-foreground text-xs leading-relaxed">{workout.notes}</p>
       )}
 

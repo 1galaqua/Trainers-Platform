@@ -21,7 +21,11 @@ import type { CalendarTraineeOption } from "@/server/actions/calendar";
 import type { CalendarScheduleItem } from "@/server/actions/calendar-types";
 import { cn } from "@/lib/utils";
 
-import { CalendarScheduleCard } from "./calendar-schedule-card";
+import { CalendarScheduleDetailSheet } from "./calendar-schedule-detail-sheet";
+import {
+  CalendarScheduleGridPreview,
+  calendarSchedulePreviewAriaLabel,
+} from "./calendar-schedule-grid-preview";
 
 type CalendarTimeGridProps = {
   dates: string[];
@@ -44,6 +48,22 @@ export function CalendarTimeGrid({
 }: CalendarTimeGridProps) {
   const hours = getCalendarGridHours();
   const [contentHeights, setContentHeights] = useState<Record<string, number>>({});
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  const selectedItem = useMemo(() => {
+    if (!selectedItemId) return null;
+    for (const dateStr of dates) {
+      const match = (itemsByDate.get(dateStr) ?? []).find((item) => item.id === selectedItemId);
+      if (match) return match;
+    }
+    return null;
+  }, [selectedItemId, dates, itemsByDate]);
+
+  useEffect(() => {
+    if (scrollToItemId) {
+      setSelectedItemId(scrollToItemId);
+    }
+  }, [scrollToItemId]);
 
   const datesKey = dates.join(",");
 
@@ -194,10 +214,21 @@ export function CalendarTimeGrid({
               hourLineOffsets={hourLineOffsets}
               gridHeight={gridHeight}
               onContentHeight={handleContentHeight}
+              onSelectItem={setSelectedItemId}
             />
           ))}
         </div>
       </div>
+
+      <CalendarScheduleDetailSheet
+        item={selectedItem}
+        userRole={userRole}
+        trainees={trainees}
+        open={selectedItem != null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedItemId(null);
+        }}
+      />
     </div>
   );
 }
@@ -211,6 +242,7 @@ type CalendarTimeGridDayColumnProps = {
   hourLineOffsets: number[];
   gridHeight: number;
   onContentHeight: (itemId: string, height: number) => void;
+  onSelectItem: (itemId: string) => void;
 };
 
 function CalendarTimeGridDayColumn({
@@ -222,6 +254,7 @@ function CalendarTimeGridDayColumn({
   hourLineOffsets,
   gridHeight,
   onContentHeight,
+  onSelectItem,
 }: CalendarTimeGridDayColumnProps) {
   return (
     <div
@@ -257,6 +290,7 @@ function CalendarTimeGridDayColumn({
             top={position.top}
             minHeight={position.minHeight}
             onContentHeight={onContentHeight}
+            onSelect={() => onSelectItem(item.id)}
           />
         );
       })}
@@ -271,17 +305,18 @@ type CalendarTimeGridScheduleBlockProps = {
   top: number;
   minHeight: number;
   onContentHeight: (itemId: string, height: number) => void;
+  onSelect: () => void;
 };
 
 function CalendarTimeGridScheduleBlock({
   item,
   userRole,
-  trainees,
   top,
   minHeight,
   onContentHeight,
+  onSelect,
 }: CalendarTimeGridScheduleBlockProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLButtonElement>(null);
 
   useLayoutEffect(() => {
     const element = contentRef.current;
@@ -296,7 +331,7 @@ function CalendarTimeGridScheduleBlock({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [item.id, onContentHeight, userRole, trainees, item]);
+  }, [item.id, onContentHeight, userRole, item]);
 
   return (
     <div
@@ -305,15 +340,15 @@ function CalendarTimeGridScheduleBlock({
       className="absolute right-0.5 left-0.5 z-10 overflow-hidden"
       style={{ top, minHeight }}
     >
-      <div ref={contentRef} className="w-full min-w-0">
-        <CalendarScheduleCard
-          item={item}
-          userRole={userRole}
-          trainees={trainees}
-          compact
-          inTimeGrid
-        />
-      </div>
+      <button
+        type="button"
+        ref={contentRef}
+        onClick={onSelect}
+        aria-label={calendarSchedulePreviewAriaLabel(item)}
+        className="w-full min-w-0 cursor-pointer rounded-lg text-start outline-none transition-opacity hover:opacity-95 focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <CalendarScheduleGridPreview item={item} userRole={userRole} className="h-full w-full" />
+      </button>
     </div>
   );
 }
