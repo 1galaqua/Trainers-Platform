@@ -136,7 +136,7 @@ export function CalendarWorkoutCard({
         </p>
       )}
       {workout.notes && !inTimeGrid && (
-        <p className="mt-1 text-muted-foreground text-xs leading-relaxed">{workout.notes}</p>
+        <p className="mt-1 text-muted-foreground text-sm leading-relaxed">{workout.notes}</p>
       )}
 
       {userRole === "COACH" && isGroup && (

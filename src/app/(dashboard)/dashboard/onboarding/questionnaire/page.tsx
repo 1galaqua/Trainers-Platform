@@ -28,7 +28,7 @@ export default async function QuestionnairePage() {
         <h1 className="font-semibold text-2xl tracking-tight">
           {isRedo ? "עדכון שאלון" : "שאלון ראשוני"}
         </h1>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-muted-foreground text-base">
           {isRedo
             ? "המאמן/ית ביקש/ה שתמלא/י את השאלון מחדש. עדכן/י את התשובות ושמור/י."
             : "מלא/י פעם אחת כדי שהמאמן/ית יוכל/י להתאים תוכנית"}

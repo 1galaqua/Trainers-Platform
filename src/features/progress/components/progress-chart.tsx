@@ -87,7 +87,7 @@ export function ProgressChart({
 
   if (data.length === 0) {
     return (
-      <p className="py-8 text-center text-muted-foreground text-sm">
+      <p className="py-8 text-center text-muted-foreground text-base">
         אין עדיין נתונים להצגה — דווח על אימון כדי לראות התקדמות
       </p>
     );

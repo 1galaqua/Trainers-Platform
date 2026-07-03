@@ -101,7 +101,7 @@ export function LogWorkoutPageContent({
   if (programSummaries.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-muted-foreground text-sm">
+        <CardContent className="py-10 text-center text-muted-foreground text-base">
           אין תוכניות פעילות.{" "}
           <Link href={emptyBackHref} className="text-primary underline">
             {emptyBackLabel}
@@ -153,7 +153,7 @@ export function LogWorkoutPageContent({
               quotaInfo={quotaInfo}
             />
           ) : (
-            <p className="text-muted-foreground text-sm">טוען תוכנית...</p>
+            <p className="text-muted-foreground text-base">טוען תוכנית...</p>
           )}
         </CardContent>
       </Card>

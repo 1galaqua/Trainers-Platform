@@ -90,7 +90,7 @@ export function CreateTraineeInviteButton() {
         <div className="mt-6 space-y-4">
           {!url ? (
             <>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-base">
                 המתאמן/ית ימלא/תמלא שאלון, יחתום/תחתום על ההסכם ויפתח/תפתח חשבון — והוא/היא
                 תשויך/תשויך אליך אוטומטית.
               </p>
@@ -114,7 +114,7 @@ export function CreateTraineeInviteButton() {
                 <MessageCircle className="size-4" />
                 שליחה בוואטסאפ
               </Button>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-sm">
                 הקישור תקף ל-30 יום וניתן לשימוש חד-פעמי.
               </p>
             </>

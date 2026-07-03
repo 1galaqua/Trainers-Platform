@@ -96,7 +96,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
               <TraineeStatusIndicator status={status} />
               <EditTraineeName traineeId={id} displayName={trainee.displayName} />
             </div>
-            <p className="mt-1 text-muted-foreground text-sm">
+            <p className="mt-1 text-muted-foreground text-base">
               היסטוריית אימונים
               {workoutQuota != null && ` · ${workoutsRemaining} מתוך ${workoutQuota} אימונים נותרו`}
             </p>
@@ -174,7 +174,7 @@ export default async function TraineeDetailPage({ params }: PageProps) {
       <div id="progress-graphs" className="scroll-mt-6 min-w-0 space-y-4">
         <div>
           <h2 className="font-medium text-base">גרפי התקדמות</h2>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             גרפי אימון — תצוגה לקריאה בלבד
           </p>
         </div>

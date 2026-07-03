@@ -125,7 +125,7 @@ export function GroupWorkoutActions({ workout, compact = false }: GroupWorkoutAc
     return (
       <p
         className={cn(
-          compact ? "mt-2 text-muted-foreground text-[11px]" : "mt-2 text-muted-foreground text-xs",
+          compact ? "mt-2 text-muted-foreground text-[11px]" : "mt-2 text-muted-foreground text-sm",
           "font-medium",
         )}
       >

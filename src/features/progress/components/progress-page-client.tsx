@@ -110,7 +110,7 @@ export function ProgressPageClient({
   if (series.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-muted-foreground text-sm">
+        <CardContent className="py-10 text-center text-muted-foreground text-base">
           {emptyMessage ??
             (readOnly
               ? "אין עדיין נתוני התקדמות להצגה."

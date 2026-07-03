@@ -42,7 +42,7 @@ export function BodyWeightHistory({ logs }: BodyWeightHistoryProps) {
   if (logs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
+        <CardContent className="py-8 text-center text-muted-foreground text-base">
           אין עדיין היסטוריית משקל
         </CardContent>
       </Card>
@@ -58,11 +58,11 @@ export function BodyWeightHistory({ logs }: BodyWeightHistoryProps) {
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm">{log.weightKg} ק״ג</p>
-                <p className="break-words text-muted-foreground text-xs">
+                <p className="break-words text-muted-foreground text-sm">
                   {formatIsraelDayLabelLong(log.recordedDay)}
                 </p>
                 {log.notes && (
-                  <p className="mt-1 text-muted-foreground text-sm">{log.notes}</p>
+                  <p className="mt-1 text-muted-foreground text-base">{log.notes}</p>
                 )}
               </div>
               <div className="flex gap-2">

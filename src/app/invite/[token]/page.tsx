@@ -29,8 +29,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4 py-12">
         <div className="mx-auto w-full max-w-md space-y-4 text-center">
           <h1 className="font-semibold text-xl">קישור לא תקף</h1>
-          <p className="text-muted-foreground text-sm">{INVALID_MESSAGES[data.reason]}</p>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-base">{INVALID_MESSAGES[data.reason]}</p>
+          <p className="text-muted-foreground text-base">
             בקש/י מהמאמן/ית לשלוח קישור הזמנה חדש.
           </p>
           {data.reason !== "used" && (
@@ -46,9 +46,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
   return (
     <div className="min-h-dvh bg-background px-4 py-8">
       <div className="mx-auto mb-8 max-w-lg space-y-2 text-center">
-        <p className="text-muted-foreground text-xs">{siteConfig.name}</p>
+        <p className="text-muted-foreground text-sm">{siteConfig.name}</p>
         <h1 className="font-semibold text-2xl tracking-tight">ברוכים הבאים</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base">
           הצטרפות למאמן/ית <strong>{data.coachName}</strong> — מלא/י את הפרטים, השאלון וההסכם
           ליצירת החשבון.
         </p>

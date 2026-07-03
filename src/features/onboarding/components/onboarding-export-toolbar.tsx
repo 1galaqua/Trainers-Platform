@@ -116,9 +116,9 @@ export function OnboardingExportToolbar({
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {!iframeReady && (
-        <p className="text-muted-foreground text-xs">טוען תצוגת מסמך...</p>
+        <p className="text-muted-foreground text-sm">טוען תצוגת מסמך...</p>
       )}
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground text-sm">
         הורדת PDF שומרת קובץ ישירות. בהדפסה אפשר גם לבחור «שמירה כ-PDF» בתפריט המדפסת.
       </p>
     </div>

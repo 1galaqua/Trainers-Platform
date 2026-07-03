@@ -58,7 +58,7 @@ function NavLinks({
               "flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               active
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                : "text-foreground/65 hover:bg-muted hover:text-foreground",
             )}
           >
             <span>{item.title}</span>
@@ -147,7 +147,7 @@ export function DashboardShell({
           <SidebarLogoutButton />
         </div>
         <Separator />
-        <div className="p-3 text-muted-foreground text-xs leading-relaxed">
+        <div className="p-3 text-muted-foreground text-base leading-relaxed">
           {siteConfig.name}
         </div>
       </aside>
@@ -165,7 +165,7 @@ export function DashboardShell({
               }
             >
               <Menu className="size-5 shrink-0" aria-hidden />
-              <span className="max-w-[4.25rem] text-center text-[10px] leading-tight font-normal text-muted-foreground">
+              <span className="max-w-[4.25rem] text-center text-xs leading-tight font-normal text-muted-foreground">
                 תפריט
               </span>
             </SheetTrigger>

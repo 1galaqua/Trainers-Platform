@@ -54,14 +54,14 @@ export function CoachOnboardingTemplateForm({
       <section className="space-y-4">
         <div>
           <h2 className="font-medium text-base">שאלון ראשוני</h2>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             ערוך את ניסוח השאלות. המבנה (סוג השדה) נשאר כמו בשאלון ברירת המחדל.
           </p>
         </div>
         <div className="space-y-3">
           {fields.map((field, index) => (
             <div key={field.key} className="space-y-1 rounded-lg border border-border p-3">
-              <p className="text-muted-foreground text-xs">מזהה: {field.key}</p>
+              <p className="text-muted-foreground text-sm">מזהה: {field.key}</p>
               <Label htmlFor={`field-label-${field.key}`}>ניסוח השאלה</Label>
               <Input
                 id={`field-label-${field.key}`}
@@ -77,7 +77,7 @@ export function CoachOnboardingTemplateForm({
       <section className="space-y-4">
         <div>
           <h2 className="font-medium text-base">הסכם עם חתימה</h2>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             הטקסט שיוצג למתאמן לפני החתימה הדיגיטלית
           </p>
         </div>

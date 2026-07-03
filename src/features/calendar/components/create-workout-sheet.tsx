@@ -193,7 +193,7 @@ export function CreateWorkoutSheet({ trainees }: CreateWorkoutSheetProps) {
                   onSelectedIdsChange={setSelectedGroupTraineeIds}
                   maxParticipants={maxParticipants}
                 />
-                <p className="text-muted-foreground text-xs">
+                <p className="text-muted-foreground text-sm">
                   ניתן לרשום מתאמנים פעילים כבר ביצירת האימון
                 </p>
               </>

@@ -79,12 +79,12 @@ export function GroupWorkoutTraineeManager({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Label>נרשמו</Label>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-sm">
             {selectedIds.length} / {maxParticipants}
           </span>
         </div>
         {selectedTrainees.length === 0 ? (
-          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
+          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-base">
             עדיין אין נרשמים
           </p>
         ) : (
@@ -128,11 +128,11 @@ export function GroupWorkoutTraineeManager({
         </div>
 
         {activeTrainees.length === 0 ? (
-          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
+          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-base">
             אין מתאמנים פעילים להוספה
           </p>
         ) : availableToAdd.length === 0 ? (
-          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
+          <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-base">
             {normalizedSearch ? "לא נמצאו מתאמנים תואמים" : "כל המתאמנים הפעילים כבר נרשמו"}
           </p>
         ) : (
@@ -159,7 +159,7 @@ export function GroupWorkoutTraineeManager({
         )}
 
         {atCapacity && (
-          <p className="text-muted-foreground text-xs">האימון מלא — יש להסיר מתאמן כדי להוסיף אחר</p>
+          <p className="text-muted-foreground text-sm">האימון מלא — יש להסיר מתאמן כדי להוסיף אחר</p>
         )}
       </div>
     </div>

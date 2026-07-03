@@ -169,7 +169,7 @@ export function TraineeOnboardingSheet({
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
           <div className="grid gap-4 px-4 py-4 pb-6 text-sm">
-          {loading && <p className="text-muted-foreground text-xs">טוען גרסאות...</p>}
+          {loading && <p className="text-muted-foreground text-sm">טוען גרסאות...</p>}
 
           {versions && <UserDetailsSection details={versions.userDetails} />}
 
@@ -230,8 +230,8 @@ export function TraineeOnboardingSheet({
 
           {viewQuestionnaire && selectedQuestionnaire && (
             <div className="space-y-3">
-              <p className="font-medium text-muted-foreground text-xs">שאלון</p>
-              <p className="text-muted-foreground text-xs">
+              <p className="font-medium text-muted-foreground text-sm">שאלון</p>
+              <p className="text-muted-foreground text-sm">
                 הושלם ב-{formatOnboardingVersionDate(selectedQuestionnaire.completedAt)}
               </p>
               {fields.map((field) => {
@@ -250,8 +250,8 @@ export function TraineeOnboardingSheet({
 
           {viewAgreement && selectedAgreement && (
             <div className="space-y-2 border-border border-t pt-4">
-              <p className="font-medium text-muted-foreground text-xs">הסכם וחתימה</p>
-              <p className="text-muted-foreground text-xs">
+              <p className="font-medium text-muted-foreground text-sm">הסכם וחתימה</p>
+              <p className="text-muted-foreground text-sm">
                 נחתם ב-{formatOnboardingVersionDate(selectedAgreement.agreedAt)}
               </p>
               <p className="break-words whitespace-pre-wrap text-sm leading-relaxed">
@@ -316,7 +316,7 @@ function Field({
 }) {
   return (
     <div className={multiline ? "sm:col-span-2" : undefined}>
-      <p className="font-medium text-muted-foreground text-xs">{label}</p>
+      <p className="font-medium text-muted-foreground text-sm">{label}</p>
       <p className="mt-0.5 break-words whitespace-pre-wrap">{value}</p>
     </div>
   );

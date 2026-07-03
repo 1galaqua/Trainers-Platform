@@ -40,12 +40,7 @@ export function HeaderQuickLinks({ userRole, className }: HeaderQuickLinksProps)
             render={<Link href={href} aria-label={label} />}
           >
             <Icon className="size-5 shrink-0" aria-hidden />
-            <span
-              className={cn(
-                "max-w-[4.25rem] text-center text-[10px] leading-tight font-normal",
-                active ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
+            <span className="max-w-[5rem] text-center text-sm leading-tight font-normal text-foreground">
               {label}
             </span>
           </Button>

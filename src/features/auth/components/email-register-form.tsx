@@ -85,17 +85,17 @@ export function EmailRegisterForm() {
           maxLength={16}
           autoComplete="new-password"
         />
-        <p className="text-muted-foreground text-xs">{PASSWORD_HINT}</p>
+        <p className="text-muted-foreground text-sm">{PASSWORD_HINT}</p>
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "נרשם..." : "יצירת חשבון מאמן/ית"}
       </Button>
-      <p className="text-center text-muted-foreground text-sm">
+      <p className="text-center text-muted-foreground text-base">
         מתאמן/ית? בקש/י מהמאמן/ית קישור הזמנה.
       </p>
-      <p className="text-center text-muted-foreground text-sm">
+      <p className="text-center text-muted-foreground text-base">
         כבר יש לך חשבון?{" "}
         <Link href="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
           התחברות

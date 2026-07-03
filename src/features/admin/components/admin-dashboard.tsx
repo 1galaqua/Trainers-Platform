@@ -42,7 +42,7 @@ export function AdminDashboard({ coaches, adminName }: AdminDashboardProps) {
     <div className="space-y-8">
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">ניהול מאמנים</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-muted-foreground text-base">
           {adminName ? `שלום ${adminName} — ` : ""}
           סקירת מאמנים, מתאמנים פעילים ולא פעילים
         </p>
@@ -181,7 +181,7 @@ export function AdminDashboard({ coaches, adminName }: AdminDashboardProps) {
             </h2>
 
             {displayedTrainees.length === 0 ? (
-              <p className="text-muted-foreground text-sm">אין מתאמנים להצגה בסינון הנוכחי.</p>
+              <p className="text-muted-foreground text-base">אין מתאמנים להצגה בסינון הנוכחי.</p>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full min-w-[480px] text-sm">

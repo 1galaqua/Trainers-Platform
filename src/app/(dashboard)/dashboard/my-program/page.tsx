@@ -62,7 +62,7 @@ export default async function MyProgramPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">התוכניות שלי</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             {programs.length === 0
               ? "תרגילים, הוראות וסרטונים"
               : `${programs.length} תוכניות משויכות — בחר תוכנית לצפייה או לדיווח`}
@@ -75,7 +75,7 @@ export default async function MyProgramPage() {
 
       {programs.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
+          <CardContent className="py-10 text-center text-muted-foreground text-base">
             המאמן/ית עדיין לא הקצה לך תוכניות אימון.
           </CardContent>
         </Card>

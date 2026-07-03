@@ -61,7 +61,7 @@ export function PersonalWorkoutTraineePicker({
           </Button>
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed px-3 py-3 text-center text-muted-foreground text-sm">
+        <p className="rounded-lg border border-dashed px-3 py-3 text-center text-muted-foreground text-base">
           {trainees.length === 0 ? "אין מתאמנים משויכים" : "בחר/י מתאמן מהרשימה"}
         </p>
       )}
@@ -84,7 +84,7 @@ export function PersonalWorkoutTraineePicker({
           </div>
 
           {matchingTrainees.length === 0 ? (
-            <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-sm">
+            <p className="rounded-lg border border-dashed px-3 py-4 text-center text-muted-foreground text-base">
               {searchQuery.trim() ? "לא נמצאו מתאמנים תואמים" : "כל המתאמנים כבר נבחרו"}
             </p>
           ) : (

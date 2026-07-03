@@ -46,7 +46,7 @@ export function CoachTrackingTraineePicker({
 
       <div className="max-h-48 space-y-1 overflow-y-auto">
         {filteredTrainees.length === 0 ? (
-          <p className="text-muted-foreground text-sm">לא נמצאו מתאמנים</p>
+          <p className="text-muted-foreground text-base">לא נמצאו מתאמנים</p>
         ) : (
           filteredTrainees.map((trainee) => (
             <button

@@ -61,7 +61,7 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
           <h1 className="font-semibold text-2xl tracking-tight">דיווח אימון — {name}</h1>
         </div>
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
+          <CardContent className="py-10 text-center text-muted-foreground text-base">
             אין תוכניות פעילות למתאמן זה.{" "}
             <Link href={`/dashboard/workouts/new?traineeId=${traineeId}`} className="text-primary underline">
               צור תוכנית חדשה
@@ -84,7 +84,7 @@ export default async function CoachLogTraineeWorkoutPage({ params, searchParams 
         </Button>
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">דיווח אימון — {name}</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             בחר את התוכנית שבוצעה באימון זה, ואז מלא את פרטי הביצוע
           </p>
         </div>

@@ -20,7 +20,7 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">לוח בקרה</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             {traineeName ? `שלום, ${traineeName}` : "סיכום אימונים והתקדמות"}
           </p>
         </div>
@@ -43,7 +43,7 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
       <div className="space-y-4">
         <div>
           <h2 className="font-medium text-base">גרפי התקדמות</h2>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב משקלי אימון ונפח לפי תאריך</p>
+          <p className="mt-1 text-muted-foreground text-base">מעקב משקלי אימון ונפח לפי תאריך</p>
         </div>
         <ProgressPageClient
           exercises={progressExercises}
@@ -54,7 +54,7 @@ export async function TraineeDashboardHome({ traineeName }: TraineeDashboardHome
       <div className="space-y-4">
         <div>
           <h2 className="font-medium text-base">אימונים שבוצעו</h2>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             כל האימונים שנשמרו או דווחו על ידך או על ידי המאמן/ית
           </p>
         </div>

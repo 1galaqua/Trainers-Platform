@@ -24,7 +24,7 @@ export default async function HomePage() {
       <main className="flex flex-1 flex-col">
         <section className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center gap-10 px-4 py-16 sm:px-6 md:py-24">
           <div className="max-w-2xl space-y-6">
-            <p className="font-medium text-muted-foreground text-sm uppercase tracking-wider">
+            <p className="font-medium text-muted-foreground text-base uppercase tracking-wider">
               מאמנים ומתאמנים
             </p>
             <h1 className="font-semibold text-4xl text-foreground tracking-tight sm:text-5xl">
@@ -58,7 +58,7 @@ export default async function HomePage() {
                 className="rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs"
               >
                 <h2 className="font-semibold text-base">{card.title}</h2>
-                <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                <p className="mt-2 text-muted-foreground text-base leading-relaxed">
                   {card.body}
                 </p>
               </div>
@@ -68,7 +68,7 @@ export default async function HomePage() {
       </main>
 
       <footer className="border-border border-t py-8">
-        <div className="mx-auto max-w-6xl px-4 text-center text-muted-foreground text-sm sm:px-6">
+        <div className="mx-auto max-w-6xl px-4 text-center text-muted-foreground text-base sm:px-6">
           © {new Date().getFullYear()} {siteConfig.name}. כל הזכויות שמורות.
         </div>
       </footer>

@@ -67,7 +67,7 @@ function ChartCard({
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="text-base">{title}</CardTitle>
         {clickable && (
-          <span className="text-muted-foreground text-xs">לחץ/י לעדכון</span>
+          <span className="text-muted-foreground text-sm">לחץ/י לעדכון</span>
         )}
       </CardHeader>
       <CardContent className="min-w-0">
@@ -79,7 +79,7 @@ function ChartCard({
             showNotesInTooltip
           />
         ) : (
-          <p className="py-8 text-center text-muted-foreground text-sm">{emptyMessage}</p>
+          <p className="py-8 text-center text-muted-foreground text-base">{emptyMessage}</p>
         )}
       </CardContent>
     </Card>

@@ -20,7 +20,7 @@ export function MeasurementsPageContent({ traineeId, data }: MeasurementsPageCon
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">היקפים</h1>
-          <p className="mt-1 text-muted-foreground text-sm">הזנת היקפים בס&quot;מ</p>
+          <p className="mt-1 text-muted-foreground text-base">הזנת היקפים בס&quot;מ</p>
         </div>
         <Button variant="outline" className="w-full sm:w-auto" render={<Link href="/dashboard/tracking" />}>
           חזרה למעקב

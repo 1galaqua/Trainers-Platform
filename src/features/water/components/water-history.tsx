@@ -34,7 +34,7 @@ export function WaterHistory({ logs }: WaterHistoryProps) {
   if (logs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
+        <CardContent className="py-8 text-center text-muted-foreground text-base">
           אין עדיין היסטוריית שתייה
         </CardContent>
       </Card>
@@ -49,8 +49,8 @@ export function WaterHistory({ logs }: WaterHistoryProps) {
           <CardContent className="flex min-w-0 items-start justify-between gap-3 py-4">
             <div className="min-w-0">
               <p className="font-medium text-sm">{formatWaterDisplay(log.amountMl)}</p>
-              <p className="text-muted-foreground text-xs">{formatIsraelDayLabelLong(log.recordedDay)}</p>
-              {log.notes && <p className="mt-1 text-muted-foreground text-sm">{log.notes}</p>}
+              <p className="text-muted-foreground text-sm">{formatIsraelDayLabelLong(log.recordedDay)}</p>
+              {log.notes && <p className="mt-1 text-muted-foreground text-base">{log.notes}</p>}
             </div>
             <Button
               type="button"

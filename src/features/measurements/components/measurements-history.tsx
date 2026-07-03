@@ -35,7 +35,7 @@ export function MeasurementsHistory({ traineeId, logs }: MeasurementsHistoryProp
   if (logs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
+        <CardContent className="py-8 text-center text-muted-foreground text-base">
           אין עדיין היסטוריית היקפים
         </CardContent>
       </Card>
@@ -55,12 +55,12 @@ export function MeasurementsHistory({ traineeId, logs }: MeasurementsHistoryProp
             <CardContent className="flex min-w-0 items-start justify-between gap-3 py-4">
               <div className="min-w-0">
                 <p className="font-medium text-sm">{formatIsraelDayLabelLong(log.recordedDay)}</p>
-                <ul className="mt-2 space-y-1 text-muted-foreground text-sm">
+                <ul className="mt-2 space-y-1 text-muted-foreground text-base">
                   {values.map((line) => (
                     <li key={line}>{line}</li>
                   ))}
                 </ul>
-                {log.notes && <p className="mt-2 text-muted-foreground text-sm">{log.notes}</p>}
+                {log.notes && <p className="mt-2 text-muted-foreground text-base">{log.notes}</p>}
               </div>
               <Button
                 type="button"

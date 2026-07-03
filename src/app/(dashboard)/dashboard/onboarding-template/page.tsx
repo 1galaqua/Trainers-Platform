@@ -16,7 +16,7 @@ export default async function OnboardingTemplatePage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">שאלון והסכם</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-muted-foreground text-base">
           ברירת המחדל היא השאלון הקיים. ניתן לערוך ניסוח שאלות וטקסט ההסכם עם החתימה.
           מתאמנים חדשים יראו את הגרסה המעודכנת.
         </p>

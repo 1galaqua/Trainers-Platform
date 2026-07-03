@@ -29,14 +29,14 @@ export default async function TraineesPage({ searchParams }: PageProps) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">מתאמנים</h1>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב אחר מתאמנים, תוכניות והתקדמות</p>
+          <p className="mt-1 text-muted-foreground text-base">מעקב אחר מתאמנים, תוכניות והתקדמות</p>
         </div>
         <CreateTraineeInviteButton />
       </div>
 
       {trainees.length === 0 ? (
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
+          <CardContent className="py-10 text-center text-muted-foreground text-base">
             אין מתאמנים משויכים אליך. לחץ/י על &quot;צור מתאמן חדש&quot; כדי ליצור קישור הזמנה
             ולשלוח אותו למתאמן/ית.
           </CardContent>

@@ -34,7 +34,7 @@ export function SleepHistory({ logs }: SleepHistoryProps) {
   if (logs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
+        <CardContent className="py-8 text-center text-muted-foreground text-base">
           אין עדיין היסטוריית שינה
         </CardContent>
       </Card>
@@ -51,10 +51,10 @@ export function SleepHistory({ logs }: SleepHistoryProps) {
               <p className="font-medium text-sm">
                 {computeSleepHours(log.sleepStart, log.sleepEnd)} שעות
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-sm">
                 {formatIsraelDayLabelLong(log.recordedDay)} · {formatSleepRange(log.sleepStart, log.sleepEnd)}
               </p>
-              {log.notes && <p className="mt-1 text-muted-foreground text-sm">{log.notes}</p>}
+              {log.notes && <p className="mt-1 text-muted-foreground text-base">{log.notes}</p>}
             </div>
             <Button
               type="button"

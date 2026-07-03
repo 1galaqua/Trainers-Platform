@@ -121,7 +121,7 @@ export function CoachingPeriodForm({
   return (
     <form onSubmit={handleSubmit} className="min-w-0 space-y-3 text-right">
       {hasPeriod && (
-        <p className="break-words text-muted-foreground text-sm leading-relaxed">
+        <p className="break-words text-muted-foreground text-base leading-relaxed">
           ליווי: {formatCoachingDisplayDate(coachingStartDate)} —{" "}
           {formatCoachingDisplayDate(coachingEndDate)}
           {workoutQuota != null && (
@@ -180,7 +180,7 @@ export function CoachingPeriodForm({
             placeholder="0"
           />
           {showLoggedHint && (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-sm">
               {loggedSessionsCount} דווחו במערכת על ידי המתאמן
             </p>
           )}

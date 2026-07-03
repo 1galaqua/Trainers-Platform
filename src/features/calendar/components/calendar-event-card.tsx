@@ -63,7 +63,7 @@ export function CalendarEventCard({
         </p>
       )}
       {event.notes && !inTimeGrid && (
-        <p className="mt-1 text-muted-foreground text-xs leading-relaxed">{event.notes}</p>
+        <p className="mt-1 text-muted-foreground text-sm leading-relaxed">{event.notes}</p>
       )}
 
       {userRole === "COACH" && !isPast && (

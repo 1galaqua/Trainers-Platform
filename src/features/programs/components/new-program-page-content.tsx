@@ -38,7 +38,7 @@ export function NewProgramPageContent({ trainees, initialTraineeId }: NewProgram
         </Button>
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">תוכנית אימון חדשה</h1>
-          <p className="mt-1 text-muted-foreground text-sm">הגדר תרגילים, סטים, חזרות וסרטוני YouTube</p>
+          <p className="mt-1 text-muted-foreground text-base">הגדר תרגילים, סטים, חזרות וסרטוני YouTube</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export function NewProgramPageContent({ trainees, initialTraineeId }: NewProgram
         </CardHeader>
         <CardContent>
           {trainees.length === 0 ? (
-            <p className="text-muted-foreground text-sm leading-relaxed">
+            <p className="text-muted-foreground text-base leading-relaxed">
               אין לך מתאמנים משויכים. מתאמנים נרשמים ובוחרים אותך כמאמן/ית — אז יופיעו כאן.
             </p>
           ) : (

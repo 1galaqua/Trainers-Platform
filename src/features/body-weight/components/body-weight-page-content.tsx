@@ -31,7 +31,7 @@ export function BodyWeightPageContent({ data, openLogForm = false }: BodyWeightP
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">משקל גוף</h1>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב משקל גוף יומי</p>
+          <p className="mt-1 text-muted-foreground text-base">מעקב משקל גוף יומי</p>
         </div>
         <Button variant="outline" className="w-full shrink-0 sm:w-auto" render={<Link href="/dashboard/tracking" />}>
           חזרה למעקב
@@ -46,7 +46,7 @@ export function BodyWeightPageContent({ data, openLogForm = false }: BodyWeightP
           <p className="font-semibold text-2xl">
             {data.latestWeightKg != null ? `${data.latestWeightKg} ק״ג` : "—"}
           </p>
-          {deltaLabel && <p className="text-muted-foreground text-sm">{deltaLabel}</p>}
+          {deltaLabel && <p className="text-muted-foreground text-base">{deltaLabel}</p>}
         </CardContent>
       </Card>
 

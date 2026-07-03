@@ -32,7 +32,7 @@ export default async function CalendarPage() {
   ]);
 
   return (
-    <Suspense fallback={<p className="text-muted-foreground text-sm">טוען יומן...</p>}>
+    <Suspense fallback={<p className="text-muted-foreground text-base">טוען יומן...</p>}>
       <CalendarPageContent
         userRole={user.role}
         scheduleItems={workouts}

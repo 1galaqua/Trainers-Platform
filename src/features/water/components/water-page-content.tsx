@@ -21,7 +21,7 @@ export function WaterPageContent({ data, openLogForm = false }: WaterPageContent
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">שתייה</h1>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב צריכת מים יומית</p>
+          <p className="mt-1 text-muted-foreground text-base">מעקב צריכת מים יומית</p>
         </div>
         <Button variant="outline" className="w-full shrink-0 sm:w-auto" render={<Link href="/dashboard/tracking" />}>
           חזרה למעקב

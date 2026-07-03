@@ -23,7 +23,7 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
       <div className="space-y-4">
         <h1 className="font-semibold text-2xl tracking-tight">דיווח אימון</h1>
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground text-sm">
+          <CardContent className="py-10 text-center text-muted-foreground text-base">
             אין תוכניות פעילות.{" "}
             <Link href="/dashboard/my-program" className="text-primary underline">
               חזרה לתוכניות
@@ -38,7 +38,7 @@ export default async function LogWorkoutPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">דיווח אימון</h1>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-muted-foreground text-base">
           בחר את התוכנית שביצעת באימון זה, ואז מלא את פרטי הביצוע
         </p>
       </div>

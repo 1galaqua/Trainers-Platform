@@ -31,7 +31,7 @@ export default async function WorkoutsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">תוכניות אימון</h1>
-          <p className="mt-1 text-muted-foreground text-sm">יצירה וניהול תוכניות למתאמנים</p>
+          <p className="mt-1 text-muted-foreground text-base">יצירה וניהול תוכניות למתאמנים</p>
         </div>
         <Button render={<Link href="/dashboard/workouts/new" />}>
           <Plus className="size-4" />

@@ -48,11 +48,11 @@ export function TraineeProgramPicker({
               )}
             >
               <p className="font-medium text-sm">{program.name}</p>
-              <p className="mt-1 text-muted-foreground text-xs">
+              <p className="mt-1 text-muted-foreground text-sm">
                 {programTypeLabels[program.type]}
                 {program.coachName ? ` · ${program.coachName}` : ""}
               </p>
-              <p className="mt-2 text-muted-foreground text-xs">
+              <p className="mt-2 text-muted-foreground text-sm">
                 {program.exerciseCount} תרגילים
               </p>
             </button>

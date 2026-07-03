@@ -109,7 +109,7 @@ export function WaterLogForm({
         </div>
       </div>
 
-      {preview && <p className="text-muted-foreground text-sm">{preview}</p>}
+      {preview && <p className="text-muted-foreground text-base">{preview}</p>}
 
       <div className="min-w-0 space-y-2 sm:max-w-xs">
         <Label htmlFor="water-date">תאריך</Label>

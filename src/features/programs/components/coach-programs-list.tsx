@@ -63,7 +63,7 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
   if (programs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-muted-foreground text-sm">
+        <CardContent className="py-10 text-center text-muted-foreground text-base">
           אין עדיין תוכניות. צור תוכנית ראשונה למתאמן.
         </CardContent>
       </Card>
@@ -97,13 +97,13 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
             placeholder="שם מתאמן או תוכנית..."
           />
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base">
           {filtered.length} מתוך {programs.length} תוכניות
         </p>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-lg border border-border py-8 text-center text-muted-foreground text-sm">
+        <p className="rounded-lg border border-border py-8 text-center text-muted-foreground text-base">
           אין תוכניות התואמות לסינון שנבחר
         </p>
       ) : (
@@ -129,7 +129,7 @@ export function CoachProgramsList({ programs }: CoachProgramsListProps) {
                 <CardDescription>{traineeLabel(program.traineeName)}</CardDescription>
               </CardHeader>
               <CardContent className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
-                <span className="pointer-events-none text-muted-foreground text-xs">
+                <span className="pointer-events-none text-muted-foreground text-sm">
                   {program.exerciseCount} תרגילים · {program.sessionCount} אימונים שבוצעו
                 </span>
                 <div className="pointer-events-auto flex flex-wrap gap-2">

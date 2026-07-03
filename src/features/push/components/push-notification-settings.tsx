@@ -57,7 +57,7 @@ export function PushNotificationSettings({ className, compact = false }: PushNot
               התראות Push למכשיר
             </p>
             {!compact && (
-              <p className="max-w-xl text-muted-foreground text-sm leading-relaxed">
+              <p className="max-w-xl text-muted-foreground text-base leading-relaxed">
                 קבל/י הודעות על אימונים ישירות למסך הנעילה — גם כשהאפליקציה סגורה או שמורה במסך הבית.
               </p>
             )}
@@ -75,7 +75,7 @@ export function PushNotificationSettings({ className, compact = false }: PushNot
         </div>
 
         {showPwaHint && (
-          <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
+          <div className="flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground text-sm leading-relaxed">
             <Smartphone className="mt-0.5 size-4 shrink-0" aria-hidden />
             <p>
               לקבלת Push ותג אדום על האייקון: הוסיפ/י את האפליקציה למסך הבית, ואז הפעיל/י התראות מתוך האפליקציה
@@ -85,13 +85,13 @@ export function PushNotificationSettings({ className, compact = false }: PushNot
         )}
 
         {status === "granted-no-subscription" && (
-          <p className="text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             ההרשאה אושרה אך המנוי לא נשמר. לחצ/י «הפעלת התראות» שוב.
           </p>
         )}
 
         {isEnabled && isStandalone && (
-          <p className="text-muted-foreground text-xs leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             כשיש עדכונים שלא נקראו, יוצג מספר אדום על אייקון האפליקציה במסך הבית (במכשירים שתומכים בכך).
           </p>
         )}
@@ -116,7 +116,7 @@ export function PushNotificationSettings({ className, compact = false }: PushNot
           )}
 
           {status === "denied" && (
-            <p className="text-muted-foreground text-xs leading-relaxed">
+            <p className="text-muted-foreground text-sm leading-relaxed">
               ההתראות חסומות בהגדרות הדפדפן. יש לאפשר התראות עבור האתר ולרענן את העמוד.
             </p>
           )}

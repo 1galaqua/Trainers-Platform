@@ -36,7 +36,7 @@ export function WorkoutSessionHistoryList({
   formatDate = defaultFormatDate,
 }: WorkoutSessionHistoryListProps) {
   if (sessions.length === 0) {
-    return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
+    return <p className="text-muted-foreground text-base">{emptyMessage}</p>;
   }
 
   return (
@@ -58,7 +58,7 @@ export function WorkoutSessionHistoryList({
               <div className="space-y-1">
                 <CardTitle className="text-sm">{sessionLabel}</CardTitle>
                 {logMeta && (
-                  <p className="text-muted-foreground text-xs">{logMeta}</p>
+                  <p className="text-muted-foreground text-sm">{logMeta}</p>
                 )}
               </div>
               {showDeleteButtons && (
@@ -70,10 +70,10 @@ export function WorkoutSessionHistoryList({
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               {session.notes?.trim() && (
-                <p className="text-muted-foreground text-xs">{session.notes.trim()}</p>
+                <p className="text-muted-foreground text-sm">{session.notes.trim()}</p>
               )}
               {session.logs.length === 0 ? (
-                <p className="text-muted-foreground text-xs">ללא פירוט תרגילים</p>
+                <p className="text-muted-foreground text-sm">ללא פירוט תרגילים</p>
               ) : (
                 sectionGroups.map((section) => (
                   <div key={`${session.id}-${section.id}`} className="space-y-2">

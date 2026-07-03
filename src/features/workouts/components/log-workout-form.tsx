@@ -103,7 +103,7 @@ function ExerciseLogCard({
     <div className="space-y-3 rounded-lg border border-border p-4">
       <div>
         <h3 className="font-medium">{exercise.name}</h3>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-sm">
           {exercise.sets} סטים × {exercise.reps} חזרות · מנוחה {exercise.restSeconds} שנ׳
         </p>
       </div>
@@ -368,23 +368,23 @@ export function LogWorkoutForm({
     >
       <div className="min-h-[4.5rem]">
         {status === "loading" && (
-          <p className="text-muted-foreground text-sm">טוען נתונים מהדיווח האחרון...</p>
+          <p className="text-muted-foreground text-base">טוען נתונים מהדיווח האחרון...</p>
         )}
         {status === "draft" && (
-          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-sm">
+          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground text-base">
             טיוטת הדיווח שוחזרה — ניתן להמשיך מהמקום שבו הפסקת. הטיוטה נשמרת אוטומטית למשך 12
             שעות.
           </p>
         )}
         {status === "prefill" && (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-base">
             השדות מולאו לפי הדיווח האחרון של תוכנית זו — ניתן לערוך לפני השמירה.
           </p>
         )}
       </div>
 
       {!prefillLoading && hasUnsavedChanges && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-sm">
           הנתונים נשמרים אוטומטית בטיוטה עד לשמירת האימון.
         </p>
       )}
@@ -430,7 +430,7 @@ export function LogWorkoutForm({
       {error && <p className="text-destructive text-sm">{error}</p>}
 
       {hasQuota && (
-        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-muted-foreground text-xs leading-relaxed">
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-muted-foreground text-sm leading-relaxed">
           <p>
             נותרו{" "}
             <span className="font-medium text-foreground">{quotaInfo.workoutsRemaining}</span>{" "}

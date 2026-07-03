@@ -47,7 +47,7 @@ export function TraineeWeeklyWorkoutChart({ sessionDates }: TraineeWeeklyWorkout
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1 text-right">
           <h2 className="font-semibold text-base">דיווחי אימון שבועיים</h2>
-          <p className="text-muted-foreground text-sm">{chartData.weekLabel}</p>
+          <p className="text-muted-foreground text-base">{chartData.weekLabel}</p>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -74,7 +74,7 @@ export function TraineeWeeklyWorkoutChart({ sessionDates }: TraineeWeeklyWorkout
       </div>
 
       {chartData.totalWorkouts === 0 ? (
-        <p className="py-12 text-center text-muted-foreground text-sm">
+        <p className="py-12 text-center text-muted-foreground text-base">
           אין דיווחי אימון בשבוע זה
         </p>
       ) : (
@@ -109,7 +109,7 @@ export function TraineeWeeklyWorkoutChart({ sessionDates }: TraineeWeeklyWorkout
         </div>
       )}
 
-      <p className="mt-4 text-right text-muted-foreground text-xs">
+      <p className="mt-4 text-right text-muted-foreground text-sm">
         ניתן לצפות עד {TRAINEE_WEEKLY_CHART_MAX_DAYS} יום אחורה · {chartData.totalWorkouts} אימונים בשבוע זה
       </p>
     </div>

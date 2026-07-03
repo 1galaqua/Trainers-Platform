@@ -12,14 +12,14 @@ export type HeaderShortcut = {
 export const traineeHeaderShortcuts: HeaderShortcut[] = [
   { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
   { href: "/dashboard/tracking", label: "מעקב", icon: Activity },
-  { href: "/dashboard/my-program", label: "התוכניות שלי", icon: ClipboardList },
+  { href: "/dashboard/my-program", label: "דיווח אימון", icon: ClipboardList },
   { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
 ];
 
 export const coachHeaderShortcuts: HeaderShortcut[] = [
   { href: "/dashboard", label: "לוח בקרה", icon: BarChart3 },
   { href: "/dashboard/tracking", label: "מעקב", icon: Activity },
-  { href: "/dashboard/workouts", label: "תוכניות אימון", icon: Dumbbell },
+  { href: "/dashboard/workouts", label: "דיווח אימון", icon: Dumbbell },
   { href: "/dashboard/calendar", label: "יומן", icon: Calendar },
 ];
 

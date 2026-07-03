@@ -45,7 +45,7 @@ export default async function TrackingPage({ searchParams }: PageProps) {
           </Suspense>
         </>
       ) : shell.role === "COACH" ? (
-        <p className="py-10 text-center text-muted-foreground text-sm">
+        <p className="py-10 text-center text-muted-foreground text-base">
           בחר/י מתאמן מהרשימה או חפש/י לפי שם
         </p>
       ) : null}

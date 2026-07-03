@@ -36,9 +36,9 @@ export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="space-y-1 text-right">
           <h2 className="font-semibold text-base">סך המתאמנים</h2>
-          <p className="text-muted-foreground text-sm">{data.rangeLabel}</p>
+          <p className="text-muted-foreground text-base">{data.rangeLabel}</p>
         </div>
-        <p className="py-12 text-center text-muted-foreground text-sm">
+        <p className="py-12 text-center text-muted-foreground text-base">
           אין עדיין מתאמנים להצגה — צור/י הזמנה כדי להתחיל
         </p>
       </div>
@@ -49,7 +49,7 @@ export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps
     <div className="rounded-xl border border-border bg-card p-6">
       <div className="mb-6 space-y-1 text-right">
         <h2 className="font-semibold text-base">סך המתאמנים</h2>
-        <p className="text-muted-foreground text-sm">{data.rangeLabel}</p>
+        <p className="text-muted-foreground text-base">{data.rangeLabel}</p>
       </div>
 
       <div className="w-full overflow-x-auto overscroll-x-contain" dir="ltr">
@@ -110,7 +110,7 @@ export function CoachTraineeMonthlyChart({ data }: CoachTraineeMonthlyChartProps
         </div>
       </div>
 
-      <p className="mt-4 text-right text-muted-foreground text-xs">
+      <p className="mt-4 text-right text-muted-foreground text-sm">
         סך המתאמנים לפי חודש בשנה האחרונה
       </p>
     </div>

@@ -41,7 +41,7 @@ export function DeleteWorkoutSessionButton({
     return (
       <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
         <p className="font-medium text-sm">האם אתה בטוח שאתה רוצה למחוק את דיווח האימון?</p>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-muted-foreground text-sm">
           <strong>{sessionLabel}</strong> יימחק לצמיתות, כולל כל הנתונים שדווחו באימון זה.
         </p>
         {error && <p className="text-destructive text-xs">{error}</p>}

@@ -22,7 +22,7 @@ export function MeasurementsTable({ logs }: MeasurementsTableProps) {
   if (sortedLogs.length === 0) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-muted-foreground text-sm">
+        <CardContent className="py-10 text-center text-muted-foreground text-base">
           אין עדיין נתוני היקפים. הזן/י מדידה ראשונה.
         </CardContent>
       </Card>

@@ -21,7 +21,7 @@ export function SleepPageContent({ data, openLogForm = false }: SleepPageContent
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-semibold text-2xl tracking-tight">שינה</h1>
-          <p className="mt-1 text-muted-foreground text-sm">מעקב שעות שינה לפי יום ההתעוררות</p>
+          <p className="mt-1 text-muted-foreground text-base">מעקב שעות שינה לפי יום ההתעוררות</p>
         </div>
         <Button variant="outline" className="w-full shrink-0 sm:w-auto" render={<Link href="/dashboard/tracking" />}>
           חזרה למעקב
@@ -37,7 +37,7 @@ export function SleepPageContent({ data, openLogForm = false }: SleepPageContent
             {data.latestHours != null ? `${data.latestHours} שעות` : "—"}
           </p>
           {data.latestSleepStart && data.latestSleepEnd && (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base">
               {formatSleepRange(data.latestSleepStart, data.latestSleepEnd)}
             </p>
           )}

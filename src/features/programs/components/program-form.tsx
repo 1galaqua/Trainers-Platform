@@ -480,7 +480,7 @@ export function ProgramForm(props: ProgramFormProps) {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs">מקטע {sectionIndex + 1}</span>
+              <span className="text-muted-foreground text-sm">מקטע {sectionIndex + 1}</span>
               <Button
                 type="button"
                 variant="outline"

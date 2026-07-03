@@ -40,7 +40,7 @@ export function DeleteProgramButton({ programId, programName }: DeleteProgramBut
         <p className="font-medium text-sm">
           האם אתה בטוח שאתה רוצה למחוק את תוכנית האימונים?
         </p>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base">
           <strong>{programName}</strong> תימחק לצמיתות, כולל כל הדיווחים והאימונים שבוצעו עליה.
         </p>
         {error && <p className="text-destructive text-sm">{error}</p>}

@@ -15,7 +15,7 @@ export function GroupWorkoutRegistrants({
         נרשמו ({registrants.length})
       </p>
       {registrants.length === 0 ? (
-        <p className={compact ? "mt-1 text-muted-foreground text-[11px]" : "mt-1 text-muted-foreground text-xs"}>
+        <p className={compact ? "mt-1 text-muted-foreground text-[11px]" : "mt-1 text-muted-foreground text-sm"}>
           עדיין אין נרשמים
         </p>
       ) : (
@@ -23,7 +23,7 @@ export function GroupWorkoutRegistrants({
           className={
             compact
               ? "mt-1 space-y-0.5 text-muted-foreground text-[11px]"
-              : "mt-1 space-y-1 text-muted-foreground text-xs"
+              : "mt-1 space-y-1 text-muted-foreground text-sm"
           }
         >
           {registrants.map((registrant) => (

@@ -74,7 +74,7 @@ export default async function EditProgramPage({ params }: PageProps) {
         </Button>
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">עריכת תוכנית</h1>
-          <p className="mt-1 text-muted-foreground text-sm">{program.name}</p>
+          <p className="mt-1 text-muted-foreground text-base">{program.name}</p>
         </div>
       </div>
 

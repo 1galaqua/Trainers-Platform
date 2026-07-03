@@ -25,7 +25,7 @@ export default async function AgreementPage() {
         <h1 className="font-semibold text-2xl tracking-tight">
           {isRedo ? "חתימת הסכם מחדש" : "הסכם וחתימה"}
         </h1>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-muted-foreground text-base">
           {isRedo
             ? "המאמן/ית ביקש/ה שתחתום/י על ההסכם מחדש. קרא/י וחתום/י דיגיטלית."
             : "קרא/י את ההסכם וחתום/י דיגיטלית"}

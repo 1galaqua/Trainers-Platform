@@ -108,7 +108,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto w-full max-w-sm space-y-4" noValidate>
-      <p className="text-muted-foreground text-sm leading-relaxed">
+      <p className="text-muted-foreground text-base leading-relaxed">
         לאימות הזהות יש להזין את אותם שם מלא, אימייל ומספר טלפון שבהם נרשמתם, ולבחור סיסמה חדשה.
       </p>
       <div className="space-y-2">
@@ -198,13 +198,13 @@ export function ForgotPasswordForm() {
           onChange={() => clearFieldError("confirmPassword")}
         />
         <RequiredFieldError show={Boolean(fieldErrors.confirmPassword)} />
-        <p className="text-muted-foreground text-xs">{PASSWORD_HINT}</p>
+        <p className="text-muted-foreground text-sm">{PASSWORD_HINT}</p>
       </div>
       {error && <p className="text-destructive text-sm leading-relaxed">{error}</p>}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "מעדכן..." : "עדכון סיסמה"}
       </Button>
-      <p className="text-center text-muted-foreground text-sm">
+      <p className="text-center text-muted-foreground text-base">
         <Link href="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
           חזרה להתחברות
         </Link>

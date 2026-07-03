@@ -69,7 +69,7 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">עדכונים</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             הודעות על אימונים, תזכורות והתראות מהמאמן. עדכונים נמחקים אוטומטית לאחר 7 ימים.
           </p>
         </div>
@@ -93,7 +93,7 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <Bell className="size-10 text-muted-foreground/60" aria-hidden />
             <p className="font-medium text-sm">אין עדכונים</p>
-            <p className="max-w-sm text-muted-foreground text-sm leading-relaxed">
+            <p className="max-w-sm text-muted-foreground text-base leading-relaxed">
               כאן יופיעו הודעות על אימונים והתראות מהמאמן. הודעות Push יישלחו גם למכשיר שלך.
             </p>
             <Button render={<Link href="/dashboard/calendar" />} variant="outline" size="sm">
@@ -147,11 +147,11 @@ export function UpdatesPageContent({ notifications }: UpdatesPageContentProps) {
                         </button>
                       )}
                     </div>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                    <p className="text-muted-foreground text-base leading-relaxed">
                       {notification.body}
                     </p>
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-muted-foreground text-xs">
+                      <p className="text-muted-foreground text-sm">
                         {formatWorkoutDateTime(new Date(notification.createdAt))}
                       </p>
                       {trackingLinkLabel && (

@@ -79,13 +79,13 @@ export function TraineesList({
             ))}
           </Select>
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base">
           {filtered.length} מתוך {trainees.length} מתאמנים
         </p>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-lg border border-border py-8 text-center text-muted-foreground text-sm">
+        <p className="rounded-lg border border-border py-8 text-center text-muted-foreground text-base">
           {hasSearch
             ? "לא נמצאו מתאמנים התואמים לחיפוש"
             : "אין מתאמנים התואמים לסינון שנבחר"}

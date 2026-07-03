@@ -46,7 +46,7 @@ export function PushNotificationSetup() {
             <Bell className="size-4" aria-hidden />
             הפעלת התראות למכשיר
           </p>
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-base leading-relaxed">
             קבל/י עדכונים על אימונים גם כשהאפליקציה סגורה. ניתן לנהל זאת גם בעמוד «עדכונים».
           </p>
         </div>

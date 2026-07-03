@@ -73,9 +73,9 @@ export function MyProgramsPageContent({ programs }: MyProgramsPageContentProps) 
         </Button>
       </div>
 
-      <p className="text-muted-foreground text-sm">מאמן/ית: {program.coachName ?? "—"}</p>
+      <p className="text-muted-foreground text-base">מאמן/ית: {program.coachName ?? "—"}</p>
       {program.description && (
-        <p className="text-muted-foreground text-sm">{program.description}</p>
+        <p className="text-muted-foreground text-base">{program.description}</p>
       )}
 
       <ProgramExercisesBySection

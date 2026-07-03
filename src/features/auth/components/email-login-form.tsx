@@ -73,7 +73,7 @@ export function EmailLoginForm() {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "מתחבר..." : "התחברות"}
       </Button>
-      <p className="text-center text-muted-foreground text-sm">
+      <p className="text-center text-muted-foreground text-base">
         אין לך חשבון?{" "}
         <Link href="/sign-up" className="font-medium text-primary underline-offset-4 hover:underline">
           הרשמה

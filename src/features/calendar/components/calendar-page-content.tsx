@@ -102,7 +102,7 @@ function CalendarPageContentInner({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">יומן</h1>
-          <p className="mt-1 text-muted-foreground text-sm">
+          <p className="mt-1 text-muted-foreground text-base">
             {isCoach
               ? "תצוגה מלאה של אימונים ואירועים ביומן"
               : "אימונים ואירועים של המאמן שלך"}
@@ -128,7 +128,7 @@ function CalendarPageContentInner({
             {calendarViewLabels[mode]}
           </Button>
         ))}
-        <span className="text-muted-foreground text-xs">
+        <span className="text-muted-foreground text-sm">
           תצוגה {calendarViewLabels[viewMode]} · היסטוריה של 30 יום
         </span>
       </div>

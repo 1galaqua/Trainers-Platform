@@ -72,10 +72,10 @@ export function PersonalWorkoutProgramSelect({
         ))}
       </Select>
       {loading && (
-        <p className="text-muted-foreground text-xs">טוען תוכניות...</p>
+        <p className="text-muted-foreground text-sm">טוען תוכניות...</p>
       )}
       {!loading && programs.length === 0 && (
-        <p className="text-muted-foreground text-xs">אין תוכניות פעילות למתאמן זה</p>
+        <p className="text-muted-foreground text-sm">אין תוכניות פעילות למתאמן זה</p>
       )}
     </div>
   );

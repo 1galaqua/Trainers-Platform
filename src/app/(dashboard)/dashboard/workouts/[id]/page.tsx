@@ -40,7 +40,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
               <Badge variant="secondary">{programTypeLabels[program.type]}</Badge>
               {!program.isActive && <Badge variant="outline">לא פעילה</Badge>}
             </div>
-            <p className="mt-1 text-muted-foreground text-sm">
+            <p className="mt-1 text-muted-foreground text-base">
               {program.trainee.displayName ?? "מתאמן"} · {program.exercises.length} תרגילים
             </p>
           </div>
@@ -64,7 +64,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
       </div>
 
       {program.description && (
-        <p className="text-muted-foreground text-sm">{program.description}</p>
+        <p className="text-muted-foreground text-base">{program.description}</p>
       )}
 
       <div className="space-y-4">

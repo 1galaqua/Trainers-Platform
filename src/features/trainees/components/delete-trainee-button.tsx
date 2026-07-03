@@ -38,7 +38,7 @@ export function DeleteTraineeButton({ traineeId, traineeName }: DeleteTraineeBut
     return (
       <div className="w-full max-w-md space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <p className="font-medium text-sm">האם אתה בטוח שאתה רוצה למחוק את המתאמן?</p>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base">
           <strong>{traineeName}</strong> יימחק לצמיתות, כולל תוכניות, דיווחי אימון, שאלון והסכם.
         </p>
         {error && <p className="text-destructive text-sm">{error}</p>}
