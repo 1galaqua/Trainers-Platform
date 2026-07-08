@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isWorkoutInPast } from "@/lib/calendar-range";
 import { cn } from "@/lib/utils";
 import type { CalendarTraineeOption, CalendarWorkoutItem } from "@/server/actions/calendar";
 import { cancelScheduledWorkoutAction } from "@/server/actions/calendar";
@@ -17,10 +18,6 @@ type CoachWorkoutActionsProps = {
   compact?: boolean;
 };
 
-function isUpcoming(startsAt: string) {
-  return new Date(startsAt) > new Date();
-}
-
 export function CoachWorkoutActions({
   workout,
   trainees,
@@ -30,10 +27,7 @@ export function CoachWorkoutActions({
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isUpcoming(workout.startsAt)) {
-    return null;
-  }
+  const isPast = isWorkoutInPast(workout.startsAt);
 
   async function handleCancel() {
     setLoading(true);
@@ -60,7 +54,11 @@ export function CoachWorkoutActions({
             : "mt-3 space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
         }
       >
-        <p className={compact ? "text-xs" : "text-sm"}>האם אתה בטוח שברצונך לבטל את האימון?</p>
+        <p className={compact ? "text-xs" : "text-sm"}>
+          {isPast
+            ? "האם אתה בטוח שברצונך להסיר את האימון מהיומן?"
+            : "האם אתה בטוח שברצונך לבטל את האימון?"}
+        </p>
         {error && <p className="text-destructive text-xs">{error}</p>}
         <div className="flex w-full min-w-0 flex-wrap gap-1">
           <Button
@@ -71,7 +69,7 @@ export function CoachWorkoutActions({
             onClick={handleCancel}
             disabled={loading}
           >
-            {loading ? "מבטל..." : "כן, בטל אימון"}
+            {loading ? (isPast ? "מסיר..." : "מבטל...") : isPast ? "כן, הסר מהיומן" : "כן, בטל אימון"}
           </Button>
           <Button
             type="button"
@@ -98,7 +96,9 @@ export function CoachWorkoutActions({
         compact ? "mt-2 flex-col" : "mt-3 flex-row gap-2",
       )}
     >
-      <EditWorkoutButton workout={workout} trainees={trainees} compact={compact} />
+      {!isPast && (
+        <EditWorkoutButton workout={workout} trainees={trainees} compact={compact} />
+      )}
       <Button
         type="button"
         variant="outline"
@@ -109,7 +109,7 @@ export function CoachWorkoutActions({
         onClick={() => setConfirmingCancel(true)}
       >
         <Trash2 className="size-3.5" aria-hidden />
-        ביטול
+        {isPast ? "הסרה מהיומן" : "ביטול"}
       </Button>
     </div>
   );

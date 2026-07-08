@@ -66,7 +66,7 @@ export function CalendarEventCard({
         <p className="mt-1 text-muted-foreground text-sm leading-relaxed">{event.notes}</p>
       )}
 
-      {userRole === "COACH" && !isPast && (
+      {userRole === "COACH" && (
         <div className={cn(inTimeGrid ? "pt-1" : undefined, "min-w-0 w-full")}>
           <CoachEventActions event={event} trainees={trainees} compact={compact || inTimeGrid} />
         </div>

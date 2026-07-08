@@ -638,9 +638,7 @@ export async function cancelScheduledWorkoutAction(workoutId: string) {
     return { error: "האימון לא נמצא" };
   }
 
-  if (existing.startsAt <= new Date()) {
-    return { error: "לא ניתן לבטל אימון שכבר התחיל או עבר" };
-  }
+  const isPast = existing.startsAt <= new Date();
 
   await prisma.scheduledWorkout.update({
     where: { id: existing.id },
@@ -654,18 +652,20 @@ export async function cancelScheduledWorkoutAction(workoutId: string) {
     (registration) => registration.traineeId,
   );
 
-  if (existing.type === "PERSONAL" && existing.traineeId) {
-    await notifyTraineeAboutPersonalCancellation({
-      workout: existing,
-      traineeId: existing.traineeId,
-    });
-  }
+  if (!isPast) {
+    if (existing.type === "PERSONAL" && existing.traineeId) {
+      await notifyTraineeAboutPersonalCancellation({
+        workout: existing,
+        traineeId: existing.traineeId,
+      });
+    }
 
-  if (existing.type === "GROUP") {
-    await notifyRegisteredTraineesAboutGroupCancellation({
-      workout: existing,
-      traineeIds: registeredIds,
-    });
+    if (existing.type === "GROUP") {
+      await notifyRegisteredTraineesAboutGroupCancellation({
+        workout: existing,
+        traineeIds: registeredIds,
+      });
+    }
   }
 
   revalidateCalendarViews(coach.id, existing.traineeId, ...registeredIds);

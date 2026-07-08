@@ -146,7 +146,7 @@ export function CalendarWorkoutCard({
         />
       )}
 
-      {userRole === "COACH" && !isPast && (
+      {userRole === "COACH" && (
         <div className={cn(inTimeGrid ? "pt-1" : undefined, "min-w-0 w-full")}>
           <CoachWorkoutActions
             workout={workout}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isWorkoutInPast } from "@/lib/calendar-range";
 import { cn } from "@/lib/utils";
 import { cancelCalendarEventAction } from "@/server/actions/calendar-events";
 import type { CalendarEventItem } from "@/server/actions/calendar-events";
@@ -18,10 +19,6 @@ type CoachEventActionsProps = {
   compact?: boolean;
 };
 
-function isUpcoming(startsAt: string) {
-  return new Date(startsAt) > new Date();
-}
-
 export function CoachEventActions({
   event,
   trainees,
@@ -31,10 +28,7 @@ export function CoachEventActions({
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!isUpcoming(event.startsAt)) {
-    return null;
-  }
+  const isPast = isWorkoutInPast(event.startsAt);
 
   async function handleCancel() {
     setLoading(true);
@@ -61,7 +55,11 @@ export function CoachEventActions({
             : "mt-3 space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
         }
       >
-        <p className={compact ? "text-xs" : "text-sm"}>האם אתה בטוח שברצונך לבטל את האירוע?</p>
+        <p className={compact ? "text-xs" : "text-sm"}>
+          {isPast
+            ? "האם אתה בטוח שברצונך להסיר את האירוע מהיומן?"
+            : "האם אתה בטוח שברצונך לבטל את האירוע?"}
+        </p>
         {error && <p className="text-destructive text-xs">{error}</p>}
         <div className="flex w-full min-w-0 flex-wrap gap-1">
           <Button
@@ -72,7 +70,7 @@ export function CoachEventActions({
             onClick={handleCancel}
             disabled={loading}
           >
-            {loading ? "מבטל..." : "כן, בטל אירוע"}
+            {loading ? (isPast ? "מסיר..." : "מבטל...") : isPast ? "כן, הסר מהיומן" : "כן, בטל אירוע"}
           </Button>
           <Button
             type="button"
@@ -99,7 +97,7 @@ export function CoachEventActions({
         compact ? "mt-2 flex-col" : "mt-3 flex-row gap-2",
       )}
     >
-      <EditEventButton event={event} trainees={trainees} compact={compact} />
+      {!isPast && <EditEventButton event={event} trainees={trainees} compact={compact} />}
       <Button
         type="button"
         variant="outline"
@@ -110,7 +108,7 @@ export function CoachEventActions({
         onClick={() => setConfirmingCancel(true)}
       >
         <Trash2 className="size-3.5" aria-hidden />
-        ביטול
+        {isPast ? "הסרה מהיומן" : "ביטול"}
       </Button>
     </div>
   );

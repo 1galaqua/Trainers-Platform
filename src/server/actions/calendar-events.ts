@@ -206,9 +206,7 @@ export async function cancelCalendarEventAction(eventId: string) {
     return { error: "האירוע לא נמצא" };
   }
 
-  if (existing.startsAt <= new Date()) {
-    return { error: "לא ניתן לבטל אירוע שכבר התחיל או עבר" };
-  }
+  const isPast = existing.startsAt <= new Date();
 
   await prisma.calendarEvent.update({
     where: { id: existing.id },
@@ -217,7 +215,7 @@ export async function cancelCalendarEventAction(eventId: string) {
 
   await cancelAllUserCalendarEventReminders(existing.id);
 
-  if (existing.traineeId) {
+  if (!isPast && existing.traineeId) {
     await notifyTraineeAboutEventCancelled({
       event: existing,
       traineeId: existing.traineeId,
