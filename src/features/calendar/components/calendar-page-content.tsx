@@ -12,7 +12,11 @@ import {
   CalendarSuccessBanner,
   useCalendarFeedback,
 } from "./calendar-feedback-context";
-import { calendarViewLabels, type CalendarViewMode } from "@/lib/calendar-config";
+import {
+  CALENDAR_HISTORY_DAYS,
+  calendarViewLabels,
+  type CalendarViewMode,
+} from "@/lib/calendar-config";
 import { getWorkoutIsraelDateKey } from "@/lib/calendar-datetime";
 import {
   clampCalendarAnchorDate,
@@ -129,7 +133,7 @@ function CalendarPageContentInner({
           </Button>
         ))}
         <span className="text-muted-foreground text-sm">
-          תצוגה {calendarViewLabels[viewMode]} · היסטוריה של 30 יום
+          תצוגה {calendarViewLabels[viewMode]} · היסטוריה של {CALENDAR_HISTORY_DAYS} יום
         </span>
       </div>
 
